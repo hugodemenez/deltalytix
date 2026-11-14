@@ -295,14 +295,23 @@ describe('deleteCurrentUserAccount', () => {
     expect(recordPendingAccountCleanup).not.toHaveBeenCalled()
   })
 
-  it('propagates auth-delete throw after cleanup attempts', async () => {
+  it('returns partial_unrecorded when auth delete fails after the queue row is written', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    cancelStripeCustomersByIds.mockResolvedValue({
+      ok: false,
+      error: 'stripe boom',
+      customerIds: ['cus_1'],
+    })
     deleteSupabaseAuthUser.mockRejectedValue(new Error('auth delete failed'))
 
     const { deleteCurrentUserAccount } = await import('./delete-account')
-    await expect(deleteCurrentUserAccount()).rejects.toThrow('auth delete failed')
-    expect(deleteUserTradeImageObjects).toHaveBeenCalled()
-    expect(cancelStripeCustomersByIds).toHaveBeenCalled()
-    expect(signOut).not.toHaveBeenCalled()
+    await expect(deleteCurrentUserAccount()).resolves.toEqual({
+      status: 'partial_unrecorded',
+    })
+    expect(recordPendingAccountCleanup).toHaveBeenCalled()
+    expect(deleteSupabaseAuthUser).toHaveBeenCalledWith('auth-1')
+    expect(signOut).toHaveBeenCalled()
+    errorSpy.mockRestore()
   })
 
   it('skips Stripe cancel when precheck found no customers', async () => {

@@ -2,6 +2,8 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { isRedirectError } from 'next/dist/client/components/redirect-error'
+import { rethrowIfRedirectError } from '@/lib/rethrow-redirect'
 import { prisma } from '@/lib/prisma'
 import { headers } from "next/headers"
 import {
@@ -38,6 +40,7 @@ export async function getWebsiteURL() {
  * a more meaningful error message.
  */
 function handleAuthError(error: any): never {
+  rethrowIfRedirectError(error)
   // Check if this is a JSON parsing error (indicates HTML response)
   if (
     error?.message?.includes('Unexpected token') ||
@@ -284,6 +287,7 @@ export async function signInWithPasswordAction(
             const ensureResult = await ensureUserRecord(signUpData.user, locale)
             isNewUser = ensureResult.isNewUser
           } catch (e) {
+            rethrowIfRedirectError(e)
             // Non-fatal; still proceed
             console.error('[signInWithPasswordAction] ensureUserInDatabase failed:', e)
           }
@@ -311,6 +315,7 @@ export async function signInWithPasswordAction(
             isNewUser = ensureResult.isNewUser
           }
         } catch (e) {
+          rethrowIfRedirectError(e)
           // Non-fatal; still proceed
           console.error('[signInWithPasswordAction] ensureUserInDatabase failed:', e)
         }
@@ -331,6 +336,7 @@ export async function signInWithPasswordAction(
         isNewUser = ensureResult.isNewUser
       }
     } catch (e) {
+      rethrowIfRedirectError(e)
       // Non-fatal; still proceed
       console.error('[signInWithPasswordAction] ensureUserInDatabase failed:', e)
     }
@@ -375,6 +381,7 @@ export async function signUpWithPasswordAction(
         const ensureResult = await ensureUserRecord(data.user, locale)
         isNewUser = ensureResult.isNewUser
       } catch (e) {
+        rethrowIfRedirectError(e)
         // Non-fatal; still proceed
         console.error('[signUpWithPasswordAction] ensureUserInDatabase failed:', e)
       }
@@ -536,7 +543,9 @@ async function ensureUserRecord(user: AuthenticatedIdentity, locale?: string) {
       if (pendingSignOutError) {
         await pendingClient.auth.signOut({ scope: 'local' });
       }
-      redirect(accountDeletedHomeHref('en', 'partial'));
+      redirect(
+        accountDeletedHomeHref(resolveAuthEmailLocale(locale), 'partial'),
+      );
     }
 
     // Create new user if no existing user found
@@ -599,11 +608,8 @@ async function ensureUserRecord(user: AuthenticatedIdentity, locale?: string) {
       throw new Error('Failed to create user account');
     }
   } catch (error) {
-    // Re-throw NEXT_REDIRECT errors immediately (these are normal Next.js redirects)
-    if (error instanceof Error && (
-      error.message === 'NEXT_REDIRECT' || 
-      ('digest' in error && typeof error.digest === 'string' && error.digest.startsWith('NEXT_REDIRECT'))
-    )) {
+    // Re-throw Next.js redirects (pending-cleanup refusal uses redirect()).
+    if (isRedirectError(error)) {
       throw error;
     }
 

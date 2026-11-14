@@ -21,9 +21,39 @@ vi.mock('@/lib/prisma', () => ({
 }))
 
 import {
-  LIVE_APP_SUBSCRIPTION_STATUSES,
+  TERMINAL_APP_SUBSCRIPTION_STATUSES,
   hasLiveAppSubscription,
+  isTerminalSubscriptionStatus,
 } from './live-subscription'
+
+/** Observed prod Subscription.status values (Team/Business empty today). */
+const PROD_STATUS_SAMPLES = [
+  'TRIAL',
+  'EXPIRED',
+  'CANCELLED',
+  'active',
+  'ACTIVE',
+  'SCHEDULED_CANCELLATION',
+] as const
+
+describe('isTerminalSubscriptionStatus', () => {
+  it('denies only cancelled/canceled, expired, incomplete_expired (case-insensitive)', () => {
+    expect([...TERMINAL_APP_SUBSCRIPTION_STATUSES]).toEqual([
+      'cancelled',
+      'canceled',
+      'expired',
+      'incomplete_expired',
+    ])
+    expect(isTerminalSubscriptionStatus('CANCELLED')).toBe(true)
+    expect(isTerminalSubscriptionStatus('canceled')).toBe(true)
+    expect(isTerminalSubscriptionStatus('EXPIRED')).toBe(true)
+    expect(isTerminalSubscriptionStatus('incomplete_expired')).toBe(true)
+    expect(isTerminalSubscriptionStatus('ACTIVE')).toBe(false)
+    expect(isTerminalSubscriptionStatus('SCHEDULED_CANCELLATION')).toBe(false)
+    expect(isTerminalSubscriptionStatus('TRIAL')).toBe(false)
+    expect(isTerminalSubscriptionStatus('weird_unknown')).toBe(false)
+  })
+})
 
 describe('hasLiveAppSubscription', () => {
   beforeEach(() => {
@@ -40,42 +70,60 @@ describe('hasLiveAppSubscription', () => {
     expect(subscriptionFindFirst).not.toHaveBeenCalled()
   })
 
-  it('treats only active / trialing / past_due statuses as live', () => {
-    expect([...LIVE_APP_SUBSCRIPTION_STATUSES]).toEqual([
-      'ACTIVE',
-      'active',
-      'TRIAL',
-      'trialing',
-      'PAST_DUE',
-      'past_due',
-    ])
-  })
+  it.each(PROD_STATUS_SAMPLES)(
+    'classifies prod status %s correctly',
+    async (status) => {
+      subscriptionFindFirst.mockResolvedValue({ status })
+      const live = await hasLiveAppSubscription({
+        userIds: ['user-1'],
+        emails: ['user@example.com'],
+      })
+      expect(live).toBe(!isTerminalSubscriptionStatus(status))
+    },
+  )
 
-  it('returns true for a live personal Subscription', async () => {
-    subscriptionFindFirst.mockResolvedValue({ id: 'sub-1' })
+  it('treats SCHEDULED_CANCELLATION as live (still billing)', async () => {
+    subscriptionFindFirst.mockResolvedValue({
+      status: 'SCHEDULED_CANCELLATION',
+    })
     await expect(
       hasLiveAppSubscription({
         userIds: ['user-1'],
-        emails: ['user@example.com'],
+        emails: [],
       }),
     ).resolves.toBe(true)
-    expect(subscriptionFindFirst).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          AND: expect.arrayContaining([
-            {
-              status: {
-                in: [...LIVE_APP_SUBSCRIPTION_STATUSES],
-              },
-            },
-          ]),
-        }),
+  })
+
+  it('returns false for CANCELLED / EXPIRED', async () => {
+    subscriptionFindFirst.mockResolvedValue({ status: 'CANCELLED' })
+    await expect(
+      hasLiveAppSubscription({
+        userIds: ['user-1'],
+        emails: [],
       }),
-    )
+    ).resolves.toBe(false)
+
+    subscriptionFindFirst.mockResolvedValue({ status: 'EXPIRED' })
+    await expect(
+      hasLiveAppSubscription({
+        userIds: ['user-1'],
+        emails: [],
+      }),
+    ).resolves.toBe(false)
+  })
+
+  it('treats American canceled as terminal (not only cancelled)', async () => {
+    subscriptionFindFirst.mockResolvedValue({ status: 'canceled' })
+    await expect(
+      hasLiveAppSubscription({
+        userIds: ['user-1'],
+        emails: [],
+      }),
+    ).resolves.toBe(false)
   })
 
   it('returns true for a live TeamSubscription the user pays for', async () => {
-    teamSubscriptionFindFirst.mockResolvedValue({ id: 'team-sub-1' })
+    teamSubscriptionFindFirst.mockResolvedValue({ status: 'ACTIVE' })
     await expect(
       hasLiveAppSubscription({
         userIds: ['user-1'],
@@ -85,7 +133,7 @@ describe('hasLiveAppSubscription', () => {
   })
 
   it('returns true for a live BusinessSubscription the user pays for', async () => {
-    businessSubscriptionFindFirst.mockResolvedValue({ id: 'biz-sub-1' })
+    businessSubscriptionFindFirst.mockResolvedValue({ status: 'TRIAL' })
     await expect(
       hasLiveAppSubscription({
         userIds: ['user-1'],
@@ -94,15 +142,13 @@ describe('hasLiveAppSubscription', () => {
     ).resolves.toBe(true)
   })
 
-  it('returns false when only canceled or expired rows would match', async () => {
+  it('treats unknown statuses as live (fail closed)', async () => {
+    subscriptionFindFirst.mockResolvedValue({ status: 'PAYMENT_PENDING' })
     await expect(
       hasLiveAppSubscription({
         userIds: ['user-1'],
-        emails: ['user@example.com'],
+        emails: [],
       }),
-    ).resolves.toBe(false)
-    expect(subscriptionFindFirst.mock.calls[0]?.[0]?.where?.AND?.[1]).toEqual({
-      status: { in: [...LIVE_APP_SUBSCRIPTION_STATUSES] },
-    })
+    ).resolves.toBe(true)
   })
 })

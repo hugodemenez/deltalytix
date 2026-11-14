@@ -2,15 +2,19 @@ import 'server-only'
 
 import { prisma } from '@/lib/prisma'
 
-/** App DB statuses that mean the user is still being billed. */
-export const LIVE_APP_SUBSCRIPTION_STATUSES = [
-  'ACTIVE',
-  'active',
-  'TRIAL',
-  'trialing',
-  'PAST_DUE',
-  'past_due',
+/** Terminal statuses that are no longer billed (case-insensitive). */
+export const TERMINAL_APP_SUBSCRIPTION_STATUSES = [
+  'cancelled',
+  'canceled',
+  'expired',
+  'incomplete_expired',
 ] as const
+
+export function isTerminalSubscriptionStatus(status: string): boolean {
+  return (TERMINAL_APP_SUBSCRIPTION_STATUSES as readonly string[]).includes(
+    status.trim().toLowerCase(),
+  )
+}
 
 function identityOrClause(input: {
   userIds: string[]
@@ -36,9 +40,10 @@ function identityOrClause(input: {
 }
 
 /**
- * True when the user still has a live personal, team, or business subscription
- * (active / trialing / past_due). Used when Stripe is not configured so we
- * fail closed instead of wiping.
+ * True when the user still has a live personal, team, or business subscription.
+ * Deny-list: only cancelled/canceled, expired, and incomplete_expired are
+ * terminal; everything else (including SCHEDULED_CANCELLATION and unknowns)
+ * counts as live so keyless delete fails closed.
  */
 export async function hasLiveAppSubscription(input: {
   userIds: string[]
@@ -47,17 +52,17 @@ export async function hasLiveAppSubscription(input: {
   const or = identityOrClause(input)
   if (or.length === 0) return false
 
-  const where = {
-    AND: [
-      { OR: or },
-      { status: { in: [...LIVE_APP_SUBSCRIPTION_STATUSES] } },
-    ],
-  }
+  const where = { OR: or }
+  const select = { status: true } as const
 
   const [personal, team, business] = await Promise.all([
-    prisma.subscription.findFirst({ where, select: { id: true } }),
-    prisma.teamSubscription.findFirst({ where, select: { id: true } }),
-    prisma.businessSubscription.findFirst({ where, select: { id: true } }),
+    prisma.subscription.findFirst({ where, select }),
+    prisma.teamSubscription.findFirst({ where, select }),
+    prisma.businessSubscription.findFirst({ where, select }),
   ])
-  return Boolean(personal || team || business)
+
+  for (const row of [personal, team, business]) {
+    if (row && !isTerminalSubscriptionStatus(row.status)) return true
+  }
+  return false
 }

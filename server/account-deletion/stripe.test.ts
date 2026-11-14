@@ -150,6 +150,27 @@ describe('cancelStripeCustomersByIds', () => {
     expect(customersDel).toHaveBeenCalledWith('cus_1')
   })
 
+  it('skips Stripe canceled (not cancelled) subscriptions when canceling', async () => {
+    subscriptionsList.mockReturnValue(
+      asyncPage([{ id: 'sub_canceled', status: 'canceled' }]),
+    )
+    customersDel.mockResolvedValue({})
+
+    const { cancelStripeCustomersByIds } = await import('./stripe')
+    await cancelStripeCustomersByIds(['cus_1'])
+    expect(subscriptionsCancel).not.toHaveBeenCalled()
+    expect(customersDel).toHaveBeenCalledWith('cus_1')
+  })
+
+  it('returns ok with empty customer ids without calling Stripe', async () => {
+    const { cancelStripeCustomersByIds } = await import('./stripe')
+    await expect(cancelStripeCustomersByIds([])).resolves.toEqual({
+      ok: true,
+      customerIds: [],
+    })
+    expect(subscriptionsList).not.toHaveBeenCalled()
+  })
+
   it('returns ok:false when customer ids exist but Stripe is not configured', async () => {
     delete process.env.STRIPE_SECRET_KEY
     const { cancelStripeCustomersByIds } = await import('./stripe')
