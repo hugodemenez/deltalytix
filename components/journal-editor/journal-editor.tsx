@@ -37,6 +37,7 @@ export interface JournalEditorProps {
   onNewsSelection?: (newsIds: string[]) => void
   onEmbedNews?: (newsIds: string[], action: "add" | "remove") => void
   date?: Date
+  readOnly?: boolean
 }
 
 function currentBlock(): JournalBlock | "p" | null {
@@ -71,6 +72,7 @@ export function JournalEditor({
   onNewsSelection,
   onEmbedNews,
   date,
+  readOnly = false,
 }: JournalEditorProps) {
   const t = useI18n()
   const locale = useCurrentLocale()
@@ -289,10 +291,11 @@ export function JournalEditor({
         onNewsSelection={onNewsSelection}
         onEmbedNews={onEmbedNews || handleEmbedNews}
         date={date}
+        disabled={readOnly}
         onToggleBlock={handleToggleBlock}
         onInsertImage={() => fileInputRef.current?.click()}
         aiMenu={
-          aiReady ? (
+          readOnly ? undefined : aiReady ? (
             <JournalAI
               getTargetText={() => {
                 const selection = window.getSelection()?.toString().trim() ?? ""
@@ -330,8 +333,9 @@ export function JournalEditor({
           ref={editorRef}
           role="textbox"
           aria-multiline="true"
+          aria-readonly={readOnly}
           aria-label={placeholder}
-          contentEditable
+          contentEditable={!readOnly}
           suppressContentEditableWarning
           className={cn(
             "h-full overflow-y-auto p-2 text-lg leading-relaxed outline-none sm:text-sm",

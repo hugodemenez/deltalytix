@@ -2,12 +2,23 @@ import { describe, expect, it } from 'vitest'
 import {
   copyStoredTradeComment,
   conversationWrite,
+  existingMoodConversationIsUnread,
+  existingMoodJournalIsUnread,
+  existingTradeCommentIsUnread,
   JournalFieldUndecryptableError,
   mindsetJournalContentWrite,
   storedCommentIsUnread,
+  storedConversationIsUnread,
+  storedJournalIsUnread,
   tradeCommentWrite,
 } from './journal-field-write-guard'
-import { encryptJournalField } from './journal-field-crypto'
+import {
+  encryptJournalConversation,
+  encryptJournalField,
+  withDecryptedMoodFields,
+  withDecryptedTradeComment,
+} from './journal-field-crypto'
+import { decryptResultTree } from './prisma-journal-encryption'
 
 describe('journal field write guards', () => {
   it('omits journalContent on an emotion-only mindset save', () => {
@@ -71,9 +82,67 @@ describe('journal field write guards', () => {
     process.env.JOURNAL_ENCRYPTION_WRITE = '1'
     process.env.JOURNAL_ENCRYPTION_KEY = '1'.repeat(64)
     const cipher = encryptJournalField('keep')
+    const conversation = encryptJournalConversation(
+      JSON.stringify([{ role: 'user', content: 'keep chat' }]),
+    )
     process.env.JOURNAL_ENCRYPTION_KEY = '2'.repeat(64)
     expect(storedCommentIsUnread(cipher)).toBe(true)
+    expect(storedJournalIsUnread(cipher)).toBe(true)
+    expect(storedConversationIsUnread(conversation)).toBe(true)
     expect(storedCommentIsUnread('legacy note')).toBe(false)
     expect(storedCommentIsUnread(null)).toBe(false)
+    expect(storedJournalIsUnread(null)).toBe(false)
+    expect(storedConversationIsUnread(null)).toBe(false)
+  })
+
+  it('refuses overwrite using decryptResultTree then withDecryptedMoodFields', () => {
+    process.env.JOURNAL_ENCRYPTION_WRITE = '1'
+    process.env.JOURNAL_ENCRYPTION_KEY = '1'.repeat(64)
+    const journalContent = encryptJournalField('keep journal')
+    const conversation = encryptJournalConversation(
+      JSON.stringify([{ role: 'user', content: 'keep chat' }]),
+    )
+    const comment = encryptJournalField('keep comment')
+    process.env.JOURNAL_ENCRYPTION_KEY = '2'.repeat(64)
+
+    const moodRow: {
+      id: string
+      journalContent: string | null
+      conversation: unknown
+      journalContentUndecryptable?: boolean
+      conversationUndecryptable?: boolean
+    } = { id: 'm1', journalContent, conversation }
+    decryptResultTree(moodRow)
+    const mood = withDecryptedMoodFields(moodRow)
+    expect(mood.journalContentUndecryptable).toBe(true)
+    expect(mood.conversationUndecryptable).toBe(true)
+    expect(() =>
+      mindsetJournalContentWrite({
+        existingUndecryptable: existingMoodJournalIsUnread(mood),
+        journalEdited: true,
+        incoming: '',
+      }),
+    ).toThrow(JournalFieldUndecryptableError)
+    expect(() =>
+      conversationWrite({
+        existingUndecryptable: existingMoodConversationIsUnread(mood),
+        incoming: [],
+      }),
+    ).toThrow(/mood.conversation/)
+
+    const tradeRow: {
+      id: string
+      comment: string | null
+      commentUndecryptable?: boolean
+    } = { id: 't1', comment }
+    decryptResultTree(tradeRow)
+    const trade = withDecryptedTradeComment(tradeRow)
+    expect(trade.commentUndecryptable).toBe(true)
+    expect(() =>
+      tradeCommentWrite({
+        existingUndecryptable: existingTradeCommentIsUnread(trade),
+        incoming: '',
+      }),
+    ).toThrow(/trade.comment/)
   })
 })

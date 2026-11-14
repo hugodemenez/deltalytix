@@ -42,7 +42,8 @@ LOCAL_DASHBOARD_USER_EMAIL=local-dashboard@deltalytix.local
 NEXT_PUBLIC_LOCAL_DASHBOARD_USER_EMAIL=local-dashboard@deltalytix.local
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 OPENAI_API_KEY=dummy
-# Local AES keys (dev only — rotate for real deployments; set distinct keys on Vercel)
+# Local AES keys (dev only — rotate for real deployments).
+# JOURNAL_ENCRYPTION_KEY must be the same value on Vercel Preview (beta) and Production.
 ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
 JOURNAL_ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
 EOF

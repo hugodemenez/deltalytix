@@ -281,9 +281,12 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
     })
   }
 
-  const handleEdit = (_section?: 'emotion' | 'journal' | 'news') => {
+  const handleEdit = (section?: 'emotion' | 'journal' | 'news') => {
     setIsEditing(true)
     setPane("journal")
+    if (section === "journal" && journalUnread) {
+      return
+    }
   }
 
   const toggleTimeline = () => {
@@ -612,6 +615,7 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
               onNewsSelection={handleNewsSelection}
               trades={trades}
               onApplyTagToAll={handleApplyTagToAll}
+              readOnly={journalUnread}
             />
             </>
           ) : (

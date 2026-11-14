@@ -1,16 +1,19 @@
 'use server'
 import { UIMessage } from "ai"
-import { prisma } from "@/lib/prisma"
-import { addDays, format } from "date-fns"
+import { prisma, prismaBase } from "@/lib/prisma"
+import { addDays } from "date-fns"
 import { Mood } from "@/prisma/generated/prisma/client"
 import { revalidateTag } from "next/cache"
 import { getUserId } from "@/server/auth"
 import {
   decryptJournalConversation,
   encryptJournalConversation,
-  rowHasUnreadConversation,
 } from "@/lib/journal-field-crypto"
-import { conversationWrite } from "@/lib/journal-field-write-guard"
+import {
+  conversationWrite,
+  storedConversationIsUnread,
+  storedJsonEquals,
+} from "@/lib/journal-field-write-guard"
 
 export async function saveChat(messages: UIMessage[]): Promise<Mood | null> {
   const userId = await getUserId()
@@ -49,8 +52,7 @@ export async function saveChat(messages: UIMessage[]): Promise<Mood | null> {
     return msg
   })
 
-  // Try to find existing mood entry for today
-  const existingMood = await prisma.mood.findFirst({
+  const existingMood = await prismaBase.mood.findFirst({
     where: {
       userId,
       day: {
@@ -58,6 +60,7 @@ export async function saveChat(messages: UIMessage[]): Promise<Mood | null> {
         lt: addDays(todayUTC, 1),
       },
     },
+    select: { id: true, conversation: true },
   })
 
   // Expire immediately so next time we load the user data, we get the latest data
@@ -65,12 +68,13 @@ export async function saveChat(messages: UIMessage[]): Promise<Mood | null> {
 
   if (existingMood) {
     conversationWrite({
-      existingUndecryptable: rowHasUnreadConversation(existingMood),
+      existingUndecryptable: storedConversationIsUnread(existingMood.conversation),
       incoming: textOnlyMessages,
     })
-    const updatedMood = await prisma.mood.update({
+    const result = await prismaBase.mood.updateMany({
       where: {
         id: existingMood.id,
+        conversation: storedJsonEquals(existingMood.conversation),
       },
       data: {
         conversation: encryptJournalConversation(
@@ -78,7 +82,12 @@ export async function saveChat(messages: UIMessage[]): Promise<Mood | null> {
         ),
       },
     })
-    return updatedMood
+    if (result.count === 0) {
+      throw new Error(
+        "Refusing to overwrite mood.conversation: stored value changed concurrently.",
+      )
+    }
+    return prisma.mood.findUnique({ where: { id: existingMood.id } })
   } else {
     // Create new mood entry
     const newMood = await prisma.mood.create({
@@ -117,8 +126,7 @@ export async function loadChat(): Promise<UIMessage[]> {
   const today = new Date()
   const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate(), 12))
 
-  // Find mood entry for today
-  const mood = await prisma.mood.findFirst({
+  const mood = await prismaBase.mood.findFirst({
     where: {
       userId,
       day: {
@@ -126,9 +134,10 @@ export async function loadChat(): Promise<UIMessage[]> {
         lt: addDays(todayUTC, 1),
       },
     },
+    select: { conversation: true },
   })
 
-  if (mood && rowHasUnreadConversation(mood)) {
+  if (mood && storedConversationIsUnread(mood.conversation)) {
     throw new Error(
       "Refusing to load unread mood.conversation. The stored transcript could not be decrypted; it was not empty.",
     )

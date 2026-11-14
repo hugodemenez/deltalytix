@@ -247,7 +247,7 @@ export async function updateTradesAction(tradesIds: string[], update: Partial<Tr
       if ('comment' in normalUpdate) {
         const existing = await prismaBase.trade.findMany({
           where: { id: { in: tradesIds }, userId },
-          select: { comment: true },
+          select: { id: true, comment: true },
         })
         for (const row of existing) {
           tradeCommentWrite({
@@ -258,11 +258,26 @@ export async function updateTradesAction(tradesIds: string[], update: Partial<Tr
         if (typeof normalUpdate.comment === 'string') {
           normalUpdate.comment = encryptJournalField(normalUpdate.comment)
         }
+        let matched = 0
+        for (const row of existing) {
+          const written = await prismaBase.trade.updateMany({
+            where: { id: row.id, userId, comment: row.comment },
+            data: normalUpdate,
+          })
+          matched += written.count
+        }
+        if (existing.length > 0 && matched !== existing.length) {
+          throw new Error(
+            'Refusing to overwrite trade.comment: stored value changed concurrently.',
+          )
+        }
+        result = { count: matched }
+      } else {
+        result = await prisma.trade.updateMany({
+          where: { id: { in: tradesIds }, userId },
+          data: normalUpdate
+        })
       }
-      result = await prisma.trade.updateMany({
-        where: { id: { in: tradesIds }, userId },
-        data: normalUpdate
-      })
     }
 
     updateTag(`trades-${userId}`)
@@ -293,10 +308,15 @@ export async function updateTradeCommentAction(tradeId: string, comment: string 
       existingUndecryptable: storedCommentIsUnread(existing.comment),
       incoming: comment,
     })
-    await prisma.trade.update({
-      where: { id: tradeId, userId },
-      data: { comment: nextComment == null ? nextComment : encryptJournalField(nextComment) }
+    const result = await prismaBase.trade.updateMany({
+      where: { id: tradeId, userId, comment: existing.comment },
+      data: { comment: nextComment == null ? nextComment : encryptJournalField(nextComment) },
     })
+    if (result.count === 0) {
+      throw new Error(
+        'Refusing to overwrite trade.comment: stored value changed concurrently.',
+      )
+    }
     revalidatePath('/')
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {

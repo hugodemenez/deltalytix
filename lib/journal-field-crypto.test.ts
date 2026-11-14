@@ -14,6 +14,7 @@ import {
   isEncryptedJournalField,
   isJournalEncryptionWriteEnabled,
   isValidJournalCiphertext,
+  journalEncryptionKeyFingerprint,
   requireExact32ByteJournalKey,
   shouldRekeyStoredField,
   withDecryptedMoodFields,
@@ -318,7 +319,43 @@ describe('journal-field-crypto', () => {
     const cipher = encryptJournalField('keep me')
     process.env.JOURNAL_ENCRYPTION_KEY = 'b'.repeat(64)
     expect(() => assertBackfillCanDecryptSamples([cipher])).toThrow(/existing jrn:v1/)
-    assertBackfillCanDecryptSamples(['legacy plaintext', null])
+    expect(() =>
+      assertBackfillCanDecryptSamples(['legacy plaintext', null]),
+    ).toThrow(/no valid jrn:v1 sample/)
+    expect(
+      assertBackfillCanDecryptSamples(['legacy plaintext', null], {
+        allowNoCiphertextSample: true,
+      }),
+    ).toEqual({ ciphertextSamples: 0 })
+  })
+
+  it('keeps an incoming unread flag when the value was already nulled', () => {
+    const mood = withDecryptedMoodFields({
+      id: 'mood-unread',
+      journalContent: null,
+      conversation: null,
+      journalContentUndecryptable: true,
+      conversationUndecryptable: true,
+    })
+    expect(mood.journalContentUndecryptable).toBe(true)
+    expect(mood.conversationUndecryptable).toBe(true)
+    expect(mood.journalContent).toBeNull()
+    expect(mood.conversation).toBeNull()
+
+    const trade = withDecryptedTradeComment({
+      id: 't-unread',
+      comment: null,
+      commentUndecryptable: true,
+    })
+    expect(trade.commentUndecryptable).toBe(true)
+    expect(trade.comment).toBeNull()
+  })
+
+  it('prints a key fingerprint that is not the raw key', () => {
+    process.env.JOURNAL_ENCRYPTION_KEY = 'a'.repeat(64)
+    const fingerprint = journalEncryptionKeyFingerprint()
+    expect(fingerprint).toMatch(/^[0-9a-f]{12}$/)
+    expect(fingerprint).not.toBe('a'.repeat(12))
   })
 
   it('rekeys only ciphertext that still decrypts with the previous key', () => {

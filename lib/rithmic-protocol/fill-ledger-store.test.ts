@@ -8,8 +8,8 @@ const findMany = vi.fn()
 const deleteMany = vi.fn()
 const transaction = vi.fn()
 
-vi.mock('@/lib/prisma', () => ({
-  prisma: {
+vi.mock('@/lib/prisma', () => {
+  const client = {
     rithmicProtocolFill: {
       createMany: (...args: unknown[]) => createMany(...args),
       updateMany: (...args: unknown[]) => updateMany(...args),
@@ -20,8 +20,9 @@ vi.mock('@/lib/prisma', () => ({
       deleteMany: (...args: unknown[]) => deleteMany(...args),
     },
     $transaction: (...args: unknown[]) => transaction(...args),
-  },
-}))
+  }
+  return { prisma: client, prismaBase: client }
+})
 
 import { upsertRithmicProtocolFills } from './fill-ledger-store'
 

@@ -1,11 +1,72 @@
 import { describe, expect, it } from 'vitest'
-import { encryptJournalField } from './journal-field-crypto'
+import {
+  decryptJournalConversationResult,
+  decryptJournalFieldResult,
+  encryptJournalConversation,
+  encryptJournalField,
+  withDecryptedMoodFields,
+  withDecryptedTradeComment,
+} from './journal-field-crypto'
+import {
+  conversationWrite,
+  existingMoodConversationIsUnread,
+  existingMoodJournalIsUnread,
+  existingTradeCommentIsUnread,
+  JournalFieldUndecryptableError,
+  mindsetJournalContentWrite,
+  tradeCommentWrite,
+} from './journal-field-write-guard'
 import {
   decryptResultTree,
   encryptWriteArgs,
   encryptWritePayload,
   withJournalFieldEncryption,
 } from './prisma-journal-encryption'
+
+/** Prisma used to run result computes, then the query-hook tree walk. */
+function simulateResultComputeThenQueryHook(raw: {
+  id: string
+  journalContent?: string | null
+  conversation?: unknown
+  comment?: string | null
+  journalContentUndecryptable?: boolean
+  conversationUndecryptable?: boolean
+  commentUndecryptable?: boolean
+}) {
+  const afterResult = { ...raw }
+  if (typeof afterResult.journalContent === 'string') {
+    try {
+      const decrypted = decryptJournalFieldResult(afterResult.journalContent)
+      afterResult.journalContentUndecryptable = !decrypted.ok
+      afterResult.journalContent = decrypted.ok ? decrypted.value : null
+    } catch {
+      afterResult.journalContentUndecryptable = true
+      afterResult.journalContent = null
+    }
+  }
+  if (afterResult.conversation !== undefined) {
+    try {
+      const decrypted = decryptJournalConversationResult(afterResult.conversation)
+      afterResult.conversationUndecryptable = !decrypted.ok
+      afterResult.conversation = decrypted.ok ? decrypted.value : null
+    } catch {
+      afterResult.conversationUndecryptable = true
+      afterResult.conversation = null
+    }
+  }
+  if (typeof afterResult.comment === 'string') {
+    try {
+      const decrypted = decryptJournalFieldResult(afterResult.comment)
+      afterResult.commentUndecryptable = !decrypted.ok
+      afterResult.comment = decrypted.ok ? decrypted.value : null
+    } catch {
+      afterResult.commentUndecryptable = true
+      afterResult.comment = null
+    }
+  }
+  decryptResultTree(afterResult)
+  return afterResult
+}
 
 describe('prisma-journal-encryption nested writes', () => {
   it('encrypts { set } updates', () => {
@@ -201,5 +262,108 @@ describe('prisma-journal-encryption without a key', () => {
     expect(() => decryptResultTree(included)).not.toThrow()
     expect(included.trades[0].comment).toBeNull()
     expect(included.trades[0].commentUndecryptable).toBe(true)
+  })
+
+  it('keeps unread flags through result-compute then query-hook then withDecrypted*', () => {
+    process.env.JOURNAL_ENCRYPTION_WRITE = '1'
+    process.env.JOURNAL_ENCRYPTION_KEY = '1'.repeat(64)
+    const journalContent = encryptJournalField('keep journal')
+    const conversation = encryptJournalConversation(
+      JSON.stringify([{ role: 'user', content: 'keep chat' }]),
+    )
+    const comment = encryptJournalField('keep comment')
+    process.env.JOURNAL_ENCRYPTION_KEY = '2'.repeat(64)
+
+    const mood = withDecryptedMoodFields(
+      simulateResultComputeThenQueryHook({
+        id: 'm1',
+        journalContent,
+        conversation,
+      }),
+    )
+    expect(mood.journalContentUndecryptable).toBe(true)
+    expect(mood.conversationUndecryptable).toBe(true)
+    expect(() =>
+      mindsetJournalContentWrite({
+        existingUndecryptable: existingMoodJournalIsUnread(mood),
+        journalEdited: true,
+        incoming: 'overwrite',
+      }),
+    ).toThrow(JournalFieldUndecryptableError)
+    expect(() =>
+      conversationWrite({
+        existingUndecryptable: existingMoodConversationIsUnread(mood),
+        incoming: [],
+      }),
+    ).toThrow(/mood.conversation/)
+
+    const trade = withDecryptedTradeComment(
+      simulateResultComputeThenQueryHook({ id: 't1', comment }),
+    )
+    expect(trade.commentUndecryptable).toBe(true)
+    expect(() =>
+      tradeCommentWrite({
+        existingUndecryptable: existingTradeCommentIsUnread(trade),
+        incoming: '',
+      }),
+    ).toThrow(/trade.comment/)
+  })
+
+  it('keeps unread flags through the real query-hook client', async () => {
+    process.env.JOURNAL_ENCRYPTION_WRITE = '1'
+    process.env.JOURNAL_ENCRYPTION_KEY = '1'.repeat(64)
+    const journalContent = encryptJournalField('keep journal')
+    const conversation = encryptJournalConversation(
+      JSON.stringify([{ role: 'user', content: 'keep chat' }]),
+    )
+    process.env.JOURNAL_ENCRYPTION_KEY = '2'.repeat(64)
+
+    const stored = {
+      id: 'm1',
+      journalContent,
+      conversation,
+    }
+    const stub = {
+      $extends(extension: {
+        query?: {
+          $allModels?: {
+            $allOperations?: (args: {
+              operation: string
+              args: unknown
+              query: (args: unknown) => Promise<unknown>
+            }) => Promise<unknown>
+          }
+        }
+      }) {
+        const hook = extension.query?.$allModels?.$allOperations
+        return {
+          mood: {
+            findFirst: async () =>
+              hook!({
+                operation: 'findFirst',
+                args: {},
+                query: async () => ({ ...stored }),
+              }),
+          },
+        }
+      },
+    }
+    const client = withJournalFieldEncryption(stub as never) as {
+      mood: { findFirst: () => Promise<typeof stored & {
+        journalContentUndecryptable?: boolean
+        conversationUndecryptable?: boolean
+      }> }
+    }
+    const row = await client.mood.findFirst()
+    const mood = withDecryptedMoodFields(row)
+    expect(mood.journalContentUndecryptable).toBe(true)
+    expect(mood.conversationUndecryptable).toBe(true)
+    expect(() =>
+      mindsetJournalContentWrite({
+        existingUndecryptable: existingMoodJournalIsUnread(mood),
+        journalEdited: true,
+        incoming: '',
+      }),
+    ).toThrow(JournalFieldUndecryptableError)
   })
 })

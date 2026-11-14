@@ -403,38 +403,86 @@ export function decryptJournalConversationSafe(value: unknown, rowId?: unknown):
   }
 }
 
+function unreadFromFlagOrDecrypt(
+  flag: boolean | undefined,
+  decrypt: () => { ok: boolean },
+  nonempty: boolean,
+): boolean {
+  if (flag === true) return true
+  try {
+    return !decrypt().ok
+  } catch {
+    return nonempty
+  }
+}
+
 export function withDecryptedMoodFields<
-  T extends { id?: unknown; journalContent?: string | null; conversation?: unknown },
+  T extends {
+    id?: unknown
+    journalContent?: string | null
+    conversation?: unknown
+    journalContentUndecryptable?: boolean
+    conversationUndecryptable?: boolean
+  },
 >(row: T): T & {
   journalContentUndecryptable: boolean
   conversationUndecryptable: boolean
 } {
-  const journal = (() => {
+  const journalUnread = unreadFromFlagOrDecrypt(
+    row.journalContentUndecryptable,
+    () => decryptJournalFieldResult(row.journalContent ?? null),
+    typeof row.journalContent === 'string' && row.journalContent.length > 0,
+  )
+  const conversationUnread = unreadFromFlagOrDecrypt(
+    row.conversationUndecryptable,
+    () => decryptJournalConversationResult(row.conversation),
+    row.conversation != null && row.conversation !== '',
+  )
+
+  let journalContent = row.journalContent ?? null
+  if (journalUnread) {
+    journalContent = null
+  } else if (typeof journalContent === 'string') {
     try {
-      return decryptJournalFieldResult(row.journalContent ?? null)
+      const result = decryptJournalFieldResult(journalContent)
+      journalContent = result.ok ? result.value : null
     } catch {
-      return { ok: false as const, undecryptable: true as const }
+      // already treated as readable plaintext/legacy
     }
-  })()
-  const conversation = (() => {
+  }
+
+  let conversation = row.conversation
+  if (conversationUnread) {
+    conversation = null
+  } else {
     try {
-      return decryptJournalConversationResult(row.conversation)
+      const result = decryptJournalConversationResult(conversation)
+      conversation = result.ok ? result.value : conversation
     } catch {
-      return { ok: false as const, undecryptable: true as const }
+      // already treated as readable plaintext/legacy
     }
-  })()
+  }
+
   return {
     ...row,
-    journalContent: journal.ok ? journal.value : null,
-    conversation: conversation.ok ? conversation.value : null,
-    journalContentUndecryptable: !journal.ok,
-    conversationUndecryptable: !conversation.ok,
+    journalContent,
+    conversation,
+    journalContentUndecryptable: journalUnread,
+    conversationUndecryptable: conversationUnread,
   }
 }
 
-export function withDecryptedTradeComment<T extends { id?: unknown; comment?: string | null }>(
-  row: T,
-): T & { commentUndecryptable: boolean } {
+export function withDecryptedTradeComment<
+  T extends { id?: unknown; comment?: string | null; commentUndecryptable?: boolean },
+>(row: T): T & { commentUndecryptable: boolean } {
+  const unread = unreadFromFlagOrDecrypt(
+    row.commentUndecryptable,
+    () => decryptJournalFieldResult(row.comment ?? null),
+    typeof row.comment === 'string' && row.comment.length > 0,
+  )
+  if (unread) {
+    return { ...row, comment: null, commentUndecryptable: true }
+  }
   if (row.comment == null) {
     return { ...row, commentUndecryptable: false }
   }
@@ -472,29 +520,49 @@ export function rowHasUnreadTradeComment(row: {
   return row.commentUndecryptable === true || isJournalDecryptFailed(row.comment)
 }
 
+/** Short SHA-256 of the backfill key. Safe to print; is not the key. */
+export function journalEncryptionKeyFingerprint(): string {
+  const key = requireExact32ByteJournalKey()
+  return createHash('sha256').update(key).digest('hex').slice(0, 12)
+}
+
 export function assertBackfillCanDecryptSamples(
   samples: Array<string | null | undefined>,
-): void {
-  const ciphertext = samples.find(
+  options?: { allowNoCiphertextSample?: boolean },
+): { ciphertextSamples: number } {
+  const ciphertext = samples.filter(
     (value): value is string => typeof value === 'string' && isValidJournalCiphertext(value),
   )
-  if (!ciphertext) return
-  let result: JournalFieldDecryptResult
-  try {
-    result = decryptJournalFieldResult(ciphertext)
-  } catch (error) {
+  if (ciphertext.length === 0) {
+    if (options?.allowNoCiphertextSample) {
+      return { ciphertextSamples: 0 }
+    }
     throw new Error(
-      `Refusing to backfill: cannot decrypt an existing jrn:v1 row (${
-        error instanceof Error ? error.message : 'unknown error'
-      }).`,
+      'Refusing to backfill: no valid jrn:v1 sample found in journalContent, ' +
+        'conversation, or comment. Pass --allow-no-ciphertext-sample if this ' +
+        'database has never been encrypted.',
     )
   }
-  if (!result.ok) {
-    throw new Error(
-      'Refusing to backfill: cannot decrypt an existing jrn:v1 row with ' +
-        'JOURNAL_ENCRYPTION_KEY / JOURNAL_ENCRYPTION_PREVIOUS_KEY.',
-    )
+
+  for (const stored of ciphertext) {
+    let result: JournalFieldDecryptResult
+    try {
+      result = decryptJournalFieldResult(stored)
+    } catch (error) {
+      throw new Error(
+        `Refusing to backfill: cannot decrypt an existing jrn:v1 row (${
+          error instanceof Error ? error.message : 'unknown error'
+        }).`,
+      )
+    }
+    if (!result.ok) {
+      throw new Error(
+        'Refusing to backfill: cannot decrypt an existing jrn:v1 row with ' +
+          'JOURNAL_ENCRYPTION_KEY / JOURNAL_ENCRYPTION_PREVIOUS_KEY.',
+      )
+    }
   }
+  return { ciphertextSamples: ciphertext.length }
 }
 
 export function shouldRekeyStoredField(stored: string | null | undefined): boolean {

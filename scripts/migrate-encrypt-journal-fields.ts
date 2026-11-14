@@ -13,17 +13,20 @@
  * Prerequisites:
  *   - JOURNAL_ENCRYPTION_KEY must be an exact 32-byte hex or base64 key.
  *     ENCRYPTION_KEY fallback and placeholders are never accepted here.
- *   - If any jrn:v1 row already exists, this script decrypts one before
- *     writing. A wrong key aborts.
+ *   - Samples several jrn:v1 rows from journalContent, conversation, and
+ *     comment, prints a key fingerprint, and decrypts them before writing.
+ *     A wrong key aborts. If no ciphertext exists, pass
+ *     --allow-no-ciphertext-sample.
  *   - DATABASE_URL / DIRECT_URL pointing at the target DB
  *
  * Usage:
  *   bun run migrate:encrypt-journal-fields
  *   bun run migrate:encrypt-journal-fields -- --dry-run
  *   bun run migrate:encrypt-journal-fields -- --rekey
+ *   bun run migrate:encrypt-journal-fields -- --allow-no-ciphertext-sample
  */
 import { loadEnvLocal } from '@/lib/load-env-local.node'
-import { PrismaClient, type Prisma } from '@/prisma/generated/prisma/client'
+import { Prisma, PrismaClient } from '@/prisma/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import {
   JOURNAL_FIELD_ENC_PREFIX,
@@ -34,6 +37,7 @@ import {
   encryptJournalField,
   isPrismaJsonNullInput,
   isValidJournalCiphertext,
+  journalEncryptionKeyFingerprint,
   requireExact32ByteJournalKey,
   shouldRekeyStoredField,
 } from '@/lib/journal-field-crypto'
@@ -42,6 +46,7 @@ loadEnvLocal()
 
 const dryRun = process.argv.includes('--dry-run')
 const rekey = process.argv.includes('--rekey')
+const allowNoCiphertextSample = process.argv.includes('--allow-no-ciphertext-sample')
 const PAGE_SIZE = 500
 const encryptOpts = { force: true } as const
 
@@ -269,23 +274,56 @@ async function migrateTradeComments() {
   }
 }
 
-async function main() {
-  requireExact32ByteJournalKey()
+function collectCiphertext(values: unknown[], limit = 8): string[] {
+  const out: string[] = []
+  for (const value of values) {
+    if (typeof value === 'string' && isValidJournalCiphertext(value)) {
+      out.push(value)
+      if (out.length >= limit) break
+    }
+  }
+  return out
+}
 
-  const [moodSample, tradeSample] = await Promise.all([
-    prisma.mood.findFirst({
+async function sampleStoredCiphertext(): Promise<string[]> {
+  const [journalRows, conversationRows, commentRows] = await Promise.all([
+    prisma.mood.findMany({
       where: { journalContent: { startsWith: JOURNAL_FIELD_ENC_PREFIX } },
+      take: 8,
       select: { journalContent: true },
     }),
-    prisma.trade.findFirst({
+    prisma.mood.findMany({
+      where: { conversation: { not: Prisma.DbNull } },
+      take: 32,
+      select: { conversation: true },
+    }),
+    prisma.trade.findMany({
       where: { comment: { startsWith: JOURNAL_FIELD_ENC_PREFIX } },
+      take: 8,
       select: { comment: true },
     }),
   ])
-  assertBackfillCanDecryptSamples([
-    moodSample?.journalContent,
-    tradeSample?.comment,
-  ])
+  return [
+    ...collectCiphertext(journalRows.map((row) => row.journalContent)),
+    ...collectCiphertext(conversationRows.map((row) => row.conversation)),
+    ...collectCiphertext(commentRows.map((row) => row.comment)),
+  ]
+}
+
+async function main() {
+  requireExact32ByteJournalKey()
+  const fingerprint = journalEncryptionKeyFingerprint()
+  console.log(
+    `[migrate-encrypt-journal-fields] JOURNAL_ENCRYPTION_KEY fingerprint: ${fingerprint}`,
+  )
+
+  const samples = await sampleStoredCiphertext()
+  const proof = assertBackfillCanDecryptSamples(samples, {
+    allowNoCiphertextSample,
+  })
+  console.log(
+    `[migrate-encrypt-journal-fields] Ciphertext samples decrypted: ${proof.ciphertextSamples}`,
+  )
 
   console.log(
     `[migrate-encrypt-journal-fields] Starting${dryRun ? ' (dry-run)' : ''}${rekey ? ' (rekey)' : ''}…`,

@@ -1,4 +1,6 @@
+import { Prisma } from '@/prisma/generated/prisma/client'
 import {
+  decryptJournalConversationResult,
   decryptJournalFieldResult,
   rowHasUnreadConversation,
   rowHasUnreadJournalContent,
@@ -87,4 +89,29 @@ export function storedCommentIsUnread(comment: string | null | undefined): boole
   } catch {
     return typeof comment === 'string' && comment.length > 0
   }
+}
+
+/** Raw stored Mood.journalContent (unextended Prisma). */
+export function storedJournalIsUnread(
+  journalContent: string | null | undefined,
+): boolean {
+  try {
+    return !decryptJournalFieldResult(journalContent).ok
+  } catch {
+    return typeof journalContent === 'string' && journalContent.length > 0
+  }
+}
+
+/** Raw stored Mood.conversation (unextended Prisma). */
+export function storedConversationIsUnread(conversation: unknown): boolean {
+  try {
+    return !decryptJournalConversationResult(conversation).ok
+  } catch {
+    return conversation != null && conversation !== ''
+  }
+}
+
+export function storedJsonEquals(value: unknown): Prisma.JsonFilter {
+  if (value == null) return { equals: Prisma.DbNull }
+  return { equals: value as Prisma.InputJsonValue }
 }

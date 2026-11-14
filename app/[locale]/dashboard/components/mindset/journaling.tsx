@@ -19,6 +19,7 @@ interface JournalingProps {
   onNewsSelection: (newsIds: string[]) => void
   trades: Trade[]
   onApplyTagToAll: (tag: string) => Promise<void>
+  readOnly?: boolean
 }
 
 export function Journaling({
@@ -33,6 +34,7 @@ export function Journaling({
   onNewsSelection,
   trades,
   onApplyTagToAll,
+  readOnly = false,
 }: JournalingProps) {
   const t = useI18n()
 
@@ -58,6 +60,7 @@ export function Journaling({
           selectedNews={selectedNews}
           onNewsSelection={onNewsSelection}
           date={date}
+          readOnly={readOnly}
         />
       </div>
 

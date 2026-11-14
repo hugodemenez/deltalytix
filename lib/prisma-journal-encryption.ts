@@ -107,54 +107,59 @@ function logDecryptFailure(field: string, rowId: unknown) {
   })
 }
 
+function decryptStringColumn(
+  row: Record<string, unknown>,
+  field: 'comment' | 'journalContent',
+  flag: 'commentUndecryptable' | 'journalContentUndecryptable',
+  logName: string,
+): void {
+  if (row[flag] === true) {
+    row[field] = null
+    return
+  }
+  if (typeof row[field] !== 'string') return
+  try {
+    const result = decryptJournalFieldResult(row[field] as string)
+    row[flag] = !result.ok
+    if (result.ok) {
+      row[field] = result.value
+    } else {
+      logDecryptFailure(logName, row.id)
+      row[field] = null
+    }
+  } catch {
+    logDecryptFailure(logName, row.id)
+    row[flag] = true
+    row[field] = null
+  }
+}
+
 function decryptRowFields(row: Record<string, unknown>): void {
-  if (typeof row.comment === 'string') {
-    try {
-      const result = decryptJournalFieldResult(row.comment)
-      row.commentUndecryptable = !result.ok
-      if (result.ok) {
-        row.comment = result.value
-      } else {
-        logDecryptFailure('trade.comment', row.id)
-        row.comment = null
-      }
-    } catch {
-      logDecryptFailure('trade.comment', row.id)
-      row.commentUndecryptable = true
-      row.comment = null
-    }
+  decryptStringColumn(row, 'comment', 'commentUndecryptable', 'trade.comment')
+  decryptStringColumn(
+    row,
+    'journalContent',
+    'journalContentUndecryptable',
+    'mood.journalContent',
+  )
+  if (row.conversationUndecryptable === true) {
+    row.conversation = null
+    return
   }
-  if (typeof row.journalContent === 'string') {
-    try {
-      const result = decryptJournalFieldResult(row.journalContent)
-      row.journalContentUndecryptable = !result.ok
-      if (result.ok) {
-        row.journalContent = result.value
-      } else {
-        logDecryptFailure('mood.journalContent', row.id)
-        row.journalContent = null
-      }
-    } catch {
-      logDecryptFailure('mood.journalContent', row.id)
-      row.journalContentUndecryptable = true
-      row.journalContent = null
-    }
-  }
-  if (row.conversation !== undefined) {
-    try {
-      const result = decryptJournalConversationResult(row.conversation)
-      row.conversationUndecryptable = !result.ok
-      if (result.ok) {
-        row.conversation = result.value
-      } else {
-        logDecryptFailure('mood.conversation', row.id)
-        row.conversation = null
-      }
-    } catch {
+  if (row.conversation === undefined) return
+  try {
+    const result = decryptJournalConversationResult(row.conversation)
+    row.conversationUndecryptable = !result.ok
+    if (result.ok) {
+      row.conversation = result.value
+    } else {
       logDecryptFailure('mood.conversation', row.id)
-      row.conversationUndecryptable = true
       row.conversation = null
     }
+  } catch {
+    logDecryptFailure('mood.conversation', row.id)
+    row.conversationUndecryptable = true
+    row.conversation = null
   }
 }
 
@@ -184,85 +189,13 @@ export function decryptResultTree(result: unknown): unknown {
 
 /**
  * Transparent AES-256-GCM for Mood journal/conversation and Trade.comment.
- * Query hooks cover nested writes; result extensions + tree walk cover includes.
+ * One decrypt layer: the query hook tree-walks results (including nested
+ * includes). Prisma `result` computes are intentionally not used — they ran
+ * before the hook and nulled unread ciphertext, so a second decrypt of `null`
+ * reset `*Undecryptable` to false.
  */
 export function withJournalFieldEncryption<T extends PrismaClient>(client: T): T {
   return client.$extends({
-    result: {
-      trade: {
-        comment: {
-          needs: { comment: true, id: true },
-          compute(row) {
-            try {
-              const result = decryptJournalFieldResult(row.comment)
-              if (result.ok) return result.value
-            } catch {
-              // missing key on ciphertext
-            }
-            logDecryptFailure('trade.comment', row.id)
-            return null
-          },
-        },
-        commentUndecryptable: {
-          needs: { comment: true, id: true },
-          compute(row) {
-            try {
-              return !decryptJournalFieldResult(row.comment).ok
-            } catch {
-              return Boolean(row.comment)
-            }
-          },
-        },
-      },
-      mood: {
-        journalContent: {
-          needs: { journalContent: true, id: true },
-          compute(row) {
-            try {
-              const result = decryptJournalFieldResult(row.journalContent)
-              if (result.ok) return result.value
-            } catch {
-              // missing key on ciphertext
-            }
-            logDecryptFailure('mood.journalContent', row.id)
-            return null
-          },
-        },
-        journalContentUndecryptable: {
-          needs: { journalContent: true, id: true },
-          compute(row) {
-            try {
-              return !decryptJournalFieldResult(row.journalContent).ok
-            } catch {
-              return Boolean(row.journalContent)
-            }
-          },
-        },
-        conversation: {
-          needs: { conversation: true, id: true },
-          compute(row) {
-            try {
-              const result = decryptJournalConversationResult(row.conversation)
-              if (result.ok) return result.value
-            } catch {
-              // missing key on ciphertext
-            }
-            logDecryptFailure('mood.conversation', row.id)
-            return null
-          },
-        },
-        conversationUndecryptable: {
-          needs: { conversation: true, id: true },
-          compute(row) {
-            try {
-              return !decryptJournalConversationResult(row.conversation).ok
-            } catch {
-              return row.conversation != null
-            }
-          },
-        },
-      },
-    },
     query: {
       $allModels: {
         async $allOperations({ operation, args, query }) {
