@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
+import { resolveAuthEmailLocale } from './auth-email-locale'
 import {
   accountDeletedHomeHref,
   parseAccountDeletedParam,
@@ -26,5 +27,17 @@ describe('account deleted notice param', () => {
     expect(accountDeletedHomeHref('en', 'partial_unrecorded')).toBe(
       '/?account_deleted=partial_unrecorded',
     )
+  })
+
+  it('pending-cleanup refusal uses the user locale for the partial notice', () => {
+    expect(
+      accountDeletedHomeHref(resolveAuthEmailLocale('fr'), 'partial'),
+    ).toBe('/fr?account_deleted=partial')
+    expect(
+      accountDeletedHomeHref(resolveAuthEmailLocale('en'), 'partial'),
+    ).toBe('/?account_deleted=partial')
+    expect(
+      accountDeletedHomeHref(resolveAuthEmailLocale(undefined), 'partial'),
+    ).toBe('/?account_deleted=partial')
   })
 })

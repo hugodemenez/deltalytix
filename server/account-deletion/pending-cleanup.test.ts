@@ -142,6 +142,73 @@ describe('retryPendingAccountCleanups', () => {
     expect(cancelStripeCustomersByIds).not.toHaveBeenCalled()
   })
 
+  it('dry-run also skips storage deletes', async () => {
+    findMany.mockResolvedValue([
+      {
+        id: 'row-storage',
+        failureKind: 'STORAGE',
+        storagePrefixes: ['auth-1'],
+        stripeCustomerIds: [],
+        authUserId: 'auth-1',
+        formerUserId: null,
+      },
+    ])
+
+    const results = await retryPendingAccountCleanups({ dryRun: true })
+    expect(results[0]).toMatchObject({
+      id: 'row-storage',
+      ok: false,
+      dryRun: true,
+      storageError: 'dry-run; no changes applied',
+    })
+    expect(deleteUserTradeImageObjects).not.toHaveBeenCalled()
+    expect(deleteRow).not.toHaveBeenCalled()
+  })
+
+  it('refuses cleanup under local auth bypass', async () => {
+    isLocalDashboardAuthBypassEnabled.mockReturnValue(true)
+    findMany.mockResolvedValue([
+      {
+        id: 'row-bypass',
+        failureKind: 'BOTH',
+        storagePrefixes: ['auth-1'],
+        stripeCustomerIds: ['cus_1'],
+        authUserId: 'auth-1',
+        formerUserId: null,
+      },
+    ])
+
+    const results = await retryPendingAccountCleanups()
+    expect(results[0]).toMatchObject({
+      ok: false,
+      storageError: expect.stringContaining('LOCAL_DASHBOARD_AUTH_BYPASS'),
+      stripeError: expect.stringContaining('LOCAL_DASHBOARD_AUTH_BYPASS'),
+    })
+    expect(deleteUserTradeImageObjects).not.toHaveBeenCalled()
+    expect(cancelStripeCustomersByIds).not.toHaveBeenCalled()
+  })
+
+  it('keeps STRIPE rows that have an empty customer id list', async () => {
+    findMany.mockResolvedValue([
+      {
+        id: 'row-empty',
+        failureKind: 'STRIPE',
+        storagePrefixes: [],
+        stripeCustomerIds: [],
+        authUserId: 'auth-1',
+        formerUserId: null,
+      },
+    ])
+
+    const results = await retryPendingAccountCleanups()
+    expect(results[0]).toMatchObject({
+      ok: false,
+      stripeError: expect.stringContaining('missing Stripe customer ids'),
+    })
+    expect(cancelStripeCustomersByIds).not.toHaveBeenCalled()
+    expect(deleteRow).not.toHaveBeenCalled()
+  })
+
   it('keeps STRIPE rows when cancel returns not configured', async () => {
     findMany.mockResolvedValue([
       {

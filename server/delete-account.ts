@@ -51,8 +51,8 @@ export async function deleteCurrentUserAccount(): Promise<DeleteAccountResult> {
     ),
   )
 
-  // When Stripe is not configured, still refuse if a live personal / team /
-  // business subscription remains (active, trialing, or past_due).
+  // When Stripe is not configured, still refuse if a non-terminal personal /
+  // team / business subscription remains (deny-list: cancelled/expired only).
   if (
     !isStripeSecretConfigured() &&
     (await hasLiveAppSubscription({ userIds, emails }))
@@ -188,8 +188,19 @@ export async function deleteCurrentUserAccount(): Promise<DeleteAccountResult> {
   }
 
   // Keep auth if the durable queue write failed so operators can still act.
+  // If auth delete fails after the queue row exists, the auth user is still
+  // present — treat that like an unrecorded partial so the landing copy is honest.
+  let authDeleteFailed = false
   if (!queueWriteFailed) {
-    await deleteSupabaseAuthUser(user.id)
+    try {
+      await deleteSupabaseAuthUser(user.id)
+    } catch (authError) {
+      authDeleteFailed = true
+      console.error(
+        '[delete-account] auth delete failed after queue write:',
+        authError instanceof Error ? authError.message : authError,
+      )
+    }
   }
 
   const { error: signOutError } = await supabase.auth.signOut()
@@ -206,7 +217,7 @@ export async function deleteCurrentUserAccount(): Promise<DeleteAccountResult> {
     }
   }
 
-  if (queueWriteFailed) {
+  if (queueWriteFailed || authDeleteFailed) {
     return { status: 'partial_unrecorded' }
   }
   return {
