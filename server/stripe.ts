@@ -1,13 +1,15 @@
 import 'server-only'
 
 import { isLocalDashboardAuthBypassEnabled } from "@/lib/local-dashboard-auth";
+import { isStripeSecretConfigured } from "@/lib/stripe-secret";
 import Stripe from "stripe";
 
+// `isStripeSecretConfigured()` and this client both read `process.env.STRIPE_SECRET_KEY`.
 const stripeSecretKey =
   process.env.STRIPE_SECRET_KEY ||
   (isLocalDashboardAuthBypassEnabled() ? "sk_test_local_dashboard_bypass" : undefined)
 
-if (!stripeSecretKey) {
+if (!stripeSecretKey || (!isStripeSecretConfigured() && !isLocalDashboardAuthBypassEnabled())) {
   throw new Error("STRIPE_SECRET_KEY is required outside local dashboard bypass mode.")
 }
 

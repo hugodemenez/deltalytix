@@ -69,6 +69,21 @@ describe('AccountDeletedNotice', () => {
     })
   })
 
+  it('renders partial_unrecorded copy', async () => {
+    useSearchParams.mockReturnValue(
+      new URLSearchParams('account_deleted=partial_unrecorded'),
+    )
+
+    render(<AccountDeletedNotice />)
+
+    expect(
+      await screen.findByText('landing.accountDeleted.partialUnrecorded'),
+    ).toBeTruthy()
+    expect(
+      screen.getByRole('status').getAttribute('data-account-deleted'),
+    ).toBe('partial_unrecorded')
+  })
+
   it('renders nothing without the account_deleted param', () => {
     useSearchParams.mockReturnValue(new URLSearchParams('utm=only'))
     const { container } = render(<AccountDeletedNotice />)

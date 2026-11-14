@@ -33,6 +33,7 @@ jobs:
             'lib/consent-persist.test.ts' \
             'lib/account-deleted-notice.test.ts' \
             'lib/account-deletion-result.test.ts' \
+            'lib/stripe-secret.test.ts' \
             'components/google-tag.test.ts' \
             'components/account-deleted-notice.test.tsx' \
             'server/account-deletion/trade-rows.test.ts' \

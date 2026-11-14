@@ -521,6 +521,27 @@ async function ensureUserRecord(user: AuthenticatedIdentity, locale?: string) {
       }
     }
 
+    // Refuse to recreate a User while unresolved cleanup still targets this auth id.
+    const pendingCleanup = await prisma.pendingAccountCleanup.findFirst({
+      where: {
+        resolvedAt: null,
+        OR: [
+          { authUserId: user.id },
+          { formerUserId: user.id },
+          { storagePrefixes: { has: user.id } },
+        ],
+      },
+      select: { id: true },
+    });
+    if (pendingCleanup) {
+      console.log(
+        '[ensureUserInDatabase] ERROR: unresolved PendingAccountCleanup for auth id',
+        { authUserId: user.id, pendingId: pendingCleanup.id },
+      );
+      await signOut();
+      throw new Error('Account cleanup is still pending; contact contact@deltalytix.app');
+    }
+
     // Create new user if no existing user found
     console.log('[ensureUserInDatabase] Creating new user');
     try {

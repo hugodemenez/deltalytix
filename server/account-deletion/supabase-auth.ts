@@ -44,3 +44,47 @@ export async function supabaseAuthUserExists(
     return true
   }
 }
+
+/**
+ * True when any Supabase auth user has this email (case-insensitive).
+ * Fail closed on admin errors so Stripe cancel is skipped.
+ */
+export async function supabaseAuthEmailExists(
+  email: string,
+): Promise<boolean> {
+  if (isLocalDashboardAuthBypassEnabled()) return false
+  const normalized = email.trim().toLowerCase()
+  if (!normalized) return false
+
+  try {
+    const admin = adminClient()
+    let page = 1
+    const perPage = 200
+    for (;;) {
+      const { data, error } = await admin.auth.admin.listUsers({ page, perPage })
+      if (error) {
+        console.error(
+          '[delete-account] auth email existence check failed:',
+          error.message,
+        )
+        return true
+      }
+      if (
+        data.users.some((user) => user.email?.trim().toLowerCase() === normalized)
+      ) {
+        return true
+      }
+      if (data.users.length < perPage) return false
+      page += 1
+      if (page > 50) {
+        console.error(
+          '[delete-account] auth email existence check aborted after max pages',
+        )
+        return true
+      }
+    }
+  } catch (error) {
+    console.error('[delete-account] auth email existence check threw:', error)
+    return true
+  }
+}

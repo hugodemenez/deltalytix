@@ -79,6 +79,8 @@ describe("privacy OpenAI / Apps checklist copy", () => {
     expect(en.privacy.retention.tradesJournal).toMatch(/pending-cleanup record/i);
     expect(en.privacy.retention.tradesJournal).toMatch(/no email/i);
     expect(en.privacy.retention.tradesJournal).toMatch(/until cleanup finishes/i);
+    expect(en.privacy.retention.tradesJournal).toMatch(/not automatic/i);
+    expect(en.privacy.retention.tradesJournal).toMatch(/contact@deltalytix\.app/);
     expect(en.privacy.retention.tradesJournal).not.toMatch(/30 days/i);
     expect(en.privacy.retention.tradesJournal).toMatch(/file storage/i);
     expect(en.privacy.retention.tokens).toMatch(/revoke/i);
@@ -131,6 +133,8 @@ describe("privacy OpenAI / Apps checklist copy", () => {
     expect(fr.privacy.retention.tradesJournal).toMatch(/nettoyage en attente/i);
     expect(fr.privacy.retention.tradesJournal).toMatch(/pas d'e-mail/i);
     expect(fr.privacy.retention.tradesJournal).toMatch(/jusqu'à la fin du nettoyage/i);
+    expect(fr.privacy.retention.tradesJournal).toMatch(/pas automatique/i);
+    expect(fr.privacy.retention.tradesJournal).toMatch(/contact@deltalytix\.app/);
     expect(fr.privacy.retention.tradesJournal).not.toMatch(/30 jours/i);
     expect(fr.privacy.retention.tokens).toMatch(/révocation|révoqu/i);
     expect(fr.privacy.retention.billing).toMatch(/Stripe/);
