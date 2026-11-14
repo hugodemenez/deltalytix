@@ -2,9 +2,15 @@ import 'server-only'
 
 import { prisma } from '@/lib/prisma'
 import { isLocalDashboardAuthBypassEnabled } from '@/lib/local-dashboard-auth'
-import { cancelStripeCustomersByIds } from '@/server/account-deletion/stripe'
+import {
+  cancelStripeCustomersByIds,
+  listStripeCustomerEmailsByIds,
+} from '@/server/account-deletion/stripe'
 import { deleteUserTradeImageObjects } from '@/server/account-deletion/storage'
-import { supabaseAuthUserExists } from '@/server/account-deletion/supabase-auth'
+import {
+  supabaseAuthEmailExists,
+  supabaseAuthUserExists,
+} from '@/server/account-deletion/supabase-auth'
 import { failureKindFromFlags } from '@/server/account-deletion/failure-kind'
 import { isUuid } from '@/server/account-deletion/id-format'
 
@@ -99,9 +105,32 @@ async function accountIsLiveAgain(
   return false
 }
 
+async function stripeEmailIsLiveAgain(
+  customerIds: string[],
+): Promise<string | undefined> {
+  const emails = await listStripeCustomerEmailsByIds(customerIds)
+  if (!emails.ok) {
+    return emails.error ?? 'unable to load Stripe customer emails'
+  }
+  for (const email of emails.emails) {
+    const user = await prisma.user.findFirst({
+      where: { email: { equals: email, mode: 'insensitive' } },
+      select: { id: true },
+    })
+    if (user) {
+      return `refusing Stripe cancel; live User email matches Stripe customer`
+    }
+    if (await supabaseAuthEmailExists(email)) {
+      return `refusing Stripe cancel; live auth email matches Stripe customer`
+    }
+  }
+  return undefined
+}
+
 /**
  * Retry unresolved PendingAccountCleanup rows (storage + Stripe only).
- * Deletes the queue row when work succeeds (no resolved retention).
+ * Deletes the queue row when work succeeds (resolvedAt column remains for
+ * any historical rows; new successes delete immediately).
  * Never resolves STRIPE work with an empty customer id list.
  * Dry-run performs no deletes or purges and reports non-ok.
  */
@@ -170,8 +199,13 @@ export async function retryPendingAccountCleanups(options?: {
         stripeError =
           'refusing Stripe cancel; auth or User record is live again'
       } else {
-        const stripe = await cancelStripeCustomersByIds(row.stripeCustomerIds)
-        if (!stripe.ok) stripeError = stripe.error
+        const emailConflict = await stripeEmailIsLiveAgain(row.stripeCustomerIds)
+        if (emailConflict) {
+          stripeError = emailConflict
+        } else {
+          const stripe = await cancelStripeCustomersByIds(row.stripeCustomerIds)
+          if (!stripe.ok) stripeError = stripe.error
+        }
       }
     }
 

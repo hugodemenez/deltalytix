@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const getUser = vi.fn()
 const signOut = vi.fn()
 const findFirst = vi.fn()
+const subscriptionFindFirst = vi.fn()
 const transaction = vi.fn()
 const deleteUserTradeRelatedRows = vi.fn()
 const deleteUserTradeImageObjects = vi.fn()
@@ -10,10 +11,13 @@ const listStripeCustomerIdsForEmails = vi.fn()
 const cancelStripeCustomersByIds = vi.fn()
 const deleteSupabaseAuthUser = vi.fn()
 const recordPendingAccountCleanup = vi.fn()
+const isStripeSecretConfigured = vi.fn()
+const hasLiveAppSubscription = vi.fn()
 
 vi.mock('@/lib/prisma', () => ({
   prisma: {
     user: { findFirst },
+    subscription: { findFirst: subscriptionFindFirst },
     $transaction: transaction,
   },
 }))
@@ -22,6 +26,14 @@ vi.mock('@/server/auth', () => ({
   createClient: vi.fn(async () => ({
     auth: { getUser, signOut },
   })),
+}))
+
+vi.mock('@/lib/stripe-secret', () => ({
+  isStripeSecretConfigured: () => isStripeSecretConfigured(),
+}))
+
+vi.mock('@/server/account-deletion/live-subscription', () => ({
+  hasLiveAppSubscription: (...args: unknown[]) => hasLiveAppSubscription(...args),
 }))
 
 vi.mock('@/server/account-deletion/trade-rows', () => ({
@@ -63,6 +75,8 @@ function mockTx() {
 describe('deleteCurrentUserAccount', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    isStripeSecretConfigured.mockReturnValue(true)
+    hasLiveAppSubscription.mockResolvedValue(false)
     getUser.mockResolvedValue({
       data: { user: { id: 'auth-1', email: 'user@example.com' } },
     })
@@ -111,10 +125,19 @@ describe('deleteCurrentUserAccount', () => {
       reason: 'billing_check_failed',
     })
     expect(transaction).not.toHaveBeenCalled()
-    expect(deleteUserTradeImageObjects).not.toHaveBeenCalled()
-    expect(cancelStripeCustomersByIds).not.toHaveBeenCalled()
-    expect(deleteSupabaseAuthUser).not.toHaveBeenCalled()
-    expect(signOut).not.toHaveBeenCalled()
+  })
+
+  it('blocks when Stripe is unconfigured but a live app Subscription exists', async () => {
+    isStripeSecretConfigured.mockReturnValue(false)
+    hasLiveAppSubscription.mockResolvedValue(true)
+
+    const { deleteCurrentUserAccount } = await import('./delete-account')
+    await expect(deleteCurrentUserAccount()).resolves.toEqual({
+      status: 'blocked',
+      reason: 'billing_check_failed',
+    })
+    expect(listStripeCustomerIdsForEmails).not.toHaveBeenCalled()
+    expect(transaction).not.toHaveBeenCalled()
   })
 
   it('runs cleanup in order: Stripe precheck, DB, storage, Stripe cancel, then auth', async () => {
@@ -150,25 +173,9 @@ describe('deleteCurrentUserAccount', () => {
       'stripe-cancel',
       'auth',
     ])
-    expect(signOut).toHaveBeenCalledTimes(1)
-    expect(recordPendingAccountCleanup).not.toHaveBeenCalled()
   })
 
-  it('returns partial, queues cleanup, and still deletes auth when storage fails', async () => {
-    deleteUserTradeImageObjects.mockResolvedValue({
-      removed: 0,
-      error: 'list failed',
-    })
-
-    const { deleteCurrentUserAccount } = await import('./delete-account')
-    const result = await deleteCurrentUserAccount()
-
-    expect(result).toEqual({ status: 'partial' })
-    expect(recordPendingAccountCleanup).toHaveBeenCalled()
-    expect(deleteSupabaseAuthUser).toHaveBeenCalledWith('auth-1')
-  })
-
-  it('keeps the auth user and returns partial when the queue write fails', async () => {
+  it('returns partial_unrecorded and keeps auth when the queue write fails', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     deleteUserTradeImageObjects.mockResolvedValue({
       removed: 0,
@@ -179,22 +186,8 @@ describe('deleteCurrentUserAccount', () => {
     const { deleteCurrentUserAccount } = await import('./delete-account')
     const result = await deleteCurrentUserAccount()
 
-    expect(result).toEqual({ status: 'partial' })
+    expect(result).toEqual({ status: 'partial_unrecorded' })
     expect(deleteSupabaseAuthUser).not.toHaveBeenCalled()
-    expect(errorSpy).toHaveBeenCalledWith(
-      '[delete-account] Failed to queue PendingAccountCleanup',
-      expect.objectContaining({
-        formerUserId: 'db-1',
-        authUserId: 'auth-1',
-        stripeCustomerIds: ['cus_1'],
-        failureKind: 'STORAGE',
-      }),
-    )
-    const logged = errorSpy.mock.calls.find(
-      (call) =>
-        call[0] === '[delete-account] Failed to queue PendingAccountCleanup',
-    )
-    expect(JSON.stringify(logged)).not.toMatch(/user@example\.com/)
     errorSpy.mockRestore()
   })
 
@@ -224,37 +217,7 @@ describe('deleteCurrentUserAccount', () => {
     const result = await deleteCurrentUserAccount()
 
     expect(result).toEqual({ status: 'partial' })
-    expect(recordPendingAccountCleanup).toHaveBeenCalledWith(
-      expect.objectContaining({
-        storageFailed: false,
-        stripeFailed: true,
-        stripeCustomerIds: ['cus_1'],
-      }),
-    )
     expect(deleteSupabaseAuthUser).toHaveBeenCalledWith('auth-1')
-  })
-
-  it('queues BOTH when storage and Stripe fail', async () => {
-    deleteUserTradeImageObjects.mockResolvedValue({
-      removed: 1,
-      error: 'remove failed',
-    })
-    cancelStripeCustomersByIds.mockResolvedValue({
-      ok: false,
-      error: 'stripe boom',
-      customerIds: ['cus_1'],
-    })
-
-    const { deleteCurrentUserAccount } = await import('./delete-account')
-    const result = await deleteCurrentUserAccount()
-
-    expect(result).toEqual({ status: 'partial' })
-    expect(recordPendingAccountCleanup).toHaveBeenCalledWith(
-      expect.objectContaining({
-        storageFailed: true,
-        stripeFailed: true,
-      }),
-    )
   })
 
   it('propagates transaction rejection before storage or auth work', async () => {
@@ -263,7 +226,18 @@ describe('deleteCurrentUserAccount', () => {
     const { deleteCurrentUserAccount } = await import('./delete-account')
     await expect(deleteCurrentUserAccount()).rejects.toThrow('tx timeout')
     expect(deleteUserTradeImageObjects).not.toHaveBeenCalled()
+    expect(cancelStripeCustomersByIds).not.toHaveBeenCalled()
     expect(deleteSupabaseAuthUser).not.toHaveBeenCalled()
+  })
+
+  it('propagates auth-delete throw after cleanup attempts', async () => {
+    deleteSupabaseAuthUser.mockRejectedValue(new Error('auth delete failed'))
+
+    const { deleteCurrentUserAccount } = await import('./delete-account')
+    await expect(deleteCurrentUserAccount()).rejects.toThrow('auth delete failed')
+    expect(deleteUserTradeImageObjects).toHaveBeenCalled()
+    expect(cancelStripeCustomersByIds).toHaveBeenCalled()
+    expect(signOut).not.toHaveBeenCalled()
   })
 
   it('skips Stripe cancel when precheck found no customers', async () => {

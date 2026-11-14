@@ -2,10 +2,12 @@
 
 import { prisma } from '@/lib/prisma'
 import { createClient } from '@/server/auth'
+import { isStripeSecretConfigured } from '@/lib/stripe-secret'
 import {
   cancelStripeCustomersByIds,
   listStripeCustomerIdsForEmails,
 } from '@/server/account-deletion/stripe'
+import { hasLiveAppSubscription } from '@/server/account-deletion/live-subscription'
 import { deleteUserTradeImageObjects } from '@/server/account-deletion/storage'
 import { deleteUserTradeRelatedRows } from '@/server/account-deletion/trade-rows'
 import { deleteSupabaseAuthUser } from '@/server/account-deletion/supabase-auth'
@@ -48,6 +50,14 @@ export async function deleteCurrentUserAccount(): Promise<DeleteAccountResult> {
         .map((value) => value.trim()),
     ),
   )
+
+  // When Stripe is not configured, still refuse if an app Subscription remains.
+  if (
+    !isStripeSecretConfigured() &&
+    (await hasLiveAppSubscription({ userIds, emails }))
+  ) {
+    return { status: 'blocked', reason: 'billing_check_failed' }
+  }
 
   // Fail closed when Stripe is configured and lookup fails. Structured result
   // (not a thrown message) so production clients still see the localised copy.
@@ -195,8 +205,10 @@ export async function deleteCurrentUserAccount(): Promise<DeleteAccountResult> {
     }
   }
 
+  if (queueWriteFailed) {
+    return { status: 'partial_unrecorded' }
+  }
   return {
-    status:
-      storageFailed || stripeFailed || queueWriteFailed ? 'partial' : 'complete',
+    status: storageFailed || stripeFailed ? 'partial' : 'complete',
   }
 }

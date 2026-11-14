@@ -32,9 +32,11 @@ function AccountDeletedNoticeInner() {
   if (!status) return null
 
   const message =
-    status === 'partial'
-      ? t('landing.accountDeleted.partial')
-      : t('landing.accountDeleted.complete')
+    status === 'partial_unrecorded'
+      ? t('landing.accountDeleted.partialUnrecorded')
+      : status === 'partial'
+        ? t('landing.accountDeleted.partial')
+        : t('landing.accountDeleted.complete')
 
   return (
     <div

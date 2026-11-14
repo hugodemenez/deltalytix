@@ -1,11 +1,17 @@
-export type AccountDeletedStatus = 'complete' | 'partial'
+export type AccountDeletedStatus = 'complete' | 'partial' | 'partial_unrecorded'
 
 export const ACCOUNT_DELETED_PARAM = 'account_deleted'
 
 export function parseAccountDeletedParam(
   value: string | null | undefined,
 ): AccountDeletedStatus | null {
-  if (value === 'complete' || value === 'partial') return value
+  if (
+    value === 'complete' ||
+    value === 'partial' ||
+    value === 'partial_unrecorded'
+  ) {
+    return value
+  }
   return null
 }
 
