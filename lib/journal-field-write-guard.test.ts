@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { Prisma } from '@/prisma/generated/prisma/client'
 import {
   copyStoredTradeComment,
   conversationWrite,
@@ -10,6 +11,7 @@ import {
   storedCommentIsUnread,
   storedConversationIsUnread,
   storedJournalIsUnread,
+  storedJsonEquals,
   tradeCommentWrite,
 } from './journal-field-write-guard'
 import {
@@ -144,5 +146,16 @@ describe('journal field write guards', () => {
         incoming: '',
       }),
     ).toThrow(/trade.comment/)
+  })
+
+  it('matches JSON null transcripts with AnyNull so JsonNull and DbNull both hit', () => {
+    expect(storedJsonEquals(null)).toEqual({ equals: Prisma.AnyNull })
+    expect(storedJsonEquals(undefined)).toEqual({ equals: Prisma.AnyNull })
+    expect(storedJsonEquals(Prisma.JsonNull)).toEqual({ equals: Prisma.AnyNull })
+    expect(storedJsonEquals(Prisma.DbNull)).toEqual({ equals: Prisma.AnyNull })
+    expect(storedJsonEquals(Prisma.AnyNull)).toEqual({ equals: Prisma.AnyNull })
+    expect(storedJsonEquals([{ role: 'user', content: 'hi' }])).toEqual({
+      equals: [{ role: 'user', content: 'hi' }],
+    })
   })
 })

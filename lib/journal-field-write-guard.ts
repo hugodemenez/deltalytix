@@ -2,6 +2,7 @@ import { Prisma } from '@/prisma/generated/prisma/client'
 import {
   decryptJournalConversationResult,
   decryptJournalFieldResult,
+  isPrismaJsonNullInput,
   rowHasUnreadConversation,
   rowHasUnreadJournalContent,
   rowHasUnreadTradeComment,
@@ -112,6 +113,8 @@ export function storedConversationIsUnread(conversation: unknown): boolean {
 }
 
 export function storedJsonEquals(value: unknown): Prisma.JsonFilter {
-  if (value == null) return { equals: Prisma.DbNull }
+  if (value == null || isPrismaJsonNullInput(value)) {
+    return { equals: Prisma.AnyNull }
+  }
   return { equals: value as Prisma.InputJsonValue }
 }

@@ -190,6 +190,9 @@ export function JournalEditor({
 
   const insertImageFile = useCallback(
     async (file: File) => {
+      if (readOnly) {
+        return
+      }
       try {
         const src = await handleImageUpload(file)
         insertHtml(
@@ -200,7 +203,7 @@ export function JournalEditor({
         toast.error(t("trade-table.imageUploadError", { error: "Upload failed" }))
       }
     },
-    [handleImageUpload, insertHtml, t],
+    [handleImageUpload, insertHtml, readOnly, t],
   )
 
   const handleEmbedNews = useCallback(
@@ -275,7 +278,12 @@ export function JournalEditor({
         type="file"
         accept="image/*"
         className="hidden"
+        disabled={readOnly}
         onChange={(event) => {
+          if (readOnly) {
+            event.target.value = ""
+            return
+          }
           const file = event.target.files?.[0]
           if (file) {
             void insertImageFile(file)
@@ -293,7 +301,9 @@ export function JournalEditor({
         date={date}
         disabled={readOnly}
         onToggleBlock={handleToggleBlock}
-        onInsertImage={() => fileInputRef.current?.click()}
+        onInsertImage={() => {
+          if (!readOnly) fileInputRef.current?.click()
+        }}
         aiMenu={
           readOnly ? undefined : aiReady ? (
             <JournalAI
@@ -348,6 +358,10 @@ export function JournalEditor({
           )}
           onInput={emitChange}
           onPaste={(event) => {
+            if (readOnly) {
+              event.preventDefault()
+              return
+            }
             const image = [...(event.clipboardData?.items ?? [])].find((item) =>
               item.type.startsWith("image/"),
             )
@@ -366,6 +380,10 @@ export function JournalEditor({
             }
           }}
           onDrop={(event) => {
+            if (readOnly) {
+              event.preventDefault()
+              return
+            }
             const file = [...event.dataTransfer.files].find((item) =>
               item.type.startsWith("image/"),
             )
