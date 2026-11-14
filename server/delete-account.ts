@@ -1,7 +1,7 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
-import { createClient, signOut } from '@/server/auth'
+import { createClient } from '@/server/auth'
 import { cancelStripeForEmail } from '@/server/account-deletion/stripe'
 import { deleteUserTradeImageObjects } from '@/server/account-deletion/storage'
 import { deleteUserTradeRelatedRows } from '@/server/account-deletion/trade-rows'
@@ -11,6 +11,7 @@ import type { DeleteAccountResult } from '@/server/account-deletion/types'
 /**
  * Wipe the signed-in user's account. Server-side only; no admin path.
  * Order: database first, then storage files, then Stripe, then auth user.
+ * Signs out the session without a server redirect so the client can show a toast.
  */
 export async function deleteCurrentUserAccount(): Promise<DeleteAccountResult> {
   const supabase = await createClient()
@@ -43,77 +44,80 @@ export async function deleteCurrentUserAccount(): Promise<DeleteAccountResult> {
     ),
   )
 
-  await prisma.$transaction(async (tx) => {
-    if (userIds.length > 0) {
-      await deleteUserTradeRelatedRows(tx, userIds)
-      await tx.shared.deleteMany({ where: { userId: { in: userIds } } })
+  await prisma.$transaction(
+    async (tx) => {
+      if (userIds.length > 0) {
+        await deleteUserTradeRelatedRows(tx, userIds)
+        await tx.shared.deleteMany({ where: { userId: { in: userIds } } })
 
-      const otherTeams = await tx.team.findMany({
-        where: {
-          userId: { notIn: userIds },
-          OR: [
-            { traderIds: { hasSome: userIds } },
-            { managers: { some: { managerId: { in: userIds } } } },
-          ],
-        },
-        select: { id: true, traderIds: true },
-      })
-      for (const team of otherTeams) {
-        await tx.team.update({
-          where: { id: team.id },
-          data: {
-            traderIds: team.traderIds.filter((id) => !userIds.includes(id)),
+        const otherTeams = await tx.team.findMany({
+          where: {
+            userId: { notIn: userIds },
+            OR: [
+              { traderIds: { hasSome: userIds } },
+              { managers: { some: { managerId: { in: userIds } } } },
+            ],
+          },
+          select: { id: true, traderIds: true },
+        })
+        for (const team of otherTeams) {
+          await tx.team.update({
+            where: { id: team.id },
+            data: {
+              traderIds: team.traderIds.filter((id) => !userIds.includes(id)),
+            },
+          })
+        }
+        await tx.teamManager.deleteMany({
+          where: { managerId: { in: userIds } },
+        })
+
+        const otherBusinesses = await tx.business.findMany({
+          where: {
+            userId: { notIn: userIds },
+            OR: [
+              { traderIds: { hasSome: userIds } },
+              { managers: { some: { managerId: { in: userIds } } } },
+            ],
+          },
+          select: { id: true, traderIds: true },
+        })
+        for (const business of otherBusinesses) {
+          await tx.business.update({
+            where: { id: business.id },
+            data: {
+              traderIds: business.traderIds.filter((id) => !userIds.includes(id)),
+            },
+          })
+        }
+        await tx.businessManager.deleteMany({
+          where: { managerId: { in: userIds } },
+        })
+      }
+
+      if (emails.length > 0) {
+        await tx.newsletter.deleteMany({ where: { email: { in: emails } } })
+        await tx.subscriptionFeedback.deleteMany({
+          where: { email: { in: emails } },
+        })
+        await tx.teamInvitation.deleteMany({
+          where: {
+            OR: [{ email: { in: emails } }, { invitedBy: { in: userIds } }],
+          },
+        })
+        await tx.businessInvitation.deleteMany({
+          where: {
+            OR: [{ email: { in: emails } }, { invitedBy: { in: userIds } }],
           },
         })
       }
-      await tx.teamManager.deleteMany({
-        where: { managerId: { in: userIds } },
-      })
 
-      const otherBusinesses = await tx.business.findMany({
-        where: {
-          userId: { notIn: userIds },
-          OR: [
-            { traderIds: { hasSome: userIds } },
-            { managers: { some: { managerId: { in: userIds } } } },
-          ],
-        },
-        select: { id: true, traderIds: true },
-      })
-      for (const business of otherBusinesses) {
-        await tx.business.update({
-          where: { id: business.id },
-          data: {
-            traderIds: business.traderIds.filter((id) => !userIds.includes(id)),
-          },
-        })
+      if (prismaUser) {
+        await tx.user.delete({ where: { id: prismaUser.id } })
       }
-      await tx.businessManager.deleteMany({
-        where: { managerId: { in: userIds } },
-      })
-    }
-
-    if (emails.length > 0) {
-      await tx.newsletter.deleteMany({ where: { email: { in: emails } } })
-      await tx.subscriptionFeedback.deleteMany({
-        where: { email: { in: emails } },
-      })
-      await tx.teamInvitation.deleteMany({
-        where: {
-          OR: [{ email: { in: emails } }, { invitedBy: { in: userIds } }],
-        },
-      })
-      await tx.businessInvitation.deleteMany({
-        where: {
-          OR: [{ email: { in: emails } }, { invitedBy: { in: userIds } }],
-        },
-      })
-    }
-
-    if (prismaUser) {
-      await tx.user.delete({ where: { id: prismaUser.id } })
-    }
-  })
+    },
+    { timeout: 60_000, maxWait: 10_000 },
+  )
 
   const storage = await deleteUserTradeImageObjects(userIds)
   let stripeError: string | undefined
@@ -124,8 +128,23 @@ export async function deleteCurrentUserAccount(): Promise<DeleteAccountResult> {
     }
   }
 
-  await deleteSupabaseAuthUser(user.id)
-  await signOut()
+  // Keep the auth user when storage cleanup fails so operators can finish
+  // file cleanup against a known auth id.
+  if (!storage.error) {
+    await deleteSupabaseAuthUser(user.id)
+  } else {
+    console.error(
+      '[delete-account] storage cleanup failed; skipping auth user delete',
+      {
+        userIds,
+        authUserId: user.id,
+        storageError: storage.error,
+      },
+    )
+  }
+
+  // Session sign-out without redirect so the client can toast, then navigate.
+  await supabase.auth.signOut()
 
   const partial = Boolean(storage.error || stripeError)
   if (partial) {
@@ -137,7 +156,5 @@ export async function deleteCurrentUserAccount(): Promise<DeleteAccountResult> {
 
   return {
     status: partial ? 'partial' : 'complete',
-    storageError: storage.error,
-    stripeError,
   }
 }

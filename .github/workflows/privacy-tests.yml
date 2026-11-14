@@ -33,4 +33,5 @@ jobs:
             'lib/consent-persist.test.ts' \
             'components/google-tag.test.ts' \
             'server/account-deletion/trade-rows.test.ts' \
-            'server/account-deletion/storage.test.ts'
+            'server/account-deletion/storage.test.ts' \
+            'server/delete-account.test.ts'
