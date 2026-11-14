@@ -4,14 +4,14 @@
  * data even if someone enables those schedules.
  *
  * Production (`VERCEL_ENV=production` and `VERCEL_TARGET_ENV=production`)
- * runs the jobs. `vercel dev` (`VERCEL=1`, `VERCEL_ENV=development`) runs
- * them so handlers can be tested. Off-Vercel hosts always refuse, even
- * with forged CloudEvent headers.
+ * runs the jobs. Off-Vercel hosts always refuse, even with forged CloudEvent
+ * headers. Development / `vercel dev` also refuse unless the override is set.
  *
- * Never set `ALLOW_SCHEDULED_JOBS=1` on `beta`: that custom environment
- * shares the production database. The override is refused when the target
- * is `beta`, or when a non-production deployment's `DATABASE_URL` matches
- * `PRODUCTION_DATABASE_URL`.
+ * Never enable schedules on `beta` or on a `main`/`beta` git ref outside
+ * production: those share the production database (same signal as
+ * `scripts/vercel-build.sh`). Override only with
+ * `ALLOW_SCHEDULED_JOBS=<VERCEL_TARGET_ENV>` on a dedicated non-prod target
+ * that does not share the production DB.
  */
 export function isVercelScheduleHost(
   env: Record<string, string | undefined> = process.env,
@@ -25,25 +25,45 @@ function scheduleTarget(
   return env.VERCEL_TARGET_ENV ?? env.VERCEL_ENV
 }
 
-function sharesProductionDatabase(
+function gitCommitRef(
+  env: Record<string, string | undefined>,
+): string {
+  return (env.VERCEL_GIT_COMMIT_REF ?? '').replace(/^refs\/heads\//, '')
+}
+
+function sharesProdGitRef(
   env: Record<string, string | undefined>,
 ): boolean {
-  const databaseUrl = env.DATABASE_URL
-  const productionUrl = env.PRODUCTION_DATABASE_URL
-  if (!databaseUrl || !productionUrl) return false
-  return databaseUrl === productionUrl
+  const ref = gitCommitRef(env)
+  return ref === 'beta' || ref === 'main'
 }
 
 export function scheduledWorkAllowed(
   env: Record<string, string | undefined> = process.env,
 ): boolean {
   if (!isVercelScheduleHost(env)) return false
-  if (scheduleTarget(env) === 'beta') return false
-  if (env.VERCEL_ENV !== 'production' && sharesProductionDatabase(env)) {
+  const target = scheduleTarget(env)
+  if (target === 'beta') return false
+  if (env.VERCEL_ENV !== 'production' && sharesProdGitRef(env)) {
     return false
   }
-  if (env.ALLOW_SCHEDULED_JOBS === '1') return true
-  if (env.VERCEL_ENV === 'development') return true
-  const target = scheduleTarget(env)
+  const allow = env.ALLOW_SCHEDULED_JOBS
+  if (allow != null && allow !== '' && allow !== '0' && allow !== 'false') {
+    // Bind the override to the deploy target; bare "1"/"true" is not enough.
+    return Boolean(target) && allow === target
+  }
   return env.VERCEL_ENV === 'production' && target === 'production'
+}
+
+export function scheduledSkipReason(
+  env: Record<string, string | undefined> = process.env,
+): string | null {
+  if (scheduledWorkAllowed(env)) return null
+  if (!isVercelScheduleHost(env)) return 'not_vercel'
+  const target = scheduleTarget(env) ?? 'unknown'
+  if (target === 'beta') return 'beta_target'
+  if (env.VERCEL_ENV !== 'production' && sharesProdGitRef(env)) {
+    return 'shared_prod_git_ref'
+  }
+  return `env_not_allowed:${target}`
 }

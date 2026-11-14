@@ -9,7 +9,7 @@ import {
   resolveRenewalNoticeFirstName,
 } from '@/lib/renewal-notice-copy'
 
-export const maxDuration = 90
+export const maxDuration = 89
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,

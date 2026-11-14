@@ -33,7 +33,8 @@ export type AdminAuthorization =
 export async function authorizeAdminRequest(
   request: Request,
 ): Promise<AdminAuthorization> {
-  void request
+  // Session gate only — headers on `request` are not credentials (no CRON_SECRET).
+  void request.headers
   let userId: string | null = null
   try {
     userId = await getUserId()

@@ -37,6 +37,7 @@ function vercelProduction() {
   process.env.VERCEL_ENV = 'production'
   process.env.VERCEL_TARGET_ENV = 'production'
   delete process.env.ALLOW_SCHEDULED_JOBS
+  delete process.env.VERCEL_GIT_COMMIT_REF
 }
 
 describe('handlePrivateSchedule', () => {
@@ -45,6 +46,7 @@ describe('handlePrivateSchedule', () => {
     VERCEL_ENV: process.env.VERCEL_ENV,
     VERCEL_TARGET_ENV: process.env.VERCEL_TARGET_ENV,
     ALLOW_SCHEDULED_JOBS: process.env.ALLOW_SCHEDULED_JOBS,
+    VERCEL_GIT_COMMIT_REF: process.env.VERCEL_GIT_COMMIT_REF,
   }
 
   afterEach(() => {
@@ -85,6 +87,7 @@ describe('handlePrivateSchedule', () => {
     const POST = handlePrivateSchedule(run)
     const response = await POST(scheduleRequest())
     expect(response.status).toBe(403)
+    expect(await response.json()).toMatchObject({ reason: 'not_vercel' })
     expect(run).not.toHaveBeenCalled()
   })
 
@@ -101,15 +104,53 @@ describe('handlePrivateSchedule', () => {
     })
   })
 
-  it('no-ops Preview dispatches instead of mutating data', async () => {
+  it('returns a distinguishable skipped body for Preview (C3)', async () => {
     process.env.VERCEL = '1'
     process.env.VERCEL_ENV = 'preview'
     process.env.VERCEL_TARGET_ENV = 'preview'
     delete process.env.ALLOW_SCHEDULED_JOBS
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const run = vi.fn()
     const POST = handlePrivateSchedule(run)
     const response = await POST(scheduleRequest())
     expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
+      skipped: true,
+      reason: 'env_not_allowed:preview',
+      name: 'daily-sync',
+      executionId: 'schx_test',
+    })
+    expect(warn).toHaveBeenCalled()
     expect(run).not.toHaveBeenCalled()
+    warn.mockRestore()
+  })
+
+  it('skips beta at the handler with reason beta_target (T3)', async () => {
+    process.env.VERCEL = '1'
+    process.env.VERCEL_ENV = 'preview'
+    process.env.VERCEL_TARGET_ENV = 'beta'
+    process.env.ALLOW_SCHEDULED_JOBS = 'beta'
+    const run = vi.fn()
+    const POST = handlePrivateSchedule(run)
+    const response = await POST(scheduleRequest())
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({
+      skipped: true,
+      reason: 'beta_target',
+    })
+    expect(run).not.toHaveBeenCalled()
+  })
+
+  it('returns 500 when the callback throws (T3)', async () => {
+    vercelProduction()
+    const POST = handlePrivateSchedule(async () => {
+      throw new Error('boom')
+    })
+    const response = await POST(scheduleRequest())
+    expect(response.status).toBe(500)
+    expect(await response.json()).toMatchObject({
+      error: 'Schedule handler failed',
+      name: 'daily-sync',
+    })
   })
 })

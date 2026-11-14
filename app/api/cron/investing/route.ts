@@ -17,7 +17,7 @@ import { upsertFinancialEvents } from '@/lib/financial-events-store'
  * Private Vercel Schedule (`investing`). Always persists to the deployment's
  * database, matching the former `/api/cron/investing?db=true` cron.
  */
-export const maxDuration = 60
+export const maxDuration = 59
 
 async function replaceEventsInWindow(events: MappedFinancialEvent[]) {
   const byLang = new Map<CronLang, MappedFinancialEvent[]>()

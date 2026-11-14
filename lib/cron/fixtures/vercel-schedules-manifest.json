@@ -1,0 +1,30 @@
+{
+  "note": "Recorded from `bunx vercel build` after cron maxDuration isolation (29/59/89/298/299). Each schedule is a distinct non-symlink .func with schedule/v1beta.",
+  "functions": [
+    {
+      "id": "api/cron/daily-sync",
+      "trigger": "schedule/v1beta",
+      "maxDuration": 298
+    },
+    {
+      "id": "api/cron/investing",
+      "trigger": "schedule/v1beta",
+      "maxDuration": 59
+    },
+    {
+      "id": "api/cron/renew-tradovate-token",
+      "trigger": "schedule/v1beta",
+      "maxDuration": 29
+    },
+    {
+      "id": "api/cron/renewal-notice",
+      "trigger": "schedule/v1beta",
+      "maxDuration": 89
+    },
+    {
+      "id": "api/cron",
+      "trigger": "schedule/v1beta",
+      "maxDuration": 299
+    }
+  ]
+}

@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
       userId,
       accountNumber,
       dryRun,
-      actor: auth.via === 'session' ? auth.actorUserId : 'cron',
+      actor: auth.actorUserId,
       connectionId,
       allowUnmatchedAnnotations:
         typeof payload.allowUnmatchedAnnotations === 'boolean'

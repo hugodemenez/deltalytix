@@ -28,7 +28,7 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 // Every subscriber's recap is now built in-process: DB read + one LLM call +
 // email render each. The whole run must fit in a single invocation, so the
 // default duration is not enough once the subscriber list grows.
-export const maxDuration = 240
+export const maxDuration = 299
 
 // Weekly performance recap. Schedule `weekly-recap`: `0 7 * * 0` UTC.
 // Sunday 08:00 Lisbon. Summer WEST UTC+1 → 07:00 UTC.

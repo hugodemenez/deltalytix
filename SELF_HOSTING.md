@@ -133,3 +133,12 @@ Demo video: `public/img/self-hosting/dashboard-demo.mp4`
 - ATAS import uses `read-excel-file@9.0.10` (do not re-add abandoned npm `xlsx`).
 - Cloud/agent shells with a pre-set `DATABASE_URL`: `unset DATABASE_URL DIRECT_URL` before `source .env.local`. At app startup, `lib/load-env-local.node.ts` also loads `.env.local` with `override: true` so local Docker Postgres wins over injected remote URLs.
 - Vercel `beta` and `main` deploys run `prisma migrate deploy` from `scripts/vercel-build.sh` (the `vercel-build` package script). Both environments must set `DIRECT_URL` (direct Postgres, not the pooled `DATABASE_URL`). Preview PR deploys skip migrate and should not receive production `DIRECT_URL`. Local `bun run build` is unchanged.
+
+## 8) Scheduled jobs (Vercel Schedules)
+
+Production Vercel deploys declare five schedules in `vercel.json` (`schedule/v1beta` private function targets). Self-host and local `bun run dev` are **not** Vercel: forged or real CloudEvent POSTs to `/api/cron/*` return **403** (`not_vercel`). Use your own timer against admin endpoints if you need the work done off Vercel.
+
+- `ALLOW_SCHEDULED_JOBS=<VERCEL_TARGET_ENV>` — optional override for a dedicated non-production Vercel target that does **not** share the production database. Bare `1`/`true` is rejected. The `beta` target and non-production deploys whose `VERCEL_GIT_COMMIT_REF` is `beta` or `main` always refuse (shared prod DB).
+- `CRON_SECRET` — keep for about two weeks after promoting the Schedules PR so a rollback to the previous Bearer-auth handlers still works. Rotate; do not delete during that window. New handlers ignore `CRON_SECRET`.
+- Plan: Pro (or higher) is required for `*/5` and `*/10` expressions.
+

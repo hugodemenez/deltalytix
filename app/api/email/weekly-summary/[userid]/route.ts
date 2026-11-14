@@ -26,7 +26,7 @@ export async function POST(req: Request, props: { params: Promise<{ userid: stri
   } catch (error) {
     console.error('API error:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Internal server error', stack: error instanceof Error ? error.stack : undefined },
+      { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }
     )
   }

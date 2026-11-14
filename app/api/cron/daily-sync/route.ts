@@ -12,7 +12,7 @@ import { invalidateConnectionsPageCache } from '@/app/[locale]/dashboard/connect
 import { serverActor } from "@/lib/api/server-actor"
 import { parseTradovateApiHosts } from '@/lib/tradovate/api-hosts'
 
-export const maxDuration = 300
+export const maxDuration = 298
 
 /**
  * Services this cron can sync unattended.
