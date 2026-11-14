@@ -77,6 +77,12 @@ export type Notification = Prisma.NotificationModel
  */
 export type User = Prisma.UserModel
 /**
+ * Model PendingAccountCleanup
+ * Durable operator queue when account wipe left storage or Stripe unfinished.
+ * No email — only former ids and Stripe customer ids for retry.
+ */
+export type PendingAccountCleanup = Prisma.PendingAccountCleanupModel
+/**
  * Model OAuthApp
  * 
  */

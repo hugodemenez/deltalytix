@@ -481,7 +481,7 @@ export default {
   "dashboard.settings.deleteAccount.complete":
     "Your account has been deleted.",
   "dashboard.settings.deleteAccount.partial":
-    "Your account was deleted, but some cleanup did not finish. If you were billed, contact contact@deltalytix.app.",
+    "Your account has been deleted. Some file or billing cleanup is still pending and will be completed. If you were billed, contact contact@deltalytix.app.",
   "dashboard.settings.weeklyRecap.error": "Unable to update weekly recap.",
   "dashboard.settings.tradingPreferences": "Trading preferences",
   "dashboard.settings.tradingPreferences.description": "Configure how your trading statistics are calculated",

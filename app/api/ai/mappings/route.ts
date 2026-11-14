@@ -30,15 +30,7 @@ export async function POST(req: NextRequest) {
     const result = streamText({
       ...resolveAiTask("mappings"),
       output: Output.object({schema:mappingSchema}),
-      onEnd: (result) => {
-        console.log("=== AI RESPONSE ===");
-        console.log(
-          "AI Mapping Result:",
-          JSON.stringify(result.text, null, 2),
-        );
-      },
       onError: (error) => {
-        console.error("=== AI ERROR ===");
         console.error("AI Mapping Error:", error);
       },
       prompt:

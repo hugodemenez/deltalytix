@@ -184,6 +184,22 @@ describe("privacy OpenAI / Apps checklist copy", () => {
   });
 
   it("covers the same AI apps facts in French", () => {
+    const section = [
+      fr.privacy.aiApps.lead,
+      fr.privacy.aiApps.scopes,
+      fr.privacy.aiApps.access,
+      fr.privacy.aiApps.secrets,
+      fr.privacy.aiApps.recipient,
+      fr.privacy.aiApps.logging,
+      fr.privacy.aiApps.revoke,
+      fr.privacy.aiApps.inAppAi,
+      fr.privacy.processors.authorizedApps,
+    ].join(" ");
+
+    expect(section).toMatch(/ChatGPT/);
+    expect(section).toMatch(/Claude/);
+    expect(section).toMatch(/Cursor/);
+    expect(section).toMatch(/https:\/\/www\.deltalytix\.app\/api\/mcp/);
     expect(fr.privacy.aiApps.scopes).toMatch(/lecture seule/i);
     expect(fr.privacy.aiApps.access).toMatch(/pas d'accès inter-utilisateurs/i);
     expect(fr.privacy.aiApps.secrets).toMatch(/jamais renvoyés/i);

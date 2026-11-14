@@ -13,7 +13,7 @@ export type StorageCleanupResult = {
   error?: string
 }
 
-type StorageFileApi = {
+export type StorageFileApi = {
   list: (
     path?: string,
     options?: { limit?: number; offset?: number },
@@ -33,6 +33,7 @@ function assertPathUnderUser(userId: string, path: string): boolean {
 /**
  * Recursively list object paths under `prefix`, paginating until empty.
  * Only returns paths that stay under `userId/`.
+ * On a mid-listing failure, returns paths already discovered plus `error`.
  */
 export async function listTradeImagePathsUnderUser(
   storage: StorageFileApi,
@@ -72,8 +73,10 @@ export async function listTradeImagePathsUnderUser(
       // Folders have null id in Supabase Storage listings.
       if (entry.id === null) {
         const nested = await listTradeImagePathsUnderUser(storage, userId, child)
-        if (nested.error) return { paths, error: nested.error }
         paths.push(...nested.paths)
+        if (nested.error) {
+          return { paths, error: nested.error }
+        }
       } else {
         paths.push(child)
       }
@@ -86,29 +89,68 @@ export async function listTradeImagePathsUnderUser(
   return { paths }
 }
 
+/** Remove known object paths under a user id, batching removes. */
+export async function removeTradeImagePaths(
+  storage: StorageFileApi,
+  userId: string,
+  paths: string[],
+): Promise<StorageCleanupResult> {
+  let removed = 0
+  let firstError: string | undefined
+  for (let i = 0; i < paths.length; i += REMOVE_BATCH_SIZE) {
+    const batch = paths.slice(i, i + REMOVE_BATCH_SIZE)
+    if (batch.some((path) => !assertPathUnderUser(userId, path))) {
+      const message = `Refusing to remove paths outside ${userId}/`
+      console.error('[delete-account]', message)
+      firstError ??= message
+      continue
+    }
+    const { error: removeError } = await storage.remove(batch)
+    if (removeError) {
+      console.error(
+        '[delete-account] storage remove failed:',
+        removeError.message,
+      )
+      firstError ??= removeError.message
+      continue
+    }
+    removed += batch.length
+  }
+  return firstError ? { removed, error: firstError } : { removed }
+}
+
 /**
  * Remove screenshot and journal image objects under each user id prefix.
  * Paginates and recurses until empty. Never deletes outside `<userId>/`.
+ * Continues across folders; on a listing failure still removes paths already found.
  */
 export async function deleteUserTradeImageObjects(
   userIds: string[],
+  storageOverride?: StorageFileApi,
 ): Promise<StorageCleanupResult> {
-  if (userIds.length === 0 || isLocalDashboardAuthBypassEnabled()) {
+  if (userIds.length === 0) {
+    return { removed: 0 }
+  }
+  // Injected storage is for tests; local dashboard bypass skips live Supabase only.
+  if (!storageOverride && isLocalDashboardAuthBypassEnabled()) {
     return { removed: 0 }
   }
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceKey = process.env.SUPABASE_SERVICE_KEY
-  if (!url || !serviceKey) {
-    const message = 'Missing Supabase credentials for storage cleanup'
-    console.error('[delete-account]', message)
-    return { removed: 0, error: message }
-  }
+  let storage = storageOverride
+  if (!storage) {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceKey = process.env.SUPABASE_SERVICE_KEY
+    if (!url || !serviceKey) {
+      const message = 'Missing Supabase credentials for storage cleanup'
+      console.error('[delete-account]', message)
+      return { removed: 0, error: message }
+    }
 
-  const admin = createSupabaseAdmin(url, serviceKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
-  const storage = admin.storage.from(TRADE_IMAGES_BUCKET) as unknown as StorageFileApi
+    const admin = createSupabaseAdmin(url, serviceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+    storage = admin.storage.from(TRADE_IMAGES_BUCKET) as unknown as StorageFileApi
+  }
 
   let removed = 0
   let firstError: string | undefined
@@ -119,27 +161,16 @@ export async function deleteUserTradeImageObjects(
       if (listed.error) {
         console.error('[delete-account] storage list failed:', prefix, listed.error)
         firstError ??= listed.error
-        continue
       }
-      for (let i = 0; i < listed.paths.length; i += REMOVE_BATCH_SIZE) {
-        const batch = listed.paths.slice(i, i + REMOVE_BATCH_SIZE)
-        if (batch.some((path) => !assertPathUnderUser(userId, path))) {
-          const message = `Refusing to remove paths outside ${userId}/`
-          console.error('[delete-account]', message)
-          firstError ??= message
-          continue
-        }
-        const { error: removeError } = await storage.remove(batch)
-        if (removeError) {
-          console.error(
-            '[delete-account] storage remove failed:',
-            prefix,
-            removeError.message,
-          )
-          firstError ??= removeError.message
-          continue
-        }
-        removed += batch.length
+      if (listed.paths.length === 0) continue
+      const removedBatch = await removeTradeImagePaths(
+        storage,
+        userId,
+        listed.paths,
+      )
+      removed += removedBatch.removed
+      if (removedBatch.error) {
+        firstError ??= removedBatch.error
       }
     }
   }

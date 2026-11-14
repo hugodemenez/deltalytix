@@ -25,7 +25,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { useUserStore } from '../../../../store/user-store'
-import { useI18n } from '@/locales/client'
+import { useCurrentLocale, useI18n } from '@/locales/client'
 import { useIsMobile } from '@/hooks/use-mobile'
 import {
   getUserIdentities,
@@ -39,6 +39,7 @@ import {
   setWeeklyRecapPreference,
 } from '@/server/weekly-recap-preference'
 import { deleteCurrentUserAccount } from '@/server/delete-account'
+import { accountDeletedHomeHref } from '@/lib/account-deleted-notice'
 import {
   ConsentPrivacyControls,
   getConsentRecordCopy,
@@ -129,6 +130,7 @@ export default function SettingsPage({
   ownedAppCount?: number
 }) {
   const t = useI18n()
+  const locale = useCurrentLocale()
   const router = useRouter()
   const consentCopy = getConsentRecordCopy(t)
   const isMobile = useIsMobile()
@@ -266,12 +268,7 @@ export default function SettingsPage({
     try {
       localStorage.removeItem('deltalytix_user_data')
       const result = await deleteCurrentUserAccount()
-      if (result.status === 'partial') {
-        toast.message(t('dashboard.settings.deleteAccount.partial'))
-      } else {
-        toast.success(t('dashboard.settings.deleteAccount.complete'))
-      }
-      router.push('/')
+      router.push(accountDeletedHomeHref(locale, result.status))
     } catch (error) {
       setDeleting(false)
       toast.error(t('dashboard.settings.deleteAccount.error'))
