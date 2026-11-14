@@ -168,6 +168,81 @@ describe('fetchAdminRebuildFills', () => {
     expect(getFillsViaOrderHistory).toHaveBeenCalled()
   })
 
+  it('refuses when W0 has fills but W1 is quiet-looking rp_code 7 after later activity (A1)', async () => {
+    let historyCalls = 0
+    getFillHistory.mockImplementation(
+      async (params: {
+        startDateYyyymmdd?: number
+        observe?: { onComplete?: (info: unknown) => void }
+      }) => {
+        historyCalls += 1
+        if (historyCalls === 1) {
+          params.observe?.onComplete?.({
+            rpCode: ['0'],
+            noData: false,
+            ok: true,
+            fillCount: 1,
+            rowAttempts: 1,
+            hitCap: false,
+          })
+          return [
+            {
+              accountId: 'A',
+              symbol: 'MESZ6',
+              transactionType: 'BUY',
+              fillPrice: 1,
+              fillSize: 1,
+              fillId: 'w0',
+              fillDate: '20260915',
+              ssboe: 1_800_000_000,
+            },
+          ]
+        }
+        params.observe?.onComplete?.({
+          rpCode: ['7'],
+          noData: true,
+          ok: false,
+          fillCount: 0,
+          rowAttempts: 0,
+          hitCap: false,
+        })
+        return []
+      },
+    )
+    getFillsViaOrderHistory.mockImplementation(
+      async (params: {
+        datesOnly?: boolean
+        onHistoryDates?: (dates: string[]) => void
+      }) => {
+        if (params.datesOnly) {
+          params.onHistoryDates?.(['20261020'])
+          return []
+        }
+        params.onHistoryDates?.(['20261020'])
+        return [
+          {
+            accountId: 'A',
+            symbol: 'MESZ6',
+            transactionType: 'BUY',
+            fillPrice: 1,
+            fillSize: 1,
+            fillId: 'later',
+            fillDate: '20261020',
+            ssboe: 1_800_100_000,
+          },
+        ]
+      },
+    )
+    await expect(
+      fetchAdminRebuildFills({
+        ...BASE,
+        historyStartDate: '2026-09-01',
+      }),
+    ).rejects.toMatchObject({
+      code: 'INCOMPLETE_FILL_HISTORY',
+    })
+  })
+
   it('refuses rp_code 7 when order-history returns no dates or fills (N3)', async () => {
     getFillHistory.mockImplementation(
       async (params: { observe?: { onComplete?: (info: unknown) => void } }) => {

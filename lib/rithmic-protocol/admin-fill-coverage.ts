@@ -1023,18 +1023,39 @@ export function lastFlatPointBefore(
   return { lastFlatMs, flatAtBoundary: false }
 }
 
-/** Earliest last-flat calendar day across books, when every book is flat at the boundary. */
+/**
+ * Earliest last-flat calendar day across books that still matter for the
+ * ordinary-range skip, when every such book is flat at the boundary.
+ *
+ * Raw stored rows can hold a history rollup plus its replay pieces; FIFO on
+ * that multiset is not flat. Prep/dedupe first (same as the live path).
+ * `relevantFromYmd` limits the scan to instruments with a fill on/after that
+ * day so an abandoned book last traded before the 366-day cap cannot pull
+ * the min below the fetch start.
+ */
 export function lastFlatYmdBeforeAnchor(
   fills: RithmicProtocolFill[],
   beforeMs: number,
+  options?: { relevantFromYmd?: string },
 ): string | undefined {
-  const instruments = new Set(
-    fills.map((fill) => normalizeInstrument(fill.symbol)).filter(Boolean),
-  )
+  const prepared = prepareRithmicProtocolFills(fills).fills
+  const fromDay = options?.relevantFromYmd
+    ? ymdToYyyymmdd(options.relevantFromYmd)
+    : ''
+  const instruments = new Set<string>()
+  for (const fill of prepared) {
+    const instrument = normalizeInstrument(fill.symbol)
+    if (!instrument) continue
+    if (/^\d{8}$/.test(fromDay)) {
+      const day = fillDayKey(fill)
+      if (!day || day < fromDay) continue
+    }
+    instruments.add(instrument)
+  }
   if (instruments.size === 0) return undefined
   let minMs = Number.POSITIVE_INFINITY
   for (const instrument of instruments) {
-    const point = lastFlatPointBefore(fills, beforeMs, instrument)
+    const point = lastFlatPointBefore(prepared, beforeMs, instrument)
     if (!point.flatAtBoundary) return undefined
     if (point.lastFlatMs > 0 && point.lastFlatMs < beforeMs) {
       minMs = Math.min(minMs, point.lastFlatMs)
