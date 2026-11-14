@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { failureKindFromFlags } from './pending-cleanup'
+import { failureKindFromFlags } from './failure-kind'
 
 describe('failureKindFromFlags', () => {
   it('maps storage/stripe flags', () => {
