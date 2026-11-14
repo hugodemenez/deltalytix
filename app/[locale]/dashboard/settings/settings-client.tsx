@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ComponentProps, type ReactNode } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -128,6 +129,7 @@ export default function SettingsPage({
   ownedAppCount?: number
 }) {
   const t = useI18n()
+  const router = useRouter()
   const consentCopy = getConsentRecordCopy(t)
   const isMobile = useIsMobile()
   const user = useUserStore((state) => state.supabaseUser)
@@ -265,27 +267,14 @@ export default function SettingsPage({
       localStorage.removeItem('deltalytix_user_data')
       const result = await deleteCurrentUserAccount()
       if (result.status === 'partial') {
-        toast.error(t('dashboard.settings.deleteAccount.error'), {
-          description:
-            result.storageError ||
-            result.stripeError ||
-            'Account deleted with cleanup warnings',
-        })
+        toast.message(t('dashboard.settings.deleteAccount.partial'))
+      } else {
+        toast.success(t('dashboard.settings.deleteAccount.complete'))
       }
+      router.push('/')
     } catch (error) {
-      if (
-        error instanceof Error &&
-        (error.message === 'NEXT_REDIRECT' ||
-          ('digest' in error &&
-            typeof error.digest === 'string' &&
-            error.digest.startsWith('NEXT_REDIRECT')))
-      ) {
-        throw error
-      }
       setDeleting(false)
-      toast.error(t('dashboard.settings.deleteAccount.error'), {
-        description: error instanceof Error ? error.message : undefined,
-      })
+      toast.error(t('dashboard.settings.deleteAccount.error'))
     }
   }
 

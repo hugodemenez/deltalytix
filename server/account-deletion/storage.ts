@@ -111,20 +111,23 @@ export async function deleteUserTradeImageObjects(
   const storage = admin.storage.from(TRADE_IMAGES_BUCKET) as unknown as StorageFileApi
 
   let removed = 0
+  let firstError: string | undefined
   for (const userId of userIds) {
     for (const folder of TRADE_IMAGE_FOLDERS) {
       const prefix = `${userId}/${folder}`
       const listed = await listTradeImagePathsUnderUser(storage, userId, prefix)
       if (listed.error) {
         console.error('[delete-account] storage list failed:', prefix, listed.error)
-        return { removed, error: listed.error }
+        firstError ??= listed.error
+        continue
       }
       for (let i = 0; i < listed.paths.length; i += REMOVE_BATCH_SIZE) {
         const batch = listed.paths.slice(i, i + REMOVE_BATCH_SIZE)
         if (batch.some((path) => !assertPathUnderUser(userId, path))) {
           const message = `Refusing to remove paths outside ${userId}/`
           console.error('[delete-account]', message)
-          return { removed, error: message }
+          firstError ??= message
+          continue
         }
         const { error: removeError } = await storage.remove(batch)
         if (removeError) {
@@ -133,11 +136,12 @@ export async function deleteUserTradeImageObjects(
             prefix,
             removeError.message,
           )
-          return { removed, error: removeError.message }
+          firstError ??= removeError.message
+          continue
         }
         removed += batch.length
       }
     }
   }
-  return { removed }
+  return firstError ? { removed, error: firstError } : { removed }
 }
