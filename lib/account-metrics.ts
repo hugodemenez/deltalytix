@@ -2,6 +2,7 @@
 // These functions can be used on both server and client for consistent results.
 import type { Trade as PrismaTrade } from '@/prisma/generated/prisma/browser'
 import type { Account } from '@/context/data-provider'
+import { formatInTimeZone } from 'date-fns-tz'
 
 export type AccountMetrics = {
   // Balance and progress
@@ -50,10 +51,27 @@ function toDate(d: string | Date | null | undefined): Date | null {
   return isNaN(dt.getTime()) ? null : dt
 }
 
+function resolveTimezone(timezone: string | undefined): string {
+  if (!timezone) return 'UTC'
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: timezone })
+    return timezone
+  } catch {
+    return 'UTC'
+  }
+}
+
+// Calendar day (yyyy-MM-dd) of a timestamp in the user's timezone, the same key the calendar uses.
+function dayKey(d: Date, timezone: string): string {
+  return formatInTimeZone(d, timezone, 'yyyy-MM-dd')
+}
+
 export function computeAccountMetrics(
   account: Account,
-  allTrades: PrismaTrade[]
+  allTrades: PrismaTrade[],
+  timezone?: string
 ): { balanceToDate: number; metrics: NonNullable<Account['metrics']>; dailyMetrics: NonNullable<Account['dailyMetrics']>; trades: PrismaTrade[]; aboveBuffer: number } {
+  const tz = resolveTimezone(timezone)
   const resetDate = toDate(account.resetDate)
   const relevantTrades = allTrades.filter(t => {
     if (t.accountNumber !== account.number) return false
@@ -140,7 +158,7 @@ export function computeAccountMetrics(
   let filteredTradesProfit = 0
   for (const trade of filteredTrades) {
     const d = toDate(trade.entryDate)!
-    const key = d.toISOString().split('T')[0]
+    const key = dayKey(d, tz)
     const pnl = trade.pnl - (trade.commission || 0)
     dailyPnL[key] = (dailyPnL[key] || 0) + pnl
     filteredTradesProfit += pnl
@@ -215,7 +233,7 @@ export function computeAccountMetrics(
   // Trading days metrics
   const dailyTrades: { [date: string]: PrismaTrade[] } = {}
   for (const trade of filteredTrades) {
-    const key = toDate(trade.entryDate)!.toISOString().split('T')[0]
+    const key = dayKey(toDate(trade.entryDate)!, tz)
     if (!dailyTrades[key]) dailyTrades[key] = []
     dailyTrades[key].push(trade)
   }
@@ -227,8 +245,8 @@ export function computeAccountMetrics(
 
   // Daily metrics (merge trade and payout dates)
   const allDates = new Set<string>()
-  filteredTrades.forEach(t => allDates.add(toDate(t.entryDate)!.toISOString().split('T')[0]))
-  ;(account.payouts || []).forEach(p => allDates.add(toDate(p.date)!.toISOString().split('T')[0]))
+  filteredTrades.forEach(t => allDates.add(dayKey(toDate(t.entryDate)!, tz)))
+  ;(account.payouts || []).forEach(p => allDates.add(dayKey(toDate(p.date)!, tz)))
 
   let dailyRunningBalance = account.startingBalance || 0
   const dailyMetrics: NonNullable<Account['dailyMetrics']> = Array.from(allDates)
@@ -241,7 +259,7 @@ export function computeAccountMetrics(
         ? true
         : dailyTradesPnL <= (totalProfit * ((account.consistencyPercentage || 30) / 100))
 
-      const payout = (account.payouts || []).find(p => toDate(p.date)!.toISOString().split('T')[0] === date)
+      const payout = (account.payouts || []).find(p => dayKey(toDate(p.date)!, tz) === date)
       if (payout?.status === 'PAID') {
         dailyRunningBalance -= payout.amount
       }
@@ -291,10 +309,11 @@ export function computeAccountMetrics(
 
 export function computeMetricsForAccounts(
   accounts: Account[],
-  trades: PrismaTrade[]
+  trades: PrismaTrade[],
+  timezone?: string
 ): Account[] {
   return accounts.map(acc => {
-    const computed = computeAccountMetrics(acc, trades)
+    const computed = computeAccountMetrics(acc, trades, timezone)
     return {
       ...acc,
       balanceToDate: computed.balanceToDate,
