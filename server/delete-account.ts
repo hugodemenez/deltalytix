@@ -2,19 +2,22 @@
 
 import { prisma } from '@/lib/prisma'
 import { createClient } from '@/server/auth'
-import { cancelStripeForEmail } from '@/server/account-deletion/stripe'
+import {
+  cancelStripeCustomersByIds,
+  listStripeCustomerIdsForEmails,
+} from '@/server/account-deletion/stripe'
 import { deleteUserTradeImageObjects } from '@/server/account-deletion/storage'
 import { deleteUserTradeRelatedRows } from '@/server/account-deletion/trade-rows'
 import { deleteSupabaseAuthUser } from '@/server/account-deletion/supabase-auth'
 import { recordPendingAccountCleanup } from '@/server/account-deletion/pending-cleanup'
+import { AccountDeletionAbortError } from '@/lib/account-deletion-errors'
+import { failureKindFromFlags } from '@/server/account-deletion/failure-kind'
 import type { DeleteAccountResult } from '@/server/account-deletion/types'
 
 /**
  * Wipe the signed-in user's account. Server-side only; no admin path.
- * Order: database first, then storage files, then Stripe, then auth user.
- * Signs out the session without a server redirect so the client can navigate
- * to a landing notice. Partial storage/Stripe failures are recorded in
- * PendingAccountCleanup; the auth user is always deleted to avoid zombie login.
+ * Order: Stripe customer id precheck → database → storage → Stripe cancel → auth.
+ * Signs out without redirect so the client can navigate to a landing notice.
  */
 export async function deleteCurrentUserAccount(): Promise<DeleteAccountResult> {
   const supabase = await createClient()
@@ -46,6 +49,13 @@ export async function deleteCurrentUserAccount(): Promise<DeleteAccountResult> {
         .map((value) => value.trim()),
     ),
   )
+
+  // Fail closed: resolve Stripe customer ids before deleting anything.
+  const stripeLookup = await listStripeCustomerIdsForEmails(emails)
+  if (!stripeLookup.ok) {
+    throw new AccountDeletionAbortError()
+  }
+  const stripeCustomerIds = stripeLookup.customerIds
 
   await prisma.$transaction(
     async (tx) => {
@@ -124,10 +134,8 @@ export async function deleteCurrentUserAccount(): Promise<DeleteAccountResult> {
 
   const storage = await deleteUserTradeImageObjects(userIds)
   let stripeError: string | undefined
-  const stripeCustomerIds: string[] = []
-  for (const userEmail of emails) {
-    const stripeResult = await cancelStripeForEmail(userEmail)
-    stripeCustomerIds.push(...stripeResult.customerIds)
+  if (stripeCustomerIds.length > 0) {
+    const stripeResult = await cancelStripeCustomersByIds(stripeCustomerIds)
     if (!stripeResult.ok) {
       stripeError = stripeResult.error ?? 'Stripe cleanup failed'
     }
@@ -136,25 +144,42 @@ export async function deleteCurrentUserAccount(): Promise<DeleteAccountResult> {
   const storageFailed = Boolean(storage.error)
   const stripeFailed = Boolean(stripeError)
   if (storageFailed || stripeFailed) {
-    const pending = await recordPendingAccountCleanup({
-      formerUserId: prismaUser?.id ?? null,
-      authUserId: user.id,
-      storagePrefixes: userIds,
-      stripeCustomerIds: Array.from(new Set(stripeCustomerIds)),
-      storageFailed,
-      stripeFailed,
-    })
-    console.error('[delete-account] partial success; queued PendingAccountCleanup', {
-      pendingId: pending?.id,
-      storageError: storage.error,
-      stripeError,
-    })
+    try {
+      const pending = await recordPendingAccountCleanup({
+        formerUserId: prismaUser?.id ?? null,
+        authUserId: user.id,
+        storagePrefixes: userIds,
+        stripeCustomerIds,
+        storageFailed,
+        stripeFailed,
+      })
+      console.error(
+        '[delete-account] partial success; queued PendingAccountCleanup',
+        {
+          pendingId: pending?.id,
+          storageError: storage.error,
+          stripeError,
+        },
+      )
+    } catch (queueError) {
+      console.error('[delete-account] Failed to queue PendingAccountCleanup', {
+        formerUserId: prismaUser?.id ?? null,
+        authUserId: user.id,
+        storagePrefixes: userIds,
+        stripeCustomerIds,
+        failureKind: failureKindFromFlags(storageFailed, stripeFailed),
+        queueError:
+          queueError instanceof Error ? queueError.message : String(queueError),
+      })
+    }
   }
 
   await deleteSupabaseAuthUser(user.id)
 
-  // Session sign-out without redirect so the client can navigate to a notice.
-  await supabase.auth.signOut()
+  const { error: signOutError } = await supabase.auth.signOut()
+  if (signOutError) {
+    console.error('[delete-account] signOut failed:', signOutError.message)
+  }
 
   return {
     status: storageFailed || stripeFailed ? 'partial' : 'complete',

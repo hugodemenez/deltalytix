@@ -39,10 +39,10 @@ function AccountDeletedNoticeInner() {
   return (
     <div
       role="status"
-      className="mx-auto w-full max-w-3xl px-4 pt-4"
+      className="relative z-10 mx-auto w-full max-w-3xl px-4 pt-3 sm:pt-4"
       data-account-deleted={status}
     >
-      <p className="rounded-[4px] border border-[#E5E5E5] bg-white px-4 py-3 text-sm text-[#171717] dark:border-border dark:bg-card dark:text-foreground">
+      <p className="rounded-[4px] border border-[#E5E5E5] bg-white px-4 py-3 text-sm leading-relaxed text-[#171717] dark:border-border dark:bg-card dark:text-foreground">
         {message}
       </p>
     </div>
