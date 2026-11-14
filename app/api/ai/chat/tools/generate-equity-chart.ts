@@ -168,7 +168,6 @@ export const generateEquityChart = tool({
       message: `Generated equity chart with ${chartData.length} data points for ${limitedAccountNumbers.length} account(s)`
     };
     
-    console.log(`[generateEquityChart] RETURNING RESULT:`, JSON.stringify(result, null, 2));
     return result;
   },
 })

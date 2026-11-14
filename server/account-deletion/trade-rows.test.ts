@@ -1,26 +1,26 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { deleteUserTradeRelatedRows } from "./delete-account"
+import { deleteUserTradeRelatedRows } from "./trade-rows"
 
 describe("deleteUserTradeRelatedRows", () => {
-  it("deletes TradeAnalytics by trade id, then fills, then trades", async () => {
+  it("deletes TradeAnalytics by trade id in chunks, then fills, then trades", async () => {
     const order: string[] = []
+    const tradeIds = Array.from({ length: 1001 }, (_, i) => `trade-${i}`)
     const tx = {
       trade: {
         findMany: vi.fn(async () => {
           order.push("findMany")
-          return [{ id: "trade-1" }, { id: "trade-2" }]
+          return tradeIds.map((id) => ({ id }))
         }),
         deleteMany: vi.fn(async () => {
           order.push("trade.deleteMany")
-          return { count: 2 }
+          return { count: tradeIds.length }
         }),
       },
       tradeAnalytics: {
         deleteMany: vi.fn(async (args: { where: { tradeId: { in: string[] } } }) => {
-          order.push("tradeAnalytics.deleteMany")
-          expect(args.where.tradeId.in).toEqual(["trade-1", "trade-2"])
-          return { count: 2 }
+          order.push(`tradeAnalytics.deleteMany:${args.where.tradeId.in.length}`)
+          return { count: args.where.tradeId.in.length }
         }),
       },
       rithmicProtocolFill: {
@@ -34,10 +34,11 @@ describe("deleteUserTradeRelatedRows", () => {
 
     const result = await deleteUserTradeRelatedRows(tx, ["user-a", "user-b"])
 
-    expect(result.tradeIds).toEqual(["trade-1", "trade-2"])
+    expect(result.tradeIds).toHaveLength(1001)
     expect(order).toEqual([
       "findMany",
-      "tradeAnalytics.deleteMany",
+      "tradeAnalytics.deleteMany:1000",
+      "tradeAnalytics.deleteMany:1",
       "rithmicProtocolFill.deleteMany",
       "trade.deleteMany",
     ])

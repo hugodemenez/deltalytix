@@ -7,7 +7,7 @@ export default {
       content:
         "Deltalytix, operated by Hugo Demenez (\"we\", \"our\", or \"us\"), is committed to protecting your privacy. This Privacy Policy explains the categories of personal data we collect, the purposes of use, the recipients and processors, how long we keep each category, the controls you have, and how AI apps and Model Context Protocol (MCP) tools use your data. It applies to deltalytix.app, the public API, and the MCP server at https://www.deltalytix.app/api/mcp.",
       controller:
-        "Controller: Deltalytix, operated by Hugo Demenez. Contact: contact@deltalytix.app. (Legal entity name and postal address to be confirmed by the operator.)",
+        "Controller: Deltalytix, operated by Hugo Demenez. Contact: contact@deltalytix.app.",
     },
     collect: {
       title: "2. Data collected",
@@ -27,13 +27,13 @@ export default {
       tokens:
         "OAuth grants and personal access tokens you create so third-party apps can access your account. We store a last-used timestamp for each token, not the tool arguments or response bodies.",
       aiChat:
-        "In-app AI conversations: messages you send to the dashboard AI assistant and the support assistant, including any images you attach in support chat. Dashboard chat is auto-saved into that day's mood conversation record and kept until you delete it or delete your account.",
+        "In-app AI conversations: messages you send to the dashboard AI assistant and the support assistant, including any images you attach in support chat. Dashboard chat is auto-saved with that day's journal/mood entry and kept until you delete that day's journal/mood entry or delete your account. Using Reset in the chat only clears the on-screen conversation; it does not delete the saved chat for that day.",
       aiFeatures:
         "Data sent to model providers for in-app AI features: journal text you ask the editor to explain or expand; full CSV rows for AI import mapping and formatting (up to 500 rows, in batches of 50 — not only headers and samples); natural-language date search queries; audio you upload for transcription; weekly performance aggregates used to draft the weekly recap; public FAQ questions on the landing page; newsletter subscriber emails sent for name formatting; and, for dashboard chat and analysis tools, trades, journal entries, past conversations, and week summaries returned to the model as tool results.",
       community:
         "Community content you post: posts, comments, and votes.",
       shares:
-        "Shared dashboard links you create. Share links are public by default (isPublic defaults to true) until you change that setting or they expire.",
+        "Shared dashboard links you create. Share links are public by default until you change that setting or they expire.",
       teams:
         "Team and business membership: when you join a team or business, managers can view and export traders' trades as part of that product feature.",
       newsletter:
@@ -66,22 +66,22 @@ export default {
       title: "4. Recipients and processors",
       lead: "We share personal data with the following recipients, each for a limited purpose:",
       supabase:
-        "Supabase: authentication, database hosting, and file storage for trade screenshots and journal images (trade-images bucket).",
+        "Supabase: authentication, database hosting, and file storage for trade screenshots and journal images.",
       stripe: "Stripe: payment processing and subscription billing.",
       posthog:
-        "PostHog: product analytics and measurement, hosted in the European Union. Requests go through deltalytix.app. Events may include page views, product events, and (with consent) session replay; retention follows PostHog Cloud defaults (typically up to 1–2 years for events on current plan defaults, and up to 7 years for grandfathered paid plans).",
+        "PostHog: product analytics and measurement, hosted in the European Union. Requests go through deltalytix.app. Events may include page views, product events, and (with consent) session replay. Analytics events are kept for up to the retention configured in our PostHog Cloud EU project (currently up to 7 years).",
       resend:
         "Resend: transactional email such as welcome messages, weekly recaps, support replies, and the marketing newsletter.",
       vercel:
-        "Vercel: application hosting, serverless execution, Web Analytics, Speed Insights, runtime logs, and (when used) the Vercel AI Gateway that routes some model requests. Web Analytics and Speed Insights receive page/performance metrics (and typically IP / user agent via the hosting edge). Runtime log retention follows Vercel plan defaults (up to 1 day on Pro, up to 30 days with Observability Plus).",
+        "Vercel: application hosting, serverless execution, Web Analytics, Speed Insights, runtime logs, and (when used) the Vercel AI Gateway that routes some model requests. Vercel Web Analytics is aggregated and cookieless (visitor hash resets daily); reporting windows follow Vercel’s documented retention (up to 12 months on Pro, up to 24 months with Web Analytics Plus / Enterprise). Speed Insights receives performance metrics. Runtime log retention follows Vercel plan defaults (up to 1 day on Pro, up to 30 days with Observability Plus).",
       google:
-        "Google: Google Analytics 4 (GA4) and Google Ads conversions on production. The Google tag loads with Consent Mode; outside EEA/UK/Switzerland, ads consent may default to granted until you opt out. With ads consent, we may send conversion events (value, currency, transaction id), click identifiers (for example gclid), and enhanced conversions with a SHA-256 hashed email (user_data). When consent is denied, Google may still receive cookieless Consent Mode pings used for conversion modelling. Retention of Google Analytics and Ads data follows Google's product defaults (GA4 user-level data typically up to 14 months unless configured otherwise).",
+        "Google: Google Analytics 4 (GA4) and Google Ads conversions on production. The Google tag loads with Consent Mode; outside EEA/UK/Switzerland, ads consent may default to granted until you opt out. With ads consent outside the EEA banner flow, we may send conversion events (value, currency, transaction id), click identifiers (for example gclid), and enhanced conversions with a SHA-256 hashed email. Accepting ads in the EEA/UK/Switzerland consent banner does not enable hashed-email enhanced conversions. When consent is denied, Google may still receive cookieless Consent Mode pings used for conversion modelling. Retention of Google Analytics and Ads data follows Google's product defaults (GA4 user-level data typically up to 14 months unless configured otherwise).",
       googleSignIn:
         "Google sign-in (and Discord sign-in): identity providers used when you choose those login methods.",
       aiProviders:
-        "AI model providers (currently OpenAI, directly via our OpenAI API key and sometimes through the Vercel AI Gateway, and Perplexity for journal “explain” via the AI Gateway). Environment overrides can reroute individual AI tasks to other providers. Providers process prompts and tool context under their API terms. We send the prompts and related account context needed for the feature you invoked, as described in Data collected.",
+        "AI model providers (currently OpenAI, directly via our OpenAI API key and sometimes through the Vercel AI Gateway, and Perplexity for journal “explain” via the AI Gateway). Environment overrides can reroute individual AI tasks to other providers. Providers process prompts and tool context under their API terms; OpenAI’s API terms provide that API inputs are not used to train models by default. We send the prompts and related account context needed for the feature you invoked, as described in Data collected.",
       brokers:
-        "Broker and market-data APIs you connect: Tradovate / NinjaTrader, Rithmic, Interactive Brokers, IG, and dxFeed — to sync accounts, fills, and market data you request.",
+        "Broker and market-data APIs you connect: Tradovate / NinjaTrader, Rithmic, Interactive Brokers, IG, and dxFeed — to sync accounts, fills, and market data you request. DxFeed credentials are also sent to the prop-firm / Volumetrica historical hosts returned by that login (for example Hyperticks or other firm-specific hosts).",
       databento:
         "Databento: instrument symbols and time windows used to compute MAE/MFE and related trade analytics.",
       calcom:
@@ -101,15 +101,15 @@ export default {
       title: "5. Data retention",
       lead: "We keep each category only as long as needed for the purposes above:",
       tradesJournal:
-        "Trades and journal data stay while your account exists. When you delete your account from Settings, we delete your trades (including related trade analytics and Rithmic protocol fills), journal data, screenshots in storage, connections, and account information. We attempt to cancel active Stripe subscriptions and delete the Stripe customer record tied to your email; if Stripe cleanup fails, the failure is logged for operators. Stripe, not Deltalytix, retains invoices and payment records as legally required under Stripe's retention.",
+        "Trades and journal data stay while your account exists. When you delete your account from Settings, we delete your trades (including related trade analytics and Rithmic protocol fills), journal data, connections, and account information, and we delete your screenshots and journal images from file storage as part of account deletion. We attempt to cancel active Stripe subscriptions and delete the Stripe customer record tied to your email; if Stripe or storage cleanup fails, the failure is logged and the deletion may complete with a partial cleanup warning. Stripe, not Deltalytix, retains invoices and payment records as legally required under Stripe's retention.",
       tokens:
         "OAuth grants and personal access tokens remain until you revoke them in Settings → Connections or delete your account. After revocation, the next API or MCP request is rejected.",
       billing:
         "In our app we delete Subscription rows on account deletion. Stripe keeps invoices and related billing records as legally required. We do not retain a separate long-term billing archive beyond what Stripe holds.",
       analytics:
-        "PostHog product analytics: up to PostHog Cloud’s standard retention (typically up to 1–2 years by current plan defaults, or up to 7 years for grandfathered paid plans). Google Analytics 4 / Ads: up to Google’s product defaults (GA4 user-level data typically up to 14 months). Vercel Web Analytics / Speed Insights: follow Vercel’s product retention. You can opt out of optional analytics and ads measurement as described in Analytics and measurement.",
+        "PostHog product analytics: kept for up to the retention configured in our PostHog Cloud EU project (currently up to 7 years). Google Analytics 4 / Ads: up to Google’s product defaults (GA4 user-level data typically up to 14 months). Vercel Web Analytics is aggregated and cookieless, with Vercel’s documented reporting window (up to 12 months on Pro, up to 24 months with Web Analytics Plus / Enterprise). You can opt out of optional browser analytics and ads measurement as described in Analytics and measurement.",
       aiChat:
-        "Dashboard AI chat is auto-saved into that day's Mood.conversation record and kept until you delete that conversation content or delete your account. Support chat messages are processed to answer you and are not kept as a separate long-term archive beyond ordinary server logs.",
+        "Dashboard AI chat is auto-saved with that day's journal/mood entry and kept until you delete that day's journal/mood entry or delete your account. Resetting the chat UI does not delete the saved conversation. Support chat messages are processed to answer you and are not kept as a separate long-term archive beyond ordinary server logs.",
       logs:
         "We do not keep MCP tool arguments or responses, or public API request/response bodies, in logs or analytics. Data you write through the API (for example POST /api/v1/trades, /imports, or /connections) is saved to your account like data entered in the app. We emit one structured request log line per public API / OAuth / MCP HTTP request (method, route, status, latency, token type, app/client id, hashed user id, optional error code) to Vercel runtime logs. Those lines never include Authorization headers, bearer tokens, or tool argument/response bodies. Vercel runtime log retention is up to 1 day on Pro by default, and up to 30 days with Observability Plus.",
     },
@@ -137,7 +137,7 @@ export default {
       webmcp:
         "Separately, the website may register browser WebMCP helpers (deltalytix.discover_resources and deltalytix.navigate) that only return public discovery URLs or navigate to public pages. They do not read your trading data and do not use your OAuth scopes.",
       inAppAi:
-        "In-app AI features (dashboard chat, support assistant, journal AI, CSV helpers including AI import of full row batches, analysis tools that return trades/journal/past conversations/week summaries to the model, transcription, weekly recap, and newsletter name formatting) send prompts and related account context to the currently configured providers (OpenAI and, for journal explain, Perplexity via the Vercel AI Gateway; env overrides can reroute tasks). Providers process that data under their API terms. Those features are separate from ChatGPT plugins; they run inside Deltalytix when you use them. Third-party apps with imports:write can also trigger AI import via POST /api/v1/imports with type=ai.",
+        "In-app AI features (dashboard chat, support assistant, journal AI, CSV helpers including AI import of full row batches, analysis tools that return trades/journal/past conversations/week summaries to the model, transcription, weekly recap, and newsletter name formatting) send prompts and related account context to the currently configured providers (OpenAI and, for journal explain, Perplexity via the Vercel AI Gateway; env overrides can reroute tasks). Providers process that data under their API terms; OpenAI’s API terms provide that API inputs are not used to train models by default. Those features are separate from ChatGPT plugins; they run inside Deltalytix when you use them. Third-party apps with imports:write can also trigger AI import via POST /api/v1/imports with type=ai.",
     },
     cookies: {
       title: "7. Cookies",
@@ -149,15 +149,15 @@ export default {
       provider:
         "We use PostHog (EU-hosted product analytics), Vercel Web Analytics and Speed Insights (page and performance metrics on our hosting), and — on production hosts — Google Analytics 4 and Google Ads conversions. PostHog requests go through deltalytix.app so your browser talks to us, not directly to PostHog.",
       beforeConsent:
-        "If you visit from the EEA, the United Kingdom or Switzerland — or we cannot tell your country — we show a consent banner. Until you accept, we only collect anonymous, cookieless measurement: page views and funnel counts with no cookies, no localStorage, no stored identifier, and no session replay. Google Consent Mode may still send cookieless pings for conversion modelling when ads consent is denied.",
+        "If you visit from the EEA, the United Kingdom or Switzerland — or we cannot tell your country — we show a consent banner. Until you accept, we only collect anonymous, cookieless measurement: page views and funnel counts with no cookies, no localStorage, no stored identifier, and no session replay. Google Consent Mode may still send cookieless pings for conversion modelling when ads consent is denied. Vercel Web Analytics and Speed Insights are not loaded until product-use analytics is allowed.",
       afterConsent:
-        "If you accept product use, we may use cookies to recognise your account and record a PostHog session replay. Form inputs and card fields stay masked in every replay. If you accept ads, Google may store ads cookies and receive conversion data including hashed email for enhanced conversions, click IDs, value, currency, and transaction id.",
+        "If you accept product use, we may use cookies to recognise your account and record a PostHog session replay, and we load Vercel Web Analytics and Speed Insights. Form inputs and card fields stay masked in every replay. If you accept ads outside the EEA banner’s hashed-email rules, Google may store ads cookies and receive conversion data including hashed email for enhanced conversions, click IDs, value, currency, and transaction id. Accepting ads in the EEA/UK/Switzerland banner does not send a hashed email.",
       otherRegions:
-        "If you visit from elsewhere (for example the United States), we measure use by default, and ads consent may default to granted. You can opt out at any time with the “Opt out of analytics” link in the footer or on this page. That opt-out turns off PostHog capturing and denies Google ad_storage, ad_user_data, and ad_personalization (as well as analytics_storage). We remember that choice in a cookie.",
+        "If you visit from elsewhere (for example the United States), we measure use by default, and ads consent may default to granted. You can opt out at any time with the “Opt out of analytics” link in the footer or on this page. That opt-out stops browser analytics and ads signals: it turns off PostHog capturing, unmounts Vercel Web Analytics and Speed Insights, and denies Google ads storage, ads user data, and ads personalization (as well as analytics storage). Server-side signup, checkout, and purchase records (pseudonymous; no email for EEA/UK/Switzerland visitors) and Google cookieless Consent Mode pings can still continue. We remember that choice in a cookie.",
       conversions:
-        "Account creation, checkout start and a completed subscription are recorded on our servers with a pseudonymous user id so a sale is not lost if a browser blocks scripts. For visitors in the EEA, the United Kingdom or Switzerland we do not attach your email to those server events. Google Ads purchase/signup conversions (when ads consent allows) may include SHA-256 hashed email, value, currency, and transaction id.",
+        "Account creation, checkout start and a completed subscription are recorded on our servers with a pseudonymous user id so a sale is not lost if a browser blocks scripts. For visitors in the EEA, the United Kingdom or Switzerland we do not attach your email to those server events. These server-side conversion records are not stopped by the browser analytics opt-out. Google Ads purchase/signup conversions (when ads consent allows hashed email outside the EEA banner rules) may include SHA-256 hashed email, value, currency, and transaction id.",
       vercel:
-        "Vercel Web Analytics and Speed Insights collect aggregated page and performance metrics for the site. They do not provide a separate Deltalytix opt-out beyond the product-use / analytics opt-out and blocking scripts; retention follows Vercel’s product defaults.",
+        "Vercel Web Analytics is aggregated and cookieless; Speed Insights measures performance. Both load only while product-use analytics is allowed, and stop loading when you opt out. Retention follows Vercel’s documented reporting windows (up to 12 months on Pro, up to 24 months with Web Analytics Plus / Enterprise).",
       optOut: "Opt out of analytics",
       optedOut: "Analytics opted out",
     },
@@ -169,7 +169,7 @@ export default {
     legal: {
       title: "10. Legal basis and international transfers",
       basis:
-        "Where the GDPR applies, we process personal data on these bases: performance of our contract with you (providing the journal, API, billing, and connected-app features); your consent (optional analytics and ads cookies in the EEA/UK/Switzerland, authorizing third-party apps, and the marketing newsletter — unsubscribe any time); legitimate interests (securing the service, preventing abuse, improving reliability, measuring product use outside consent regions where permitted); and legal obligations (tax and accounting records).",
+        "Where the GDPR applies, we process personal data on these bases: performance of our contract with you (providing the journal, API, billing, and connected-app features); your consent (optional analytics and ads cookies in the EEA/UK/Switzerland, authorizing third-party apps, and the marketing newsletter — unsubscribe any time); legitimate interests (securing the service, preventing abuse, improving reliability, measuring product use outside consent regions where permitted); and legal obligations. Stripe, not Deltalytix, keeps tax and accounting records for payments as legally required.",
       transfers:
         "We and our processors may process data in the European Union and in other countries, including the United States (for example Vercel hosting, OpenAI, Stripe, Google, and related infrastructure). Where required, we rely on appropriate transfer mechanisms such as the processors’ standard contractual clauses or equivalent safeguards.",
     },
@@ -188,7 +188,7 @@ export default {
       delete:
         "Delete your account in Settings. That permanently removes your trades, journal data, storage images, connections, and related account records as described in Data retention.",
       analytics:
-        "Opt out of analytics and ads measurement with the link on this page or in the footer. That denies analytics_storage and Google ad_storage / ad_user_data / ad_personalization. In Settings you can also change cookie consent.",
+        "Opt out of browser analytics and ads measurement with the link on this page or in the footer. That stops PostHog capturing, unmounts Vercel Web Analytics and Speed Insights, and denies Google ads storage, ads user data, and ads personalization. Server-side signup/checkout/purchase records and Google cookieless Consent Mode pings may continue. In Settings you can also change cookie consent.",
       revoke:
         "Revoke connected apps and personal access tokens in Settings → Connections.",
       contact:

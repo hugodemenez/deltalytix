@@ -68,8 +68,8 @@ const BY_NAME = {
       fr: "from/to optionnels (ISO 8601), accountNumbers (max 50), limit (défaut 366, max 1000), cursor, et showIndividual (booléen ; au plus 8 séries par compte).",
     },
     outputs: {
-      en: "Daily points with date, equity, dailyPnL, dailyCommissions, netPnL; dateRange {startDate, endDate}; accountNumbers; nextCursor. On payout or reset days, dynamic keys reset_<account>, payout_<account>, payoutStatus_<account>, and payoutAmount_<account>. With showIndividual, equity_<account> series (combined equity may be 0).",
-      fr: "Points journaliers avec date, equity, dailyPnL, dailyCommissions, netPnL ; dateRange {startDate, endDate} ; accountNumbers ; nextCursor. Les jours de payout ou de reset : clés dynamiques reset_<compte>, payout_<compte>, payoutStatus_<compte> et payoutAmount_<compte>. Avec showIndividual, séries equity_<compte> (l'equity combinée peut être 0).",
+      en: "Daily points with date, equity, dailyPnL, dailyCommissions, netPnL; dateRange {startDate, endDate}; accountNumbers; nextCursor. On payout or reset days, dynamic keys reset_<account>, payout_<account>, payoutStatus_<account>, and payoutAmount_<account>. With showIndividual, equity_<account> series and combined equity is 0.",
+      fr: "Points journaliers avec date, equity, dailyPnL, dailyCommissions, netPnL ; dateRange {startDate, endDate} ; accountNumbers ; nextCursor. Les jours de payout ou de reset : clés dynamiques reset_<compte>, payout_<compte>, payoutStatus_<compte> et payoutAmount_<compte>. Avec showIndividual, séries equity_<compte> et l'equity combinée vaut 0.",
     },
   },
   get_daily_pnl: {
@@ -78,8 +78,8 @@ const BY_NAME = {
       fr: "from/to optionnels (ISO 8601), accountNumbers (max 50), limit (défaut 366, max 1000) et cursor. Mêmes filtres de date/compte que get_equity_curve (sans showIndividual).",
     },
     outputs: {
-      en: "Daily points projected from the equity series: date, dailyPnL, netPnL, equity, dailyCommissions; plus accountNumbers, dateRange, and nextCursor.",
-      fr: "Points journaliers projetés depuis la série d'equity : date, dailyPnL, netPnL, equity, dailyCommissions ; plus accountNumbers, dateRange et nextCursor.",
+      en: "Daily points projected from the equity series: date, dailyPnL, netPnL, equity, dailyCommissions; plus accountNumbers, dateRange {startDate, endDate}, and nextCursor.",
+      fr: "Points journaliers projetés depuis la série d'equity : date, dailyPnL, netPnL, equity, dailyCommissions ; plus accountNumbers, dateRange {startDate, endDate} et nextCursor.",
     },
   },
   list_connections: {

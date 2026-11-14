@@ -263,7 +263,15 @@ export default function SettingsPage({
     setDeleting(true)
     try {
       localStorage.removeItem('deltalytix_user_data')
-      await deleteCurrentUserAccount()
+      const result = await deleteCurrentUserAccount()
+      if (result.status === 'partial') {
+        toast.error(t('dashboard.settings.deleteAccount.error'), {
+          description:
+            result.storageError ||
+            result.stripeError ||
+            'Account deleted with cleanup warnings',
+        })
+      }
     } catch (error) {
       if (
         error instanceof Error &&

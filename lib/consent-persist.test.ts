@@ -78,6 +78,30 @@ describe("persistConsentSettings", () => {
     );
   });
 
+  it("overrides a stored ad_storage:true on analytics opt-out", () => {
+    const getItem = vi.mocked(localStorage.getItem);
+    getItem.mockReturnValue(
+      JSON.stringify({
+        ...DEFAULT_CONSENT_SETTINGS,
+        analytics_storage: true,
+        ad_storage: true,
+        ad_user_data: true,
+        ad_personalization: true,
+      }),
+    );
+    const setItem = vi.mocked(localStorage.setItem);
+
+    persistAnalyticsOptOut();
+
+    const saved = JSON.parse(String(setItem.mock.calls.at(-1)?.[1]));
+    expect(saved).toMatchObject({
+      analytics_storage: false,
+      ad_storage: false,
+      ad_user_data: false,
+      ad_personalization: false,
+    });
+  });
+
   it("stops replay immediately when Product use is saved off", () => {
     persistConsentSettings(fromRecordChoices({ productUse: false, ads: false }));
 

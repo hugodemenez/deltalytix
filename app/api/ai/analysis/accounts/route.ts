@@ -97,14 +97,6 @@ export async function POST(req: NextRequest) {
       timezone: string;
     } = await req.json();
 
-    // Add debugging to see what locale is being received
-    console.log("Account Analysis API received:", {
-      username,
-      locale,
-      timezone,
-      currentTime,
-    });
-
     // Validate the request
     const validatedData = analysisSchema.parse({
       username,
@@ -112,7 +104,6 @@ export async function POST(req: NextRequest) {
       timezone,
       currentTime,
     });
-    console.log("Validated data:", validatedData);
     const modelMessages = await convertToModelMessages(
       omitSystemMessages(messages),
     );
