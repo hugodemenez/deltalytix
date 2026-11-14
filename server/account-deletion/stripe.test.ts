@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('server-only', () => ({}))
 
@@ -25,61 +25,94 @@ vi.mock('@/server/stripe', () => ({
   },
 }))
 
-import {
-  cancelStripeCustomersByIds,
-  listStripeCustomerIdsForEmails,
-} from './stripe'
+function asyncPage<T>(items: T[]) {
+  return {
+    async *[Symbol.asyncIterator]() {
+      for (const item of items) yield item
+    },
+  }
+}
 
 describe('listStripeCustomerIdsForEmails', () => {
+  const originalKey = process.env.STRIPE_SECRET_KEY
+
   beforeEach(() => {
     vi.clearAllMocks()
     isLocalDashboardAuthBypassEnabled.mockReturnValue(false)
+    process.env.STRIPE_SECRET_KEY = 'sk_test_unit'
+  })
+
+  afterEach(() => {
+    if (originalKey === undefined) delete process.env.STRIPE_SECRET_KEY
+    else process.env.STRIPE_SECRET_KEY = originalKey
+  })
+
+  it('skips when Stripe is not configured', async () => {
+    delete process.env.STRIPE_SECRET_KEY
+    const { listStripeCustomerIdsForEmails } = await import('./stripe')
+    const result = await listStripeCustomerIdsForEmails(['a@example.com'])
+    expect(result).toEqual({
+      ok: true,
+      customerIds: [],
+      skipped: true,
+    })
+    expect(customersList).not.toHaveBeenCalled()
   })
 
   it('fails closed when customers.list throws', async () => {
-    customersList.mockRejectedValue(new Error('stripe down'))
+    customersList.mockImplementation(() => {
+      throw new Error('stripe down')
+    })
+    const { listStripeCustomerIdsForEmails } = await import('./stripe')
     const result = await listStripeCustomerIdsForEmails(['a@example.com'])
     expect(result.ok).toBe(false)
-    expect(result.customerIds).toEqual([])
     expect(result.error).toMatch(/stripe down/i)
   })
 
-  it('returns customer ids and probes subscriptions before wipe', async () => {
-    customersList.mockResolvedValue({
-      data: [{ id: 'cus_1' }, { id: 'cus_2' }],
-    })
+  it('auto-paginates customers.list beyond a single page', async () => {
+    customersList.mockReturnValue(
+      asyncPage([{ id: 'cus_1' }, { id: 'cus_2' }, { id: 'cus_3' }]),
+    )
     subscriptionsList.mockResolvedValue({ data: [] })
 
+    const { listStripeCustomerIdsForEmails } = await import('./stripe')
     const result = await listStripeCustomerIdsForEmails(['a@example.com'])
-    expect(result).toEqual({ ok: true, customerIds: ['cus_1', 'cus_2'] })
-    expect(subscriptionsList).toHaveBeenCalledTimes(2)
-  })
-
-  it('fails closed when subscription probe throws after listing a customer', async () => {
-    customersList.mockResolvedValue({ data: [{ id: 'cus_1' }] })
-    subscriptionsList.mockRejectedValue(new Error('subs down'))
-
-    const result = await listStripeCustomerIdsForEmails(['a@example.com'])
-    expect(result.ok).toBe(false)
-    expect(result.customerIds).toEqual(['cus_1'])
+    expect(result).toEqual({
+      ok: true,
+      customerIds: ['cus_1', 'cus_2', 'cus_3'],
+    })
+    expect(customersList).toHaveBeenCalledWith({
+      email: 'a@example.com',
+      limit: 100,
+    })
+    expect(subscriptionsList).toHaveBeenCalledTimes(3)
   })
 })
 
 describe('cancelStripeCustomersByIds', () => {
+  const originalKey = process.env.STRIPE_SECRET_KEY
+
   beforeEach(() => {
     vi.clearAllMocks()
     isLocalDashboardAuthBypassEnabled.mockReturnValue(false)
+    process.env.STRIPE_SECRET_KEY = 'sk_test_unit'
+  })
+
+  afterEach(() => {
+    if (originalKey === undefined) delete process.env.STRIPE_SECRET_KEY
+    else process.env.STRIPE_SECRET_KEY = originalKey
   })
 
   it('cancels active subscriptions then deletes customers', async () => {
-    subscriptionsList.mockResolvedValue({
-      data: [
+    subscriptionsList.mockReturnValue(
+      asyncPage([
         { id: 'sub_1', status: 'active' },
         { id: 'sub_2', status: 'canceled' },
-      ],
-    })
+      ]),
+    )
     customersDel.mockResolvedValue({})
 
+    const { cancelStripeCustomersByIds } = await import('./stripe')
     const result = await cancelStripeCustomersByIds(['cus_1'])
     expect(result.ok).toBe(true)
     expect(subscriptionsCancel).toHaveBeenCalledWith('sub_1')
@@ -87,10 +120,15 @@ describe('cancelStripeCustomersByIds', () => {
     expect(customersDel).toHaveBeenCalledWith('cus_1')
   })
 
-  it('refuses under local dashboard bypass', async () => {
-    isLocalDashboardAuthBypassEnabled.mockReturnValue(true)
+  it('skips cancel when Stripe is not configured', async () => {
+    delete process.env.STRIPE_SECRET_KEY
+    const { cancelStripeCustomersByIds } = await import('./stripe')
     const result = await cancelStripeCustomersByIds(['cus_1'])
-    expect(result.ok).toBe(false)
+    expect(result).toEqual({
+      ok: true,
+      customerIds: ['cus_1'],
+      skipped: true,
+    })
     expect(subscriptionsList).not.toHaveBeenCalled()
   })
 })

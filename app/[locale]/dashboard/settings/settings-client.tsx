@@ -39,7 +39,7 @@ import {
   setWeeklyRecapPreference,
 } from '@/server/weekly-recap-preference'
 import { deleteCurrentUserAccount } from '@/server/delete-account'
-import { isAccountDeletionStripePrecheckError } from '@/lib/account-deletion-errors'
+import { isDeleteAccountBlocked } from '@/lib/account-deletion-result'
 import { accountDeletedHomeHref } from '@/lib/account-deleted-notice'
 import {
   ConsentPrivacyControls,
@@ -269,14 +269,19 @@ export default function SettingsPage({
     try {
       localStorage.removeItem('deltalytix_user_data')
       const result = await deleteCurrentUserAccount()
+      if (isDeleteAccountBlocked(result)) {
+        setDeleting(false)
+        toast.error(
+          result.reason === 'billing_check_failed'
+            ? t('dashboard.settings.deleteAccount.stripePrecheckError')
+            : t('dashboard.settings.deleteAccount.error'),
+        )
+        return
+      }
       router.push(accountDeletedHomeHref(locale, result.status))
-    } catch (error) {
+    } catch {
       setDeleting(false)
-      toast.error(
-        isAccountDeletionStripePrecheckError(error)
-          ? t('dashboard.settings.deleteAccount.stripePrecheckError')
-          : t('dashboard.settings.deleteAccount.error'),
-      )
+      toast.error(t('dashboard.settings.deleteAccount.error'))
     }
   }
 

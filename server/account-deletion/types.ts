@@ -1,5 +1,4 @@
-import 'server-only'
-
-export type DeleteAccountResult = {
-  status: 'complete' | 'partial'
-}
+export type {
+  DeleteAccountBlockedReason,
+  DeleteAccountResult,
+} from '@/lib/account-deletion-result'
