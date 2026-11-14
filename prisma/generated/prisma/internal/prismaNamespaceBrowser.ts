@@ -58,6 +58,7 @@ export const ModelName = {
   TeamSubscription: 'TeamSubscription',
   Notification: 'Notification',
   User: 'User',
+  PendingAccountCleanup: 'PendingAccountCleanup',
   OAuthApp: 'OAuthApp',
   OAuthAuthorizationCode: 'OAuthAuthorizationCode',
   OAuthAccessToken: 'OAuthAccessToken',
@@ -216,6 +217,20 @@ export const UserScalarFieldEnum = {
 } as const
 
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+export const PendingAccountCleanupScalarFieldEnum = {
+  id: 'id',
+  formerUserId: 'formerUserId',
+  authUserId: 'authUserId',
+  storagePrefixes: 'storagePrefixes',
+  stripeCustomerIds: 'stripeCustomerIds',
+  failureKind: 'failureKind',
+  createdAt: 'createdAt',
+  resolvedAt: 'resolvedAt'
+} as const
+
+export type PendingAccountCleanupScalarFieldEnum = (typeof PendingAccountCleanupScalarFieldEnum)[keyof typeof PendingAccountCleanupScalarFieldEnum]
 
 
 export const OAuthAppScalarFieldEnum = {

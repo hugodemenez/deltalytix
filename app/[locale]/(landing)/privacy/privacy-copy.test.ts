@@ -109,7 +109,11 @@ describe("privacy OpenAI / Apps checklist copy", () => {
     expect(en.privacy.security.content).toMatch(/HTTPS|TLS/i);
     expect(en.privacy.children.content).toMatch(/16/);
     expect(en.privacy.changes.content).toMatch(/email/i);
+    expect(en.privacy.rights.export).toMatch(/CSV/i);
     expect(en.privacy.rights.analytics).toMatch(/browser analytics/i);
+    expect(en.privacy.analytics.conversions).toMatch(
+      /Outside the EEA[\s\S]*unless you opt out[\s\S]*may include your email/i,
+    );
   });
 
   it("names the same facts in French, including tokens and billing", () => {
@@ -135,30 +139,72 @@ describe("privacy OpenAI / Apps checklist copy", () => {
     expect(fr.privacy.processors.aiProviders).toMatch(/actuellement OpenAI/i);
     expect(fr.privacy.processors.brokers).toMatch(/Rithmic/);
     expect(fr.privacy.processors.brokers).toMatch(/Volumetrica|prop firm/i);
+    expect(fr.privacy.processors.databento).toMatch(/Databento/);
+    expect(fr.privacy.processors.calcom).toMatch(/Cal\.com/);
     expect(fr.privacy.collect.aiChat).toMatch(/Réinitialiser/i);
     expect(fr.privacy.use.newsletter).toMatch(/newsletter/i);
     expect(fr.privacy.security.content).toMatch(/HTTPS|TLS/i);
     expect(fr.privacy.children.content).toMatch(/16/);
     expect(fr.privacy.changes.content).toMatch(/e-mail/i);
     expect(fr.privacy.rights.access).toMatch(/Consultez et mettez à jour/i);
+    expect(fr.privacy.rights.export).toMatch(/CSV/i);
     expect(fr.privacy.rights.delete).toMatch(/Supprimez votre compte/i);
     expect(fr.privacy.rights.analytics).toMatch(/navigateur/i);
     expect(fr.privacy.legal.basis).toMatch(/RGPD/i);
+    expect(fr.privacy.analytics.conversions).toMatch(
+      /Hors de l'EEE[\s\S]*refusez[\s\S]*e-mail/i,
+    );
   });
 
   it("covers AI apps / MCP recipients and logging (EN)", () => {
+    const section = [
+      en.privacy.aiApps.lead,
+      en.privacy.aiApps.scopes,
+      en.privacy.aiApps.access,
+      en.privacy.aiApps.secrets,
+      en.privacy.aiApps.recipient,
+      en.privacy.aiApps.logging,
+      en.privacy.aiApps.revoke,
+      en.privacy.aiApps.inAppAi,
+      en.privacy.processors.authorizedApps,
+    ].join(" ");
+
+    expect(section).toMatch(/ChatGPT/);
+    expect(section).toMatch(/Claude/);
+    expect(section).toMatch(/Cursor/);
+    expect(section).toMatch(/https:\/\/www\.deltalytix\.app\/api\/mcp/);
     expect(en.privacy.aiApps.scopes).toMatch(/read-only/i);
     expect(en.privacy.aiApps.access).toMatch(/no cross-user access/i);
     expect(en.privacy.aiApps.secrets).toMatch(/never returned/i);
+    expect(en.privacy.aiApps.logging).toMatch(/do not store MCP tool inputs/i);
+    expect(en.privacy.aiApps.revoke).toMatch(/Settings → Connections/);
     expect(en.privacy.aiApps.tableLead).toMatch(/projection of GET \/api\/v1\/metrics\/equity/);
     expect(en.privacy.aiApps.inAppAi).toMatch(/imports:write/);
     expect(en.privacy.aiApps.inAppAi).toMatch(/not used to train/i);
   });
 
   it("covers the same AI apps facts in French", () => {
+    const section = [
+      fr.privacy.aiApps.lead,
+      fr.privacy.aiApps.scopes,
+      fr.privacy.aiApps.access,
+      fr.privacy.aiApps.secrets,
+      fr.privacy.aiApps.recipient,
+      fr.privacy.aiApps.logging,
+      fr.privacy.aiApps.revoke,
+      fr.privacy.aiApps.inAppAi,
+      fr.privacy.processors.authorizedApps,
+    ].join(" ");
+
+    expect(section).toMatch(/ChatGPT/);
+    expect(section).toMatch(/Claude/);
+    expect(section).toMatch(/Cursor/);
+    expect(section).toMatch(/https:\/\/www\.deltalytix\.app\/api\/mcp/);
     expect(fr.privacy.aiApps.scopes).toMatch(/lecture seule/i);
     expect(fr.privacy.aiApps.access).toMatch(/pas d'accès inter-utilisateurs/i);
     expect(fr.privacy.aiApps.secrets).toMatch(/jamais renvoyés/i);
+    expect(fr.privacy.aiApps.logging).toMatch(/ne stockons pas/i);
+    expect(fr.privacy.aiApps.revoke).toMatch(/Paramètres → Connexions/);
     expect(fr.privacy.aiApps.tableLead).toMatch(/projection de GET \/api\/v1\/metrics\/equity/);
     expect(fr.privacy.aiApps.inAppAi).toMatch(/imports:write/);
   });

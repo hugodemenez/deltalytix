@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { listTradeImagePathsUnderUser } from "./storage"
+import { deleteUserTradeImageObjects, listTradeImagePathsUnderUser } from "./storage"
 
 describe("listTradeImagePathsUnderUser", () => {
   it("recurses into folders and stays under the user prefix", async () => {
@@ -91,5 +91,48 @@ describe("listTradeImagePathsUnderUser", () => {
     expect(result.paths).toEqual([])
     expect(result.error).toMatch(/Refusing to list outside user prefix/)
     expect(storage.list).not.toHaveBeenCalled()
+  })
+})
+
+
+describe("deleteUserTradeImageObjects continues after errors", () => {
+  it("removes paths already listed when a later page fails, then continues folders", async () => {
+    const removedBatches: string[][] = []
+    const storage = {
+      list: vi.fn(async (prefix?: string, options?: { offset?: number }) => {
+        if (prefix === "user-1/trades") {
+          if ((options?.offset ?? 0) === 0) {
+            return {
+              data: Array.from({ length: 100 }, (_, i) => ({
+                name: `early-${i}.png`,
+                id: `e-${i}`,
+                metadata: {},
+              })),
+              error: null,
+            }
+          }
+          return { data: null, error: { message: "page-2 boom" } }
+        }
+        if (prefix === "user-1/journal") {
+          return {
+            data: [{ name: "j-1.png", id: "j1", metadata: {} }],
+            error: null,
+          }
+        }
+        return { data: [], error: null }
+      }),
+      remove: vi.fn(async (paths: string[]) => {
+        removedBatches.push(paths)
+        return { error: null }
+      }),
+    }
+
+    const result = await deleteUserTradeImageObjects(["user-1"], storage)
+
+    expect(result.error).toMatch(/page-2 boom/)
+    expect(removedBatches.flat()).toContain("user-1/trades/early-0.png")
+    expect(removedBatches.flat()).toContain("user-1/trades/early-99.png")
+    expect(removedBatches.flat()).toContain("user-1/journal/j-1.png")
+    expect(result.removed).toBe(101)
   })
 })

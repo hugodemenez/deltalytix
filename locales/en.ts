@@ -478,6 +478,10 @@ export default {
   "dashboard.settings.deleteAccount.cancel": "Cancel",
   "dashboard.settings.deleteAccount.error":
     "Unable to delete account. Try again.",
+  "dashboard.settings.deleteAccount.complete":
+    "Your account has been deleted.",
+  "dashboard.settings.deleteAccount.partial":
+    "Your account has been deleted. Some file or billing cleanup is still pending and will be completed. If you were billed, contact contact@deltalytix.app.",
   "dashboard.settings.weeklyRecap.error": "Unable to update weekly recap.",
   "dashboard.settings.tradingPreferences": "Trading preferences",
   "dashboard.settings.tradingPreferences.description": "Configure how your trading statistics are calculated",

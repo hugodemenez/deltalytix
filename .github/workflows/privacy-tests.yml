@@ -31,6 +31,9 @@ jobs:
           bunx vitest run \
             'app/[locale]/(landing)/privacy/privacy-copy.test.ts' \
             'lib/consent-persist.test.ts' \
+            'lib/account-deleted-notice.test.ts' \
             'components/google-tag.test.ts' \
             'server/account-deletion/trade-rows.test.ts' \
-            'server/account-deletion/storage.test.ts'
+            'server/account-deletion/storage.test.ts' \
+            'server/account-deletion/pending-cleanup.test.ts' \
+            'server/delete-account.test.ts'

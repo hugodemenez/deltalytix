@@ -156,6 +156,23 @@ model User {
   @@schema("public")
 }
 
+/// Durable operator queue when account wipe left storage or Stripe unfinished.
+/// No email — only former ids and Stripe customer ids for retry.
+model PendingAccountCleanup {
+  id                String                         @id @default(cuid())
+  formerUserId      String?
+  authUserId        String
+  storagePrefixes   String[]
+  stripeCustomerIds String[]                       @default([])
+  failureKind       PendingAccountCleanupFailure
+  createdAt         DateTime                       @default(now())
+  resolvedAt        DateTime?
+
+  @@index([resolvedAt])
+  @@index([authUserId])
+  @@schema("public")
+}
+
 model OAuthApp {
   id               String   @id @default(uuid())
   /// Null for a dynamically registered client. User-owned apps still set it.
@@ -783,6 +800,14 @@ enum PaymentFrequency {
 enum PromoType {
   DIRECT
   PERCENTAGE
+
+  @@schema("public")
+}
+
+enum PendingAccountCleanupFailure {
+  STORAGE
+  STRIPE
+  BOTH
 
   @@schema("public")
 }

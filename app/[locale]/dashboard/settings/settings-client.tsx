@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ComponentProps, type ReactNode } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,7 +25,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { useUserStore } from '../../../../store/user-store'
-import { useI18n } from '@/locales/client'
+import { useCurrentLocale, useI18n } from '@/locales/client'
 import { useIsMobile } from '@/hooks/use-mobile'
 import {
   getUserIdentities,
@@ -38,6 +39,7 @@ import {
   setWeeklyRecapPreference,
 } from '@/server/weekly-recap-preference'
 import { deleteCurrentUserAccount } from '@/server/delete-account'
+import { accountDeletedHomeHref } from '@/lib/account-deleted-notice'
 import {
   ConsentPrivacyControls,
   getConsentRecordCopy,
@@ -128,6 +130,8 @@ export default function SettingsPage({
   ownedAppCount?: number
 }) {
   const t = useI18n()
+  const locale = useCurrentLocale()
+  const router = useRouter()
   const consentCopy = getConsentRecordCopy(t)
   const isMobile = useIsMobile()
   const user = useUserStore((state) => state.supabaseUser)
@@ -264,28 +268,10 @@ export default function SettingsPage({
     try {
       localStorage.removeItem('deltalytix_user_data')
       const result = await deleteCurrentUserAccount()
-      if (result.status === 'partial') {
-        toast.error(t('dashboard.settings.deleteAccount.error'), {
-          description:
-            result.storageError ||
-            result.stripeError ||
-            'Account deleted with cleanup warnings',
-        })
-      }
+      router.push(accountDeletedHomeHref(locale, result.status))
     } catch (error) {
-      if (
-        error instanceof Error &&
-        (error.message === 'NEXT_REDIRECT' ||
-          ('digest' in error &&
-            typeof error.digest === 'string' &&
-            error.digest.startsWith('NEXT_REDIRECT')))
-      ) {
-        throw error
-      }
       setDeleting(false)
-      toast.error(t('dashboard.settings.deleteAccount.error'), {
-        description: error instanceof Error ? error.message : undefined,
-      })
+      toast.error(t('dashboard.settings.deleteAccount.error'))
     }
   }
 
