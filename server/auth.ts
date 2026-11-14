@@ -21,6 +21,8 @@ import {
 import { readAttributionFromCookies } from '@/lib/attribution-server'
 import { getRequestOrigin } from '@/lib/site-url'
 import { resolveAuthEmailLocale } from '@/lib/auth-email-locale'
+import { findUnresolvedPendingCleanupForAuthId } from '@/server/account-deletion/pending-cleanup-guard'
+import { accountDeletedHomeHref } from '@/lib/account-deleted-notice'
 
 export async function getWebsiteURL() {
   // Reuse the shared trusted-host allowlist (*.deltalytix.app, *.vercel.app,
@@ -522,24 +524,19 @@ async function ensureUserRecord(user: AuthenticatedIdentity, locale?: string) {
     }
 
     // Refuse to recreate a User while unresolved cleanup still targets this auth id.
-    const pendingCleanup = await prisma.pendingAccountCleanup.findFirst({
-      where: {
-        resolvedAt: null,
-        OR: [
-          { authUserId: user.id },
-          { formerUserId: user.id },
-          { storagePrefixes: { has: user.id } },
-        ],
-      },
-      select: { id: true },
-    });
+    const pendingCleanup = await findUnresolvedPendingCleanupForAuthId(user.id);
     if (pendingCleanup) {
       console.log(
         '[ensureUserInDatabase] ERROR: unresolved PendingAccountCleanup for auth id',
         { authUserId: user.id, pendingId: pendingCleanup.id },
       );
-      await signOut();
-      throw new Error('Account cleanup is still pending; contact contact@deltalytix.app');
+      // Sign out without the redirecting helper first, then land on the notice.
+      const pendingClient = await createClient();
+      const { error: pendingSignOutError } = await pendingClient.auth.signOut();
+      if (pendingSignOutError) {
+        await pendingClient.auth.signOut({ scope: 'local' });
+      }
+      redirect(accountDeletedHomeHref('en', 'partial'));
     }
 
     // Create new user if no existing user found

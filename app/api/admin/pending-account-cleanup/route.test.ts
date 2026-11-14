@@ -82,7 +82,6 @@ describe('POST /api/admin/pending-account-cleanup', () => {
     authorizeAdminRequest.mockResolvedValue({
       ok: true,
       via: 'cron',
-      actorUserId: null,
     })
     retryPendingAccountCleanups.mockResolvedValue([
       {

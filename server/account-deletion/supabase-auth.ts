@@ -2,6 +2,9 @@ import 'server-only'
 
 import { createClient as createSupabaseAdmin } from '@supabase/supabase-js'
 import { isLocalDashboardAuthBypassEnabled } from '@/lib/local-dashboard-auth'
+import { prisma } from '@/lib/prisma'
+
+export type AuthEmailLookup = 'match' | 'none' | 'unknown'
 
 function adminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -46,45 +49,29 @@ export async function supabaseAuthUserExists(
 }
 
 /**
- * True when any Supabase auth user has this email (case-insensitive).
- * Fail closed on admin errors so Stripe cancel is skipped.
+ * Direct lookup of auth.users by lower(email) via the app DB connection.
+ * Returns tri-state so callers can keep queue rows when the lookup is unknown.
  */
-export async function supabaseAuthEmailExists(
+export async function lookupSupabaseAuthEmail(
   email: string,
-): Promise<boolean> {
-  if (isLocalDashboardAuthBypassEnabled()) return false
+): Promise<AuthEmailLookup> {
+  if (isLocalDashboardAuthBypassEnabled()) return 'none'
   const normalized = email.trim().toLowerCase()
-  if (!normalized) return false
+  if (!normalized) return 'none'
 
   try {
-    const admin = adminClient()
-    let page = 1
-    const perPage = 200
-    for (;;) {
-      const { data, error } = await admin.auth.admin.listUsers({ page, perPage })
-      if (error) {
-        console.error(
-          '[delete-account] auth email existence check failed:',
-          error.message,
-        )
-        return true
-      }
-      if (
-        data.users.some((user) => user.email?.trim().toLowerCase() === normalized)
-      ) {
-        return true
-      }
-      if (data.users.length < perPage) return false
-      page += 1
-      if (page > 50) {
-        console.error(
-          '[delete-account] auth email existence check aborted after max pages',
-        )
-        return true
-      }
-    }
+    const rows = await prisma.$queryRaw<Array<{ id: string }>>`
+      SELECT id::text AS id
+      FROM auth.users
+      WHERE lower(email) = ${normalized}
+      LIMIT 1
+    `
+    return rows.length > 0 ? 'match' : 'none'
   } catch (error) {
-    console.error('[delete-account] auth email existence check threw:', error)
-    return true
+    console.error(
+      '[delete-account] auth email lookup failed:',
+      error instanceof Error ? error.message : error,
+    )
+    return 'unknown'
   }
 }
