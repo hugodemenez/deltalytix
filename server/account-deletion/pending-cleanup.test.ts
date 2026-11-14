@@ -13,7 +13,7 @@ const {
   cancelStripeCustomersByIds,
   listStripeCustomerEmailsByIds,
   supabaseAuthUserExists,
-  supabaseAuthEmailExists,
+  lookupSupabaseAuthEmail,
   isLocalDashboardAuthBypassEnabled,
 } = vi.hoisted(() => ({
   create: vi.fn(),
@@ -26,7 +26,7 @@ const {
   cancelStripeCustomersByIds: vi.fn(),
   listStripeCustomerEmailsByIds: vi.fn(),
   supabaseAuthUserExists: vi.fn(),
-  supabaseAuthEmailExists: vi.fn(),
+  lookupSupabaseAuthEmail: vi.fn(),
   isLocalDashboardAuthBypassEnabled: vi.fn(),
 }))
 
@@ -62,8 +62,8 @@ vi.mock('@/server/account-deletion/stripe', () => ({
 vi.mock('@/server/account-deletion/supabase-auth', () => ({
   supabaseAuthUserExists: (...args: unknown[]) =>
     supabaseAuthUserExists(...args),
-  supabaseAuthEmailExists: (...args: unknown[]) =>
-    supabaseAuthEmailExists(...args),
+  lookupSupabaseAuthEmail: (...args: unknown[]) =>
+    lookupSupabaseAuthEmail(...args),
 }))
 
 import { failureKindFromFlags } from './failure-kind'
@@ -112,7 +112,7 @@ describe('retryPendingAccountCleanups', () => {
     deleteMany.mockResolvedValue({ count: 0 })
     userFindFirst.mockResolvedValue(null)
     supabaseAuthUserExists.mockResolvedValue(false)
-    supabaseAuthEmailExists.mockResolvedValue(false)
+    lookupSupabaseAuthEmail.mockResolvedValue('none')
     deleteUserTradeImageObjects.mockResolvedValue({ removed: 1 })
     cancelStripeCustomersByIds.mockResolvedValue({
       ok: true,
@@ -259,14 +259,41 @@ describe('retryPendingAccountCleanups', () => {
       ok: true,
       emails: ['billing@example.com'],
     })
-    supabaseAuthEmailExists.mockResolvedValue(true)
+    lookupSupabaseAuthEmail.mockResolvedValue('match')
 
     const results = await retryPendingAccountCleanups()
+    expect(lookupSupabaseAuthEmail).toHaveBeenCalledWith('billing@example.com')
     expect(results[0]).toMatchObject({
       ok: false,
       stripeError: expect.stringContaining('live auth email'),
     })
     expect(cancelStripeCustomersByIds).not.toHaveBeenCalled()
+  })
+
+  it('keeps the Stripe row when auth email lookup is unknown', async () => {
+    findMany.mockResolvedValue([
+      {
+        id: 'row-auth-unknown',
+        failureKind: 'STRIPE',
+        storagePrefixes: [],
+        stripeCustomerIds: ['cus_1'],
+        authUserId: 'auth-old',
+        formerUserId: null,
+      },
+    ])
+    listStripeCustomerEmailsByIds.mockResolvedValue({
+      ok: true,
+      emails: ['billing@example.com'],
+    })
+    lookupSupabaseAuthEmail.mockResolvedValue('unknown')
+
+    const results = await retryPendingAccountCleanups()
+    expect(results[0]).toMatchObject({
+      ok: false,
+      stripeError: expect.stringContaining('auth email lookup unknown'),
+    })
+    expect(cancelStripeCustomersByIds).not.toHaveBeenCalled()
+    expect(deleteRow).not.toHaveBeenCalled()
   })
 
   it('skips Stripe cancel when the auth or User record is live again', async () => {

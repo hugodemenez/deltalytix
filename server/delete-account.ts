@@ -51,7 +51,8 @@ export async function deleteCurrentUserAccount(): Promise<DeleteAccountResult> {
     ),
   )
 
-  // When Stripe is not configured, still refuse if an app Subscription remains.
+  // When Stripe is not configured, still refuse if a live personal / team /
+  // business subscription remains (active, trialing, or past_due).
   if (
     !isStripeSecretConfigured() &&
     (await hasLiveAppSubscription({ userIds, emails }))

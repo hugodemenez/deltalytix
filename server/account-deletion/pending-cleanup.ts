@@ -8,7 +8,7 @@ import {
 } from '@/server/account-deletion/stripe'
 import { deleteUserTradeImageObjects } from '@/server/account-deletion/storage'
 import {
-  supabaseAuthEmailExists,
+  lookupSupabaseAuthEmail,
   supabaseAuthUserExists,
 } from '@/server/account-deletion/supabase-auth'
 import { failureKindFromFlags } from '@/server/account-deletion/failure-kind'
@@ -120,8 +120,12 @@ async function stripeEmailIsLiveAgain(
     if (user) {
       return `refusing Stripe cancel; live User email matches Stripe customer`
     }
-    if (await supabaseAuthEmailExists(email)) {
+    const authEmail = await lookupSupabaseAuthEmail(email)
+    if (authEmail === 'match') {
       return `refusing Stripe cancel; live auth email matches Stripe customer`
+    }
+    if (authEmail === 'unknown') {
+      return `refusing Stripe cancel; auth email lookup unknown`
     }
   }
   return undefined
