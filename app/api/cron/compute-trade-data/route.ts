@@ -1,9 +1,15 @@
-// CRON JOB RUNNING EVERY WEEK
+/**
+ * Admin-only MAE/MFE backfill for last week's trades (Databento).
+ * Not a Vercel Schedule — invoke via authenticated admin POST.
+ * Previously an unauthenticated GET with CORS * and a trade sample in the body.
+ */
 
 import { connection } from "next/server";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { startOfWeek, endOfWeek, subWeeks, parseISO, format } from "date-fns";
+import { startOfWeek, endOfWeek, subWeeks, format } from "date-fns";
+import { authorizeAdminRequest } from "@/lib/admin/auth";
+import { jsonError } from "@/lib/api/json-error";
 
 // PURPOSE:
 // - Compute MAE and MFE for all trades of the week
@@ -291,11 +297,26 @@ async function processInstrumentTrades(instrumentData: InstrumentData): Promise<
   }
 }
 
-export async function GET() {
+export async function POST(request: Request) {
   await connection();
 
+  const auth = await authorizeAdminRequest(request)
+  if (!auth.ok) {
+    return jsonError({
+      code: auth.status === 401 ? 'unauthorized' : 'forbidden',
+      message:
+        auth.status === 401
+          ? 'Admin authentication is required.'
+          : 'This user is not on the admin allowlist.',
+      hint:
+        auth.status === 401
+          ? 'Sign in as an allowlisted admin.'
+          : 'This account is not on the admin allowlist.',
+    })
+  }
+
   try {
-    console.log('Starting MAE/MFE computation cron job');
+    console.log('Starting MAE/MFE computation (admin)');
     
     if (!DATABENTO_API_KEY) {
       throw new Error('DATABENTO_API_KEY environment variable is required');
@@ -410,37 +431,28 @@ export async function GET() {
     
     console.log(`Saved ${successfulSaves} trade analytics, ${failedSaves} failed`);
     
-    // Example of potential data issues to log
     const priceDiscrepancies = allProcessedTrades.filter(trade => trade.priceDifference > 0.5);
     if (priceDiscrepancies.length > 0) {
       console.warn(`Found ${priceDiscrepancies.length} trades with significant price discrepancies`);
     }
     
-         return NextResponse.json({
-       success: true,
-       message: `Successfully computed MAE/MFE for ${allProcessedTrades.length} trades`,
-       processed: allProcessedTrades.length,
-       saved: successfulSaves,
-       failed: failedSaves,
-       instruments: Object.keys(instrumentGroups),
-       priceDiscrepancies: priceDiscrepancies.length,
-       data: allProcessedTrades.slice(0, 5), // Return first 5 as sample
-       summary: {
-         averageMAE: allProcessedTrades.reduce((sum, t) => sum + t.mae, 0) / allProcessedTrades.length,
-         averageMFE: allProcessedTrades.reduce((sum, t) => sum + t.mfe, 0) / allProcessedTrades.length,
-         maxMAE: Math.max(...allProcessedTrades.map(t => t.mae)),
-         maxMFE: Math.max(...allProcessedTrades.map(t => t.mfe)),
-         averageRiskReward: allProcessedTrades
-           .filter(t => t.mae > 0)
-           .reduce((sum, t) => sum + (t.mfe / t.mae), 0) / allProcessedTrades.filter(t => t.mae > 0).length || 0
-       }
-     }, {
-      status: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      },
+    return NextResponse.json({
+      success: true,
+      message: `Successfully computed MAE/MFE for ${allProcessedTrades.length} trades`,
+      processed: allProcessedTrades.length,
+      saved: successfulSaves,
+      failed: failedSaves,
+      instruments: Object.keys(instrumentGroups),
+      priceDiscrepancies: priceDiscrepancies.length,
+      summary: {
+        averageMAE: allProcessedTrades.reduce((sum, t) => sum + t.mae, 0) / allProcessedTrades.length,
+        averageMFE: allProcessedTrades.reduce((sum, t) => sum + t.mfe, 0) / allProcessedTrades.length,
+        maxMAE: Math.max(...allProcessedTrades.map(t => t.mae)),
+        maxMFE: Math.max(...allProcessedTrades.map(t => t.mfe)),
+        averageRiskReward: allProcessedTrades
+          .filter(t => t.mae > 0)
+          .reduce((sum, t) => sum + (t.mfe / t.mae), 0) / allProcessedTrades.filter(t => t.mae > 0).length || 0
+      }
     });
     
   } catch (error) {
@@ -449,13 +461,6 @@ export async function GET() {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred',
       processed: 0
-    }, {
-      status: 500,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      },
-    });
+    }, { status: 500 });
   }
 }

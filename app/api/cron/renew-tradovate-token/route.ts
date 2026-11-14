@@ -12,20 +12,16 @@ import {
   withTradovateHost,
 } from '@/lib/tradovate/api-hosts';
 import { tradovateFetch } from '@/lib/tradovate/fetch';
-import { NextRequest } from 'next/server';
+import { handlePrivateSchedule } from '@/lib/cron/handle-private-schedule';
+
+export const maxDuration = 29
 
 /**
  * Keeps Tradovate access tokens alive. Scheduled syncing itself lives in
  * /api/cron/daily-sync, which drives every service off the same schedule maths
  * (`lib/connection-sync-schedule.ts`) and reads the token this job refreshes.
  */
-export async function GET(request: NextRequest) {
-  // Verify this is a cron request
-  const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return new Response('Unauthorized', { status: 401 });
-  }
-
+async function runTradovateTokenRenewal() {
   try {
     // Get all users with Tradovate tokens from your database
     const synchronizations = await prisma.connection.findMany({
@@ -61,16 +57,18 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    return Response.json({
-      success: true,
-      processed: synchronizations.length,
-      tokenRenewals
-    });
+    console.info(
+      `[CRON] Tradovate token renewal processed=${synchronizations.length} renewed=${tokenRenewals}`,
+    )
   } catch (error) {
     console.error('Cron job error:', error);
-    return Response.json({ error: 'Cron job failed' }, { status: 500 });
+    throw error
   }
 }
+
+export const POST = handlePrivateSchedule(async () => {
+  await runTradovateTokenRenewal()
+})
 
 /**
  * Attempts to renew the Tradovate access token for a given synchronization record.

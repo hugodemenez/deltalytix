@@ -33,6 +33,21 @@ describe('POST /api/admin/rithmic-protocol/resync', () => {
     resyncRithmicProtocolAccount.mockReset()
   })
 
+  it('rejects the old CRON_SECRET bearer', async () => {
+    authorizeAdminRequest.mockResolvedValue({ ok: false, status: 401 })
+    const response = await post(
+      {
+        userId: 'user-1',
+        accountNumber: 'LFE050-I7X0S9B3-TEST001',
+        dryRun: true,
+      },
+      { authorization: 'Bearer cron-secret' },
+    )
+    expect(response.status).toBe(401)
+    expect(authorizeAdminRequest).toHaveBeenCalled()
+    expect(resyncRithmicProtocolAccount).not.toHaveBeenCalled()
+  })
+
   it('rejects unauthenticated callers without leaking the cron secret', async () => {
     authorizeAdminRequest.mockResolvedValue({ ok: false, status: 401 })
     const response = await post({
@@ -133,7 +148,8 @@ describe('POST /api/admin/rithmic-protocol/resync', () => {
   it('returns a non-2xx body with result after an empty rebuild', async () => {
     authorizeAdminRequest.mockResolvedValue({
       ok: true,
-      via: 'cron',
+      via: 'session',
+      actorUserId: 'admin-1',
     })
     resyncRithmicProtocolAccount.mockResolvedValue({
       dryRun: false,
@@ -210,7 +226,8 @@ describe('POST /api/admin/rithmic-protocol/resync', () => {
   it('returns 200 after a committed rebuild even if a follow-up read failed', async () => {
     authorizeAdminRequest.mockResolvedValue({
       ok: true,
-      via: 'cron',
+      via: 'session',
+      actorUserId: 'admin-1',
     })
     resyncRithmicProtocolAccount.mockResolvedValue({
       dryRun: false,

@@ -1,14 +1,15 @@
-import { NextResponse } from "next/server"
+import { handlePrivateSchedule } from '@/lib/cron/handle-private-schedule'
 import { PrismaClient } from "@/prisma/generated/prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
 import { Resend } from 'resend'
-import { headers } from 'next/headers'
 import { subDays, isEqual, startOfDay } from 'date-fns'
 import RenewalNoticeEmail from '@/components/emails/renewal-notice'
 import {
   buildRenewalNoticeCopy,
   resolveRenewalNoticeFirstName,
 } from '@/lib/renewal-notice-copy'
+
+export const maxDuration = 89
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
@@ -59,19 +60,8 @@ const calculateNextPaymentDate = (currentDate: Date, frequency: string): Date =>
 }
 
 // Daily cron job handler - runs every day at 9 AM UTC
-export async function GET(req: Request) {
+async function runRenewalNotice() {
   try {
-    // Verify that this is a legitimate Vercel cron job request
-    const headersList = await headers()
-    const authHeader = headersList.get('authorization')
-    
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
     const today = startOfDay(new Date())
     
     // Find all accounts with auto-renewal enabled and valid payment dates
@@ -98,10 +88,8 @@ export async function GET(req: Request) {
     })
 
     if (accountsWithRenewal.length === 0) {
-      return NextResponse.json(
-        { message: 'No accounts with auto-renewal found' },
-        { status: 200 }
-      )
+      console.info('[schedule renewal-notice] no accounts with auto-renewal')
+      return
     }
 
     // Filter accounts that need renewal notification today
@@ -113,10 +101,8 @@ export async function GET(req: Request) {
     })
 
     if (accountsToNotify.length === 0) {
-      return NextResponse.json(
-        { message: 'No accounts need renewal notification today' },
-        { status: 200 }
-      )
+      console.info('[schedule renewal-notice] no accounts need notice today')
+      return
     }
 
     let successCount = 0
@@ -231,26 +217,14 @@ export async function GET(req: Request) {
     }
 
     console.log(`Renewal notice emails processed: ${successCount} successful, ${errorCount} failed`)
-
-    return NextResponse.json({
-      success: true,
-      message: `Renewal notice emails processed: ${successCount} successful, ${errorCount} failed`,
-      stats: { 
-        success: successCount, 
-        failed: errorCount,
-        accountsChecked: accountsWithRenewal.length,
-        accountsToNotify: accountsToNotify.length,
-        usersNotified: userAccountsMap.size
-      }
-    })
-
   } catch (error) {
     console.error('Renewal notice cron job error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    throw error
   } finally {
     await prisma.$disconnect()
   }
-} 
+}
+
+export const POST = handlePrivateSchedule(async () => {
+  await runRenewalNotice()
+}) 

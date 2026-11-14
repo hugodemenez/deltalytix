@@ -1,5 +1,5 @@
 // app/api/cron/daily-sync/route.ts
-import { NextRequest, NextResponse } from 'next/server'
+import { handlePrivateSchedule } from '@/lib/cron/handle-private-schedule'
 import { prisma } from '@/lib/prisma'
 import { decryptConnectionToken } from '@/lib/connection-token-crypto'
 import { isConnectionSyncDue } from '@/lib/connection-sync-schedule'
@@ -12,7 +12,7 @@ import { invalidateConnectionsPageCache } from '@/app/[locale]/dashboard/connect
 import { serverActor } from "@/lib/api/server-actor"
 import { parseTradovateApiHosts } from '@/lib/tradovate/api-hosts'
 
-export const maxDuration = 300
+export const maxDuration = 298
 
 /**
  * Services this cron can sync unattended.
@@ -120,12 +120,7 @@ async function syncConnection(connection: {
   return { ok: false, reason: error }
 }
 
-export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get('authorization')
-  if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return new Response('Unauthorized', { status: 401 })
-  }
-
+async function runDailySync() {
   const startedAt = Date.now()
   const now = new Date()
 
@@ -210,16 +205,15 @@ export async function GET(request: NextRequest) {
       [...touchedUserIds].map((userId) => invalidateConnectionsPageCache(userId)),
     )
 
-    return NextResponse.json({
-      success: true,
-      candidates: connections.length,
-      due: due.length,
-      synced,
-      failed,
-      deferred,
-    })
+    console.info(
+      `[CRON daily-sync] candidates=${connections.length} due=${due.length} synced=${synced} failed=${failed} deferred=${deferred}`,
+    )
   } catch (error) {
     console.error('[CRON daily-sync] job error:', error)
-    return NextResponse.json({ error: 'Cron job failed' }, { status: 500 })
+    throw error
   }
 }
+
+export const POST = handlePrivateSchedule(async () => {
+  await runDailySync()
+})

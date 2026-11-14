@@ -20,11 +20,9 @@ function readOptionalString(value: unknown): string | undefined {
 /**
  * Admin-only rebuild of one Rithmic Protocol trading account.
  *
- * Auth: session user in `ADMIN_USER_ID` / `ALLOWED_ADMIN_USER_ID` /
- * `ADMIN_USER_IDS`, or `Authorization: Bearer $CRON_SECRET`.
- * `CRON_SECRET` is shared with `/api/cron/daily-sync` and can invoke this
- * destructive path; keep it restricted to operator scripts. A dedicated
- * resync secret is not required yet.
+ * Auth: signed-in session user in `ADMIN_USER_ID` / `ALLOWED_ADMIN_USER_ID` /
+ * `ADMIN_USER_IDS`. A leftover `Authorization: Bearer $CRON_SECRET` header is
+ * not accepted.
  *
  * POST { userId, accountNumber, dryRun: boolean, connectionId?: string,
  *        allowUnmatchedAnnotations?: boolean }
@@ -122,7 +120,7 @@ export async function POST(request: NextRequest) {
       userId,
       accountNumber,
       dryRun,
-      actor: auth.via === 'session' ? auth.actorUserId : 'cron',
+      actor: auth.actorUserId,
       connectionId,
       allowUnmatchedAnnotations:
         typeof payload.allowUnmatchedAnnotations === 'boolean'

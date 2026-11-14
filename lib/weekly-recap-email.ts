@@ -40,7 +40,7 @@ export type WeeklyRecapBuildResult =
 
 /**
  * Build the weekly recap Resend payload (or skip) for one subscriber.
- * Shared by GET /api/cron and POST /api/email/weekly-summary/[userid]
+ * Shared by the weekly-recap schedule and POST /api/email/weekly-summary/[userid]
  * so the Sunday cron never HTTP-self-fetches through a public URL.
  *
  * Loads the same User.id the cron already resolved (trades.userId = User.id).
