@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { RITHMIC_PROTOCOL_TRADE_TAG } from '@/lib/trade-id-utils'
 import { buildTradesFromRithmicFills } from './fills-to-trades'
 import { fillIdentityKey, markFillSource } from './dedupe-fills'
@@ -777,5 +777,99 @@ describe('reattachProtocolTradeAnnotations', () => {
       protocolTradeSetsMatch([base], [{ ...base, comment: 'new note' }]),
     ).toBe(false)
     expect(duplicateRebuildTradeIds(['a', 'b', 'a'])).toEqual(['a'])
+  })
+})
+
+describe('manual fills', () => {
+  const atMs = Date.parse('2026-09-25T15:07:00Z')
+  const manual = markFillSource(
+    [
+      fill({
+        fillId: 'manual-gap',
+        fillSize: 2,
+        fillPrice: 5810.25,
+        fillDate: '20260925',
+        ssboe: atMs / 1000,
+      }),
+    ],
+    'manual',
+  )[0]
+  const upstream = markFillSource(
+    [
+      fill({
+        fillId: '88421',
+        fillSize: 2,
+        fillPrice: 5810.25,
+        fillDate: '20260925',
+        ssboe: atMs / 1000 + 3,
+      }),
+    ],
+    'history',
+  )[0]
+  const nearbyOneLot = markFillSource(
+    [
+      fill({
+        fillId: '88422',
+        fillSize: 1,
+        fillPrice: 5810.25,
+        fillDate: '20260925',
+        ssboe: atMs / 1000 + 1,
+      }),
+    ],
+    'history',
+  )[0]
+
+  it('never overwrites a manual row or lets a manual row replace a plant fill', () => {
+    expect(shouldReplaceStoredFill(manual, { ...manual, source: 'history' })).toBe(false)
+    expect(shouldReplaceStoredFill(day1Buy, manual)).toBe(false)
+    const { updates } = partitionIncomingFills([day1Sell], [manual])
+    expect(updates).toEqual([])
+  })
+
+  it('keeps a manual fill through merge and the ordinary sync ledger', () => {
+    const merged = mergeFillLedgers([manual, day1Sell], [day1Buy])
+    expect(merged.map((row) => row.fillId).sort()).toEqual(
+      ['1001', '1002', 'manual-gap'].sort(),
+    )
+    const prepared = deriveTradesFromFillLedger([manual, day1Sell], [day1Buy])
+    expect(prepared.fills.map((row) => row.fillId)).toContain('manual-gap')
+    expect(prepared.fills.find((row) => row.fillId === 'manual-gap')?.source).toBe(
+      'manual',
+    )
+    expect(prepared.fills.find((row) => row.fillId === 'manual-gap')?.fillSize).toBe(2)
+  })
+
+  it('prefers an exact upstream fill within a few seconds and logs it', () => {
+    const info = vi.spyOn(console, 'info').mockImplementation(() => {})
+    try {
+      const merged = mergeFillLedgers([manual], [upstream])
+      expect(merged.map((row) => row.fillId)).toEqual(['88421'])
+      expect(info).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'preferring upstream fillId=88421 over manual fillId=manual-gap',
+        ),
+      )
+      const prepared = deriveTradesFromFillLedger([manual], [upstream])
+      expect(prepared.fills).toHaveLength(1)
+      expect(prepared.fills[0]?.fillId).toBe('88421')
+      expect(prepared.fills[0]?.fillSize).toBe(2)
+    } finally {
+      info.mockRestore()
+    }
+  })
+
+  it('keeps a manual fill when the nearby upstream fill has a different quantity', () => {
+    const prepared = prepareRithmicProtocolFills([manual, nearbyOneLot])
+    const sizes = prepared.fills.map((row) => row.fillSize).sort((a, b) => a - b)
+    expect(sizes).toEqual([1, 2])
+    expect(prepared.fills.find((row) => row.source === 'manual')?.fillId).toBe(
+      'manual-gap',
+    )
+  })
+
+  it('keeps a manual fill when the same-size upstream fill is more than a few seconds away', () => {
+    const later = { ...upstream, ssboe: (manual.ssboe ?? 0) + 30 }
+    const merged = mergeFillLedgers([manual], [later])
+    expect(merged.map((row) => row.fillId).sort()).toEqual(['88421', 'manual-gap'])
   })
 })

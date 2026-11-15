@@ -506,10 +506,16 @@ export function consolidateOrderFills(
 
   const out: RithmicProtocolFill[] = []
   for (const groupFills of groups.values()) {
-    const history = groupFills.filter((fill) => fill.source !== 'replay')
+    // A manual patch is not a piece of a plant order. Leave it intact so a
+    // nearby same-price history fill cannot absorb its quantity.
+    const manual = groupFills.filter((fill) => fill.source === 'manual')
+    const history = groupFills.filter(
+      (fill) => fill.source !== 'replay' && fill.source !== 'manual',
+    )
     const replay = groupFills.filter((fill) => fill.source === 'replay')
     const historyClusters = clusterOneSource(history, pieceWindowMs)
     for (const cluster of historyClusters) out.push(mergeCluster(cluster))
+    for (const fill of manual) out.push(fill)
     for (const cluster of clusterOneSource(replay, pieceWindowMs)) {
       const coveredByHistory = historyClusters.some(
         (h) =>

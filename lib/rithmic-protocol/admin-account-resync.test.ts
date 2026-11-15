@@ -958,6 +958,7 @@ describe('admin account resync scoping and safety', () => {
       sellLots: 330,
     })
     expect(preview.proposed?.openingNotFlatReport).toContain('P_0=+2')
+    expect(preview.diagnostics?.positions).toEqual([{ symbol: 'MESZ6', p0: 2 }])
     expect(tradeDeleteMany).not.toHaveBeenCalled()
   })
 
@@ -1255,6 +1256,63 @@ describe('admin account resync scoping and safety', () => {
     })
     expect(result.error).not.toBe('ORDINARY_RANGE_UNFETCHABLE')
     expect(fetchAdminRebuildFills).toHaveBeenCalled()
+  })
+
+  it('a stored manual 2-lot buy closes the -2 gap and is not missing upstream', async () => {
+    const info = vi.spyOn(console, 'info').mockImplementation(() => {})
+    tradeFindMany.mockResolvedValue([])
+    fillCount.mockResolvedValue(1)
+    const ssboe = Date.parse('2026-09-30T15:30:00Z') / 1000
+    fillFindMany.mockResolvedValue([
+      {
+        accountNumber: ACCOUNT,
+        accountId: 'acct-1',
+        identityKey: 'manual-row',
+        fillId: 'manual-gap',
+        rawFillId: null,
+        symbol: 'MESZ6',
+        exchange: 'CME',
+        transactionType: 'BUY',
+        fillPrice: 5797.5,
+        fillSize: 2,
+        fillDate: '20260930',
+        fillTime: '15:30:00',
+        basketId: null,
+        sequenceNumber: null,
+        ssboe,
+        usecs: null,
+        source: 'manual',
+      },
+    ])
+    fetchAdminRebuildFills.mockImplementation(async () =>
+      fetchedFills(jeremieAdminFills(false)),
+    )
+    try {
+      const result = await resyncRithmicProtocolAccount({
+        userId: USER,
+        accountNumber: ACCOUNT,
+        dryRun: true,
+        anchorDate: '2026-09-25',
+      })
+      expect(result.error).toBeUndefined()
+      expect(result.wouldRefuse).toBeFalsy()
+      expect(result.wouldRefuseReasons ?? []).not.toContain('STORED_FILL_MISSING_UPSTREAM')
+      expect(result.proposed?.positionChecks?.[0]).toMatchObject({
+        symbol: 'MESZ6',
+        p0: 0,
+        pEnd: 0,
+        net: 0,
+        buyLots: 330,
+        sellLots: 330,
+      })
+      expect(result.proposed?.openSkipped).toBe(0)
+      expect(fillDeleteMany).not.toHaveBeenCalled()
+      expect(info.mock.calls.some((call) => String(call[0]).includes('preferring upstream'))).toBe(
+        false,
+      )
+    } finally {
+      info.mockRestore()
+    }
   })
 
   it('FIFO on a flat Jérémie window produces no phantom shorts', async () => {

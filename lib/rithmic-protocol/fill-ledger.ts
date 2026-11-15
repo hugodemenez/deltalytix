@@ -10,7 +10,7 @@ import {
   type DedupeFillsStats,
   type RithmicProtocolFillPairIdentity,
 } from './dedupe-fills'
-import { fillSide, normalizeInstrument } from './fills-to-trades'
+import { fillSide, fillTimestampMs, normalizeInstrument } from './fills-to-trades'
 
 export type LedgerSeenIndex = {
   identityKeys: Set<string>
@@ -88,7 +88,8 @@ export function summarizeFillLedgerNets(
 export function prepareRithmicProtocolFills(
   fills: RithmicProtocolFill[],
 ): { fills: RithmicProtocolFill[]; stats: DedupeFillsStats } {
-  const preferred = preferHistoryFills(fills)
+  const withoutSupersededManuals = preferUpstreamOverMatchingManualFills(fills)
+  const preferred = preferHistoryFills(withoutSupersededManuals)
   const deduped = dedupeFillsWithStats(preferred)
   const consolidated = consolidateOrderFills(deduped.fills)
   return {
@@ -136,18 +137,84 @@ export function dropSeenLedgerFills(
 /**
  * History is the settled record. Replace a stored replay twin when the same
  * identity later arrives from ShowFillHistory; keep stored history if replay
- * restates it. Prefer a row that actually has a clock.
+ * restates it. Prefer a row that actually has a clock. A manual patch is
+ * never overwritten, and a manual row never replaces a plant fill.
  */
 export function shouldReplaceStoredFill(
   stored: RithmicProtocolFill,
   incoming: RithmicProtocolFill,
 ): boolean {
+  if (stored.source === 'manual' || incoming.source === 'manual') return false
   if (stored.source === 'history' && incoming.source === 'replay') return false
   if (stored.source === 'replay' && incoming.source === 'history') return true
   const storedClock = stored.ssboe ?? 0
   const incomingClock = incoming.ssboe ?? 0
   if (incomingClock > 0 && storedClock <= 0) return true
   return false
+}
+
+/**
+ * Same execution as a manual patch: same account, symbol, side, quantity,
+ * and price, with clocks within a few seconds. Quantity is part of the
+ * match so a 1-lot plant fill cannot retire a 2-lot patch.
+ */
+export const MANUAL_FILL_UPSTREAM_MATCH_MS = 5_000
+
+export function manualFillMatchesUpstream(
+  manual: RithmicProtocolFill,
+  upstream: RithmicProtocolFill,
+  toleranceMs = MANUAL_FILL_UPSTREAM_MATCH_MS,
+): boolean {
+  if (manual.source !== 'manual' || upstream.source === 'manual') return false
+  if ((manual.accountId || '') !== (upstream.accountId || '')) return false
+  const manualSymbol = (manual.symbol || '').trim().toUpperCase()
+  const upstreamSymbol = (upstream.symbol || '').trim().toUpperCase()
+  if (!manualSymbol || manualSymbol !== upstreamSymbol) return false
+  if (fillSide(manual.transactionType) !== fillSide(upstream.transactionType)) {
+    return false
+  }
+  const manualQty = Math.abs(Number(manual.fillSize) || 0)
+  const upstreamQty = Math.abs(Number(upstream.fillSize) || 0)
+  if (!(manualQty > 0) || Math.abs(manualQty - upstreamQty) > 1e-6) return false
+  const manualPrice = Number(manual.fillPrice || manual.avgFillPrice || 0)
+  const upstreamPrice = Number(upstream.fillPrice || upstream.avgFillPrice || 0)
+  if (!Number.isFinite(manualPrice) || !Number.isFinite(upstreamPrice)) return false
+  if (Math.abs(manualPrice - upstreamPrice) > 1e-6) return false
+  const manualMs = fillTimestampMs(manual)
+  const upstreamMs = fillTimestampMs(upstream)
+  if (!(manualMs > 0) || !(upstreamMs > 0)) return false
+  return Math.abs(manualMs - upstreamMs) <= toleranceMs
+}
+
+/**
+ * Drop a manual row from the working book when an upstream fill is the same
+ * execution. The stored row is left in the database; the next merge brings
+ * it back if that upstream fill disappears. Prefer the closest clock.
+ */
+export function preferUpstreamOverMatchingManualFills(
+  fills: RithmicProtocolFill[],
+): RithmicProtocolFill[] {
+  const upstream = fills.filter((fill) => fill.source !== 'manual')
+  if (upstream.length === 0 || upstream.length === fills.length) return fills
+  return fills.filter((fill) => {
+    if (fill.source !== 'manual') return true
+    let best: RithmicProtocolFill | undefined
+    let bestDt = Number.POSITIVE_INFINITY
+    const manualMs = fillTimestampMs(fill)
+    for (const candidate of upstream) {
+      if (!manualFillMatchesUpstream(fill, candidate)) continue
+      const dt = Math.abs(fillTimestampMs(candidate) - manualMs)
+      if (dt < bestDt) {
+        best = candidate
+        bestDt = dt
+      }
+    }
+    if (!best) return true
+    console.info(
+      `[RITHMIC-MANUAL-FILL] preferring upstream fillId=${best.fillId ?? ''} over manual fillId=${fill.fillId ?? ''} account=${fill.accountId} symbol=${(fill.symbol || '').trim().toUpperCase()} dtMs=${bestDt}`,
+    )
+    return false
+  })
 }
 
 export function mergeFillLedgers(
@@ -163,7 +230,7 @@ export function mergeFillLedgers(
       byKey.set(key, fill)
     }
   }
-  return [...byKey.values()]
+  return preferUpstreamOverMatchingManualFills([...byKey.values()])
 }
 
 export function partitionIncomingFills(

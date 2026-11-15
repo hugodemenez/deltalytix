@@ -31,10 +31,18 @@ type FillRow = {
   source: string
 }
 
+/** Persist and reload `manual` as itself. Anything else unknown stays history. */
+export function normalizePersistedFillSource(
+  value: string | null | undefined,
+): NonNullable<RithmicProtocolFill['source']> {
+  if (value === 'replay' || value === 'manual') return value
+  return 'history'
+}
+
 function sourceOf(
   value: string | null | undefined,
 ): NonNullable<RithmicProtocolFill['source']> {
-  return value === 'replay' ? 'replay' : 'history'
+  return normalizePersistedFillSource(value)
 }
 
 export function rowToFill(row: FillRow): RithmicProtocolFill {

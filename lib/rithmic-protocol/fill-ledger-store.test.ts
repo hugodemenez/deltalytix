@@ -24,7 +24,10 @@ vi.mock('@/lib/prisma', () => {
   return { prisma: client, prismaBase: client }
 })
 
-import { upsertRithmicProtocolFills } from './fill-ledger-store'
+import {
+  normalizePersistedFillSource,
+  upsertRithmicProtocolFills,
+} from './fill-ledger-store'
 
 const ACCOUNT = 'LFE050-TEST-LEDGER'
 const at = (iso: string) => Date.parse(iso) / 1000
@@ -42,6 +45,16 @@ function fill(
     ...overrides,
   }
 }
+
+describe('normalizePersistedFillSource', () => {
+  it('keeps manual and replay and treats anything else as history', () => {
+    expect(normalizePersistedFillSource('manual')).toBe('manual')
+    expect(normalizePersistedFillSource('replay')).toBe('replay')
+    expect(normalizePersistedFillSource('history')).toBe('history')
+    expect(normalizePersistedFillSource('nope')).toBe('history')
+    expect(normalizePersistedFillSource(null)).toBe('history')
+  })
+})
 
 describe('upsertRithmicProtocolFills', () => {
   beforeEach(() => {
@@ -101,5 +114,48 @@ describe('upsertRithmicProtocolFills', () => {
     expect(inserted[0].source).toBe('history')
     expect(updateMany).toHaveBeenCalledTimes(1)
     expect(transaction).toHaveBeenCalledTimes(1)
+  })
+
+  it('inserts a manual fill as manual and does not overwrite it on resync', async () => {
+    const manual = markFillSource(
+      [fill({ fillId: 'manual-gap', fillSize: 2, ssboe: at('2026-09-25T15:07:00Z') })],
+      'manual',
+    )[0]
+    const history = markFillSource(
+      [
+        fill({
+          fillId: '1002',
+          transactionType: 'SELL',
+          fillPrice: 7801,
+          ssboe: at('2026-09-25T15:10:00Z'),
+        }),
+      ],
+      'history',
+    )[0]
+
+    const insertedManual = await upsertRithmicProtocolFills({
+      userId: 'user-1',
+      fills: [manual],
+      stored: [],
+      accountIdByNumber: new Map([[ACCOUNT, 'acct-1']]),
+    })
+    expect(insertedManual).toEqual({ inserted: 1, updated: 0, skipped: 0 })
+    const manualRow = createMany.mock.calls[0][0].data[0] as { source: string; fillId: string }
+    expect(manualRow.source).toBe('manual')
+    expect(manualRow.fillId).toBe('manual-gap')
+
+    createMany.mockClear()
+    updateMany.mockClear()
+    const resync = await upsertRithmicProtocolFills({
+      userId: 'user-1',
+      fills: [history],
+      stored: [manual],
+      accountIdByNumber: new Map([[ACCOUNT, 'acct-1']]),
+    })
+    expect(resync).toEqual({ inserted: 1, updated: 0, skipped: 0 })
+    expect(updateMany).not.toHaveBeenCalled()
+    const historyRow = createMany.mock.calls[0][0].data[0] as { fillId: string; source: string }
+    expect(historyRow.fillId).toBe('1002')
+    expect(historyRow.source).toBe('history')
   })
 })

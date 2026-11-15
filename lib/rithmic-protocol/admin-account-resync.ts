@@ -196,7 +196,7 @@ export type AdminAccountResyncResult = {
       historyStatus?: string
       resolved?: boolean
     }>
-    positions?: Array<{ symbol: string; netQuantity: number }>
+    positions?: Array<{ symbol: string; p0: number }>
   }
 }
 
@@ -938,7 +938,18 @@ export async function resyncRithmicProtocolAccount(params: {
         const snapshotStatus = 'ok' as const
         const snapshotReason = undefined
 
-        const prepared = prepareRithmicProtocolFills(windowIncoming)
+        // In-window manual patches are part of the book the plant omitted.
+        // They are not in `windowIncoming`, so FIFO and P_0 have to see them
+        // here. Pre-window manuals stay on the ledger for ordinary sync and
+        // do not change this window's net.
+        const manualWindowFills = inWindowStoredFills.filter(
+          (fill) => fill.source === 'manual',
+        )
+        const prepared = prepareRithmicProtocolFills(
+          manualWindowFills.length === 0
+            ? windowIncoming
+            : mergeFillLedgers(manualWindowFills, windowIncoming),
+        )
         const merged = mergeFillLedgers(storedFills, windowIncoming)
         const fillPartition = partitionIncomingFills(windowIncoming, storedFills)
         const missingStoredFills = storedFillsMissingUpstream(
@@ -1220,7 +1231,7 @@ export async function resyncRithmicProtocolAccount(params: {
           })),
           positions: notFlat.slice(0, ADMIN_DIAGNOSTIC_LIMIT).map((row) => ({
             symbol: row.symbol,
-            netQuantity: row.p0,
+            p0: row.p0,
           })),
         }
 

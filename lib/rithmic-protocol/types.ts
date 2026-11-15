@@ -41,9 +41,12 @@ export interface RithmicProtocolFill {
   /**
    * Where the fill came from. ShowFillHistory (and its order-history
    * fallback) is the settled record; ReplayExecutions only tops up the
-   * latest fills history has not published yet.
+   * latest fills history has not published yet. `manual` is an operator
+   * patch for a fill the plant's order history omitted. Resync keeps the
+   * row. While an upstream fill matches it exactly, FIFO counts the
+   * upstream fill only.
    */
-  source?: 'history' | 'replay'
+  source?: 'history' | 'replay' | 'manual'
 }
 
 export interface RithmicProtocolCredentials {
