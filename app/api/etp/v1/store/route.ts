@@ -1,13 +1,5 @@
-import { PrismaClient } from '@/prisma/generated/prisma/client'
-import { PrismaPg } from '@prisma/adapter-pg'
 import { NextRequest, NextResponse } from 'next/server'
-
-// Create a new PrismaClient instance for this API route
-const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL,
-})
-
-const prisma = new PrismaClient({ adapter })
+import { prisma } from '@/lib/prisma'
 
 // Common authentication function to use across all methods
 async function authenticateRequest(req: NextRequest) {
@@ -120,8 +112,6 @@ export async function POST(req: NextRequest) {
       error: 'Failed to store orders', 
       details: error instanceof Error ? error.message : 'Unknown error' 
     }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
@@ -200,8 +190,6 @@ export async function GET(req: NextRequest) {
       error: 'Failed to retrieve orders', 
       details: error instanceof Error ? error.message : 'Unknown error' 
     }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
@@ -235,7 +223,5 @@ export async function DELETE(req: NextRequest) {
       error: 'Failed to delete orders', 
       details: error instanceof Error ? error.message : 'Unknown error' 
     }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
   }
 } 

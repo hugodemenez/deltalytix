@@ -1,7 +1,7 @@
 import 'server-only'
 import { revalidateTag, updateTag } from 'next/cache'
 import type { Trade } from '@/prisma/generated/prisma/client'
-import { prisma } from '@/lib/prisma'
+import { prisma, prismaBase } from '@/lib/prisma'
 import { decryptConnectionToken } from '@/lib/connection-token-crypto'
 import { generatePersistedTradeUUID, RITHMIC_PROTOCOL_TRADE_TAG } from '@/lib/trade-id-utils'
 import { fetchFillsForAccounts } from '@/lib/rithmic-protocol/client'
@@ -35,6 +35,7 @@ import {
 } from './fill-ledger'
 import { buildTradesFromRithmicFills } from './fills-to-trades'
 import { createManyTradesInChunks } from '@/lib/trades/create-many-trades'
+import { copyStoredTradeComment } from '@/lib/journal-field-write-guard'
 import type { RithmicProtocolFill } from './types'
 
 const SERVICE = 'rithmic-protocol'
@@ -192,7 +193,7 @@ export async function summarizeAccountProtocolData(
 async function loadExistingProtocolTrades(
   userId: string,
   accountNumber: string,
-  db: ProtocolDb = prisma,
+  db: ProtocolDb = prismaBase,
 ): Promise<ExistingProtocolTrade[]> {
   return db.trade.findMany({
     where: {
@@ -369,7 +370,7 @@ function tradeCreateRow(
     ...trade,
     userId,
     accountId,
-    comment: trade.comment ?? null,
+    comment: copyStoredTradeComment(trade.comment),
     imageBase64: trade.imageBase64 ?? null,
     imageBase64Second: trade.imageBase64Second ?? null,
     videoUrl: trade.videoUrl ?? null,
@@ -626,7 +627,7 @@ export async function resyncRithmicProtocolAccount(params: {
         let createdCount = 0
         try {
           guard.throwIfLost()
-          await prisma.$transaction(
+          await prismaBase.$transaction(
             async (tx) => {
               guard.throwIfLost()
               await tx.$queryRaw`

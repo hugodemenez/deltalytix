@@ -35,6 +35,7 @@ interface Mood {
   hasTradingExperience: boolean | null;
   selectedNews: string[];
   journalContent: string | null;
+  journalContentUndecryptable?: boolean;
   conversation: any;
   createdAt: Date;
   updatedAt: Date;
@@ -46,6 +47,7 @@ export function DailyComment({ dayData, selectedDate }: DailyCommentProps) {
   const moodHistory = useMoodStore((state) => state.moods);
   const setMoodHistory = useMoodStore((state) => state.setMoods);
   const [comment, setComment] = React.useState<string>("");
+  const [journalUnread, setJournalUnread] = React.useState(false);
   const [isSavingComment, setIsSavingComment] = React.useState(false);
   const [saveError, setSaveError] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
@@ -60,6 +62,7 @@ export function DailyComment({ dayData, selectedDate }: DailyCommentProps) {
 
       try {
         setIsLoading(true);
+        setJournalUnread(false);
         // Ensure selectedDate is a Date object
         const date =
           selectedDate instanceof Date ? selectedDate : new Date(selectedDate);
@@ -73,7 +76,18 @@ export function DailyComment({ dayData, selectedDate }: DailyCommentProps) {
           return format(moodDate, "yyyy-MM-dd") === dateKey;
         });
 
+        const historyUnread = Boolean(
+          (moodForDate as Mood | undefined)?.journalContentUndecryptable,
+        );
+        if (historyUnread) {
+          setJournalUnread(true);
+          setComment("");
+          setIsLoading(false);
+          return;
+        }
+
         if (moodForDate?.journalContent) {
+          setJournalUnread(false);
           setComment(moodForDate.journalContent);
           setIsLoading(false);
           return;
@@ -82,8 +96,14 @@ export function DailyComment({ dayData, selectedDate }: DailyCommentProps) {
         // If not in moodHistory, try to load from server
         const mood = await getMoodForDay(dateKey);
         if (mood) {
-          const comment = mood.journalContent || "";
-          setComment(comment);
+          const unread = Boolean(
+            (mood as { journalContentUndecryptable?: boolean })
+              .journalContentUndecryptable,
+          );
+          setJournalUnread(unread);
+          setComment(unread ? "" : mood.journalContent || "");
+        } else {
+          setJournalUnread(false);
         }
       } catch (error) {
         console.error("Error loading comment:", error);
@@ -98,6 +118,10 @@ export function DailyComment({ dayData, selectedDate }: DailyCommentProps) {
   const handleSaveComment = async () => {
     if (!user?.id) {
       toast.error(t("auth.required"));
+      return;
+    }
+
+    if (journalUnread) {
       return;
     }
 
@@ -148,14 +172,23 @@ export function DailyComment({ dayData, selectedDate }: DailyCommentProps) {
             <Skeleton className="h-[400px] w-full" />
           </div>
         ) : (
-          <JournalEditor
-            key={`${(selectedDate instanceof Date ? selectedDate : new Date(selectedDate)).toISOString()}-${comment ? "has-content" : "no-content"}`}
-            content={comment}
-            onChange={setComment}
-            height="100%"
-            width="100%"
-            placeholder={t("mindset.journaling.placeholder")}
-          />
+          <>
+            {journalUnread ? (
+              <p className="mb-3 text-sm text-muted-foreground">
+                This journal entry could not be decrypted and was not
+                overwritten.
+              </p>
+            ) : null}
+            <JournalEditor
+              key={`${(selectedDate instanceof Date ? selectedDate : new Date(selectedDate)).toISOString()}-${comment ? "has-content" : "no-content"}`}
+              content={comment}
+              onChange={setComment}
+              height="100%"
+              width="100%"
+              placeholder={t("mindset.journaling.placeholder")}
+              readOnly={journalUnread}
+            />
+          </>
         )}
       </div>
       <div className="flex items-center justify-between">
@@ -168,7 +201,7 @@ export function DailyComment({ dayData, selectedDate }: DailyCommentProps) {
         {saveError && <p className="text-sm text-destructive">{saveError}</p>}
         <Button
           onClick={handleSaveComment}
-          disabled={isLoading || isSavingComment || !comment.trim()}
+          disabled={isLoading || isSavingComment || journalUnread || !comment.trim()}
           size="sm"
         >
           {t("calendar.charts.saveComment")}

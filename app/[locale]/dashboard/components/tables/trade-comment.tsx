@@ -17,13 +17,16 @@ import { useData } from '@/context/data-provider'
 interface TradeCommentProps {
   tradeIds: string[]
   comment: string | null
+  commentUndecryptable?: boolean
   onCommentChange?: (comment: string | null) => void
 }
 
-export function TradeComment({ tradeIds, comment: initialComment, onCommentChange }: TradeCommentProps) {
+export function TradeComment({ tradeIds, comment: initialComment, commentUndecryptable = false, onCommentChange }: TradeCommentProps) {
   const t = useI18n()
   const { updateTrades } = useData()
-  const [localComment, setLocalComment] = useState(initialComment || '')
+  const [localComment, setLocalComment] = useState(
+    commentUndecryptable ? '' : (initialComment || ''),
+  )
   const [isUpdating, setIsUpdating] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -31,16 +34,14 @@ export function TradeComment({ tradeIds, comment: initialComment, onCommentChang
 
   // Sync localComment with comment prop
   useEffect(() => {
-    setLocalComment(initialComment || '')
-  }, [initialComment])
+    setLocalComment(commentUndecryptable ? '' : (initialComment || ''))
+  }, [initialComment, commentUndecryptable])
 
   const handleSave = async () => {
+    if (commentUndecryptable) return
     setIsUpdating(true)
     try {
-      // Update local state immediately
       const newComment = localComment || null
-      
-      // Update all trades in the list
       await updateTrades(tradeIds, { comment: newComment })
 
       
@@ -59,12 +60,10 @@ export function TradeComment({ tradeIds, comment: initialComment, onCommentChang
   }
 
   const handleClear = async () => {
+    if (commentUndecryptable) return
     setIsUpdating(true)
     try {
-      // Update local state immediately
       setLocalComment('')
-      
-      // Update all trades in the list
       await updateTrades(tradeIds, { comment: null })
       
       setShowSuccess(true)
@@ -92,7 +91,11 @@ export function TradeComment({ tradeIds, comment: initialComment, onCommentChang
                 !localComment && "text-muted-foreground font-normal"
               )}
             >
-              {localComment ? (
+              {commentUndecryptable ? (
+                <div className="truncate text-muted-foreground">
+                  Unreadable note
+                </div>
+              ) : localComment ? (
                 <div className="truncate">
                   {localComment}
                 </div>
@@ -107,10 +110,17 @@ export function TradeComment({ tradeIds, comment: initialComment, onCommentChang
             </div>
             <div className="space-y-2">
               <div className="relative">
+                {commentUndecryptable ? (
+                  <p className="text-sm text-muted-foreground">
+                    This trade comment could not be decrypted and was not
+                    overwritten.
+                  </p>
+                ) : null}
                 <textarea
                   ref={inputRef}
                   placeholder={t('trade-table.addComment')}
                   value={localComment}
+                  disabled={commentUndecryptable}
                   onChange={(e) => setLocalComment(e.target.value)}
                   className={cn(
                     "w-full px-3 py-2 text-base sm:text-sm bg-transparent border rounded min-h-[100px]",
@@ -147,7 +157,7 @@ export function TradeComment({ tradeIds, comment: initialComment, onCommentChang
               <Button
                 variant="outline"
                 size="sm"
-                disabled={isUpdating || !localComment}
+                disabled={isUpdating || commentUndecryptable || !localComment}
                 onClick={handleClear}
                 className="text-destructive hover:text-destructive"
               >
@@ -156,7 +166,7 @@ export function TradeComment({ tradeIds, comment: initialComment, onCommentChang
               </Button>
               <Button
                 size="sm"
-                disabled={isUpdating}
+                disabled={isUpdating || commentUndecryptable}
                 onClick={handleSave}
               >
                 <Save className="h-4 w-4 mr-2" />

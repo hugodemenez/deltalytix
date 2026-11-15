@@ -1,9 +1,49 @@
 'use server'
 
-import { prisma } from '@/lib/prisma'
+import { prisma, prismaBase } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { createClient } from './auth';
 import { Mood } from '@/prisma/generated/prisma/client';
+import {
+  encryptJournalConversation,
+  encryptJournalField,
+  withDecryptedMoodFields,
+} from '@/lib/journal-field-crypto';
+import {
+  conversationWrite,
+  mindsetJournalContentWrite,
+  storedConversationIsUnread,
+  storedJournalIsUnread,
+  storedJsonEquals,
+} from '@/lib/journal-field-write-guard';
+
+function moodDayBounds(today: Date) {
+  return {
+    gte: new Date(today.getFullYear(), today.getMonth(), today.getDate()),
+    lt: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1),
+  }
+}
+
+async function loadStoredMoodRaw(userId: string, today: Date) {
+  return prismaBase.mood.findFirst({
+    where: { userId, day: moodDayBounds(today) },
+    select: { id: true, journalContent: true, conversation: true },
+  })
+}
+
+async function decryptedMoodById(id: string) {
+  const mood = await prisma.mood.findUnique({ where: { id } })
+  if (!mood) {
+    throw new Error('Mood not found after write')
+  }
+  return withDecryptedMoodFields(mood)
+}
+
+function parseStoredConversation(value: unknown) {
+  if (value == null) return null
+  if (typeof value !== 'string') return value
+  return JSON.parse(value)
+}
 
 export type Conversation = {
   role: 'user' | 'assistant' | 'system';
@@ -13,7 +53,8 @@ export type Conversation = {
 export type MindsetData = {
   emotionValue: number;
   selectedNews: string[];
-  journalContent: string;
+  journalContent?: string;
+  journalEdited?: boolean;
 };
 
 export async function saveMindset(
@@ -48,31 +89,45 @@ export async function saveMindset(
       return 'VERY_HAPPY'
     }
 
-    // Check if mood already exists for today
-    const existingMood = await prisma.mood.findFirst({
-      where: {
-        userId: user.id,
-        day: {
-          gte: new Date(today.getFullYear(), today.getMonth(), today.getDate()),
-          lt: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1),
-        },
-      },
-    })
+    const existingMood = await loadStoredMoodRaw(user.id, today)
 
     if (existingMood) {
-      // Update existing mood
-      const updatedMood = await prisma.mood.update({
-        where: { id: existingMood.id },
+      const journalWrite = mindsetJournalContentWrite({
+        existingUndecryptable: storedJournalIsUnread(existingMood.journalContent),
+        journalEdited: data.journalEdited === true,
+        incoming: data.journalContent,
+      })
+      const moodFields = {
+        emotionValue: data.emotionValue,
+        selectedNews: data.selectedNews,
+        mood: getMoodLabel(data.emotionValue),
+        updatedAt: now,
+      }
+      if ('omit' in journalWrite) {
+        const updatedMood = await prisma.mood.update({
+          where: { id: existingMood.id },
+          data: moodFields,
+        })
+        revalidatePath('/')
+        return withDecryptedMoodFields(updatedMood)
+      }
+      const result = await prismaBase.mood.updateMany({
+        where: {
+          id: existingMood.id,
+          journalContent: existingMood.journalContent,
+        },
         data: {
-          emotionValue: data.emotionValue,
-          selectedNews: data.selectedNews,
-          journalContent: data.journalContent,
-          mood: getMoodLabel(data.emotionValue),
-          updatedAt: now,
+          ...moodFields,
+          journalContent: encryptJournalField(journalWrite.value),
         },
       })
+      if (result.count === 0) {
+        throw new Error(
+          'Refusing to overwrite mood.journalContent: stored value changed concurrently.',
+        )
+      }
       revalidatePath('/')
-      return updatedMood
+      return decryptedMoodById(existingMood.id)
     }
 
     // Create new mood
@@ -82,13 +137,13 @@ export async function saveMindset(
         day: today,
         emotionValue: data.emotionValue,
         selectedNews: data.selectedNews,
-        journalContent: data.journalContent,
+        journalContent: encryptJournalField(data.journalContent ?? ''),
         mood: getMoodLabel(data.emotionValue),
       },
     })
 
     revalidatePath('/')
-    return newMood
+    return withDecryptedMoodFields(newMood)
   } catch (error) {
     console.error('Error saving mindset:', error)
     throw error
@@ -117,29 +172,39 @@ export async function saveMood(
     }
     const now = new Date()
 
-    // Check if mood already exists for today
-    const existingMood = await prisma.mood.findFirst({
-      where: {
-        userId: user.id,
-        day: {
-          gte: new Date(today.getFullYear(), today.getMonth(), today.getDate()),
-          lt: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1),
-        },
-      },
-    })
+    const existingMood = await loadStoredMoodRaw(user.id, today)
 
     if (existingMood) {
-      // Update existing mood
-      const updatedMood = await prisma.mood.update({
-        where: { id: existingMood.id },
+      if (!conversation) {
+        const updatedMood = await prisma.mood.update({
+          where: { id: existingMood.id },
+          data: { mood, updatedAt: now },
+        })
+        revalidatePath('/')
+        return withDecryptedMoodFields(updatedMood)
+      }
+      conversationWrite({
+        existingUndecryptable: storedConversationIsUnread(existingMood.conversation),
+        incoming: conversation,
+      })
+      const result = await prismaBase.mood.updateMany({
+        where: {
+          id: existingMood.id,
+          conversation: storedJsonEquals(existingMood.conversation),
+        },
         data: {
           mood,
-          conversation: conversation ? JSON.stringify(conversation) : undefined,
+          conversation: encryptJournalConversation(JSON.stringify(conversation)),
           updatedAt: now,
         },
       })
+      if (result.count === 0) {
+        throw new Error(
+          'Refusing to overwrite mood.conversation: stored value changed concurrently.',
+        )
+      }
       revalidatePath('/')
-      return updatedMood
+      return decryptedMoodById(existingMood.id)
     }
 
     // Create new mood
@@ -148,12 +213,14 @@ export async function saveMood(
         userId: user.id,
         day: today,
         mood,
-        conversation: conversation ? JSON.stringify(conversation) : undefined,
+        conversation: conversation
+          ? encryptJournalConversation(JSON.stringify(conversation))
+          : undefined,
       },
     })
 
     revalidatePath('/')
-    return newMood
+    return withDecryptedMoodFields(newMood)
   } catch (error) {
     console.error('Error saving mood:', error)
     throw error
@@ -184,10 +251,12 @@ export async function getMoodForDay(date: string) {
       },
     })
 
-    return mood ? {
-      ...mood,
-      conversation: mood.conversation ? JSON.parse(mood.conversation as string) : null,
-    } : null
+    if (!mood) return null
+    const decrypted = withDecryptedMoodFields(mood)
+    return {
+      ...decrypted,
+      conversation: parseStoredConversation(decrypted.conversation),
+    }
   } catch (error) {
     console.error('Error getting mood:', error)
     throw error
@@ -214,10 +283,13 @@ export async function getMoodHistory(fromDate?: Date, toDate?: Date): Promise<Mo
       },
     })
 
-    return moods.map(mood => ({
-      ...mood,
-      conversation: mood.conversation ? JSON.parse(mood.conversation as string) : null,
-    }))
+    return moods.map(mood => {
+      const decrypted = withDecryptedMoodFields(mood)
+      return {
+        ...decrypted,
+        conversation: parseStoredConversation(decrypted.conversation),
+      }
+    })
   } catch (error) {
     console.error('Error getting mood history:', error)
     throw error
@@ -284,28 +356,34 @@ export async function saveJournal(
     }
     const now = new Date()
 
-    // Check if mood already exists for today
-    const existingMood = await prisma.mood.findFirst({
-      where: {
-        userId: user.id,
-        day: {
-          gte: new Date(today.getFullYear(), today.getMonth(), today.getDate()),
-          lt: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1),
-        },
-      },
-    })
+    const existingMood = await loadStoredMoodRaw(user.id, today)
 
     if (existingMood) {
-      // Update existing mood with only journal content
-      const updatedMood = await prisma.mood.update({
-        where: { id: existingMood.id },
+      const journalWrite = mindsetJournalContentWrite({
+        existingUndecryptable: storedJournalIsUnread(existingMood.journalContent),
+        journalEdited: true,
+        incoming: journalContent,
+      })
+      if ('omit' in journalWrite) {
+        return decryptedMoodById(existingMood.id)
+      }
+      const result = await prismaBase.mood.updateMany({
+        where: {
+          id: existingMood.id,
+          journalContent: existingMood.journalContent,
+        },
         data: {
-          journalContent,
+          journalContent: encryptJournalField(journalWrite.value),
           updatedAt: now,
         },
       })
+      if (result.count === 0) {
+        throw new Error(
+          'Refusing to overwrite mood.journalContent: stored value changed concurrently.',
+        )
+      }
       revalidatePath('/')
-      return updatedMood
+      return decryptedMoodById(existingMood.id)
     }
 
     // Create new mood with only journal content
@@ -313,14 +391,14 @@ export async function saveJournal(
       data: {
         userId: user.id,
         day: today,
-        journalContent,
+        journalContent: encryptJournalField(journalContent),
         mood: 'NEUTRAL', // Default mood
         emotionValue: 50, // Default emotion value
       },
     })
 
     revalidatePath('/')
-    return newMood
+    return withDecryptedMoodFields(newMood)
   } catch (error) {
     console.error('Error saving journal:', error)
     throw error

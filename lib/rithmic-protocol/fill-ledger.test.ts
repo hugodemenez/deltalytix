@@ -299,6 +299,20 @@ describe('gap then fill closes leftover without inventing overnight short', () =
     }
     expect(hasTradeJournalAnnotations(annotated)).toBe(true)
     expect(
+      hasTradeJournalAnnotations({
+        ...annotated,
+        comment: null,
+        commentUndecryptable: true,
+      }),
+    ).toBe(true)
+    expect(
+      phantomProtocolTradeIds({
+        existing: [{ ...annotated, comment: null, commentUndecryptable: true }],
+        derived,
+        ledgerFillIds: canonicalLedgerFillIds([...incomplete, gapFill]),
+      }),
+    ).toEqual([])
+    expect(
       phantomProtocolTradeIds({
         existing: [annotated],
         derived,

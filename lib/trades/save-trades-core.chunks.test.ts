@@ -132,4 +132,46 @@ describe("saveTradesCore chunk commits", () => {
     expect(updateTag).toHaveBeenCalledWith("trades-u1")
     expect(updateTag).toHaveBeenCalledWith("user-data-u1")
   })
+
+  it("encrypts trade comments before each createMany chunk", async () => {
+    const count = TRADE_CREATE_MANY_CHUNK_SIZE + 1
+    createMany.mockImplementation(async (args: { data: unknown[] }) => ({
+      count: args.data.length,
+    }))
+
+    const result = await saveTradesCore(
+      Array.from({ length: count }, (_, index) => ({
+        ...trade(index),
+        comment: `held too long ${index}`,
+      })),
+      { userId: "u1" },
+    )
+
+    expect(result.error).toBe(false)
+    expect(createMany).toHaveBeenCalledTimes(2)
+    const first = createMany.mock.calls[0][0].data as Array<{ comment: string | null }>
+    const second = createMany.mock.calls[1][0].data as Array<{ comment: string | null }>
+    expect(first).toHaveLength(TRADE_CREATE_MANY_CHUNK_SIZE)
+    expect(second).toHaveLength(1)
+    for (const row of [...first, ...second]) {
+      expect(row.comment?.startsWith("jrn:v1:")).toBe(true)
+      expect(row.comment).not.toContain("held too long")
+    }
+  })
+
+  it("leaves comments plaintext when JOURNAL_ENCRYPTION_WRITE is off", async () => {
+    const previous = process.env.JOURNAL_ENCRYPTION_WRITE
+    delete process.env.JOURNAL_ENCRYPTION_WRITE
+    createMany.mockResolvedValue({ count: 1 })
+    try {
+      await saveTradesCore(
+        [{ ...trade(0), comment: "held too long 0" }],
+        { userId: "u1" },
+      )
+      expect(createMany.mock.calls[0][0].data[0].comment).toBe("held too long 0")
+    } finally {
+      if (previous === undefined) delete process.env.JOURNAL_ENCRYPTION_WRITE
+      else process.env.JOURNAL_ENCRYPTION_WRITE = previous
+    }
+  })
 })

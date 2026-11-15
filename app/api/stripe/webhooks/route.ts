@@ -3,9 +3,8 @@
 import type { Stripe } from "stripe";
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/server/stripe";
-import { PrismaClient } from "@/prisma/generated/prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
 import { sendSubscriptionErrorEmail } from "@/app/[locale]/(landing)/actions/send-support-email";
+import { prisma } from "@/lib/prisma";
 import { capturePostHogEvent, shutdownPostHog } from "@/lib/posthog-server";
 import { buildSubscriptionPurchasedCapture } from "@/lib/conversion-analytics";
 import {
@@ -77,12 +76,6 @@ export async function POST(req: Request) {
 
   if (permittedEvents.includes(event.type)) {
     let data;
-    const adapter = new PrismaPg({
-      connectionString: process.env.DATABASE_URL,
-    })
-    
-    const prisma = new PrismaClient({ adapter })
-
     try {
       switch (event.type) {
         case "checkout.session.completed":

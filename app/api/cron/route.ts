@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
-import { PrismaClient } from "@/prisma/generated/prisma/client"
-import { PrismaPg } from "@prisma/adapter-pg"
 import { Resend } from 'resend'
+import { prisma } from '@/lib/prisma'
 import { headers } from 'next/headers'
 import {
   buildWeeklyRecapEmail,
@@ -19,11 +18,6 @@ import {
 } from "@/lib/resend-rate-limit"
 import { getRecapWeekUtc } from "@/lib/weekly-newsletter-window"
 
-const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL,
-})
-
-const prisma = new PrismaClient({ adapter })
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 // Every subscriber's recap is now built in-process: DB read + one LLM call +

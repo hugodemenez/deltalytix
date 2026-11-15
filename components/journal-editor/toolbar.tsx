@@ -31,6 +31,7 @@ interface JournalToolbarProps {
   onInsertImage: () => void
   aiMenu?: ReactNode
   onToggleFullscreen: () => void
+  disabled?: boolean
 }
 
 export function JournalToolbar({
@@ -45,6 +46,7 @@ export function JournalToolbar({
   onInsertImage,
   aiMenu,
   onToggleFullscreen,
+  disabled = false,
 }: JournalToolbarProps) {
 
   const formatButtons: Array<{
@@ -62,7 +64,8 @@ export function JournalToolbar({
 
   return (
     <div className="flex flex-wrap items-center gap-1 border-b bg-muted/30 p-2">
-      {events &&
+      {!disabled &&
+      events &&
       events.length > 0 &&
       onNewsSelection &&
       onEmbedNews &&
@@ -86,6 +89,7 @@ export function JournalToolbar({
           title={title}
           aria-pressed={activeBlock === id}
           className={cn(activeBlock === id && "bg-muted")}
+          disabled={disabled}
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => onToggleBlock(id)}
         >
@@ -98,6 +102,7 @@ export function JournalToolbar({
         variant="ghost"
         size="icon-sm"
         title="Upload image"
+        disabled={disabled}
         onMouseDown={(event) => event.preventDefault()}
         onClick={onInsertImage}
       >
@@ -112,6 +117,7 @@ export function JournalToolbar({
         size="icon-sm"
         className="ml-auto"
         title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+        disabled={disabled}
         onClick={onToggleFullscreen}
       >
         {isFullscreen ? <Minimize2 /> : <Maximize2 />}

@@ -52,6 +52,8 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
   const [emotionValue, setEmotionValue] = useState(0)
   const [selectedNews, setSelectedNews] = useState<string[]>([])
   const [journalContent, setJournalContent] = useState("")
+  const [journalEdited, setJournalEdited] = useState(false)
+  const [journalUnread, setJournalUnread] = useState(false)
   const [selectedDate, setSelectedDate] = useState(new Date())
   const journalEventWindow = useMemo(
     () => localDayFinancialEventWindow(selectedDate),
@@ -90,10 +92,17 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
       return format(moodDate, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd')
     })
 
+    const unread = Boolean(
+      mood &&
+        (mood as { journalContentUndecryptable?: boolean }).journalContentUndecryptable,
+    )
+    setJournalUnread(unread)
+    setJournalEdited(false)
+
     if (isToday(selectedDate) && hasTodayData) {
       setEmotionValue(mood?.emotionValue ?? 50)
       setSelectedNews(mood?.selectedNews ?? [])
-      setJournalContent(mood?.journalContent ?? "")
+      setJournalContent(unread ? "" : (mood?.journalContent ?? ""))
       setIsEditing(true)
       setPane("summary")
       return
@@ -102,7 +111,7 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
     if (mood) {
       setEmotionValue(mood.emotionValue ?? 50)
       setSelectedNews(mood.selectedNews ?? [])
-      setJournalContent(mood.journalContent ?? "")
+      setJournalContent(unread ? "" : (mood.journalContent ?? ""))
       setPane("summary")
       return
     }
@@ -121,6 +130,8 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
   }
 
   const handleJournalChange = (content: string) => {
+    if (journalUnread) return
+    setJournalEdited(true)
     setJournalContent(content)
   }
 
@@ -166,7 +177,9 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
       const savedMood = await saveMindset({
         emotionValue,
         selectedNews,
-        journalContent,
+        ...(journalUnread || !journalEdited
+          ? {}
+          : { journalContent, journalEdited: true }),
       }, dateKey)
 
       // Update the moodHistory in context
@@ -227,13 +240,20 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
     })
 
     if (moodForDate) {
+      const unread = Boolean(
+        (moodForDate as { journalContentUndecryptable?: boolean })
+          .journalContentUndecryptable,
+      )
+      setJournalUnread(unread)
+      setJournalEdited(false)
       setEmotionValue(moodForDate.emotionValue ?? 50)
       setSelectedNews(moodForDate.selectedNews ?? [])
-      setJournalContent(moodForDate.journalContent ?? " ")
+      setJournalContent(unread ? "" : (moodForDate.journalContent ?? " "))
       setIsEditing(true)
       setPane("summary")
     } else {
-      // If no data exists, reset the form
+      setJournalUnread(false)
+      setJournalEdited(false)
       setEmotionValue(50)
       setSelectedNews([])
       setJournalContent("")
@@ -261,9 +281,12 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
     })
   }
 
-  const handleEdit = (_section?: 'emotion' | 'journal' | 'news') => {
+  const handleEdit = (section?: 'emotion' | 'journal' | 'news') => {
     setIsEditing(true)
     setPane("journal")
+    if (section === "journal" && journalUnread) {
+      return
+    }
   }
 
   const toggleTimeline = () => {
@@ -573,6 +596,13 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
         <div className="flex h-full min-w-0 flex-1 flex-col p-4">
           <FinancialEventLoadRetry window={journalEventWindow} lang={locale} />
           {pane === "journal" ? (
+            <>
+            {journalUnread ? (
+              <p className="mb-3 text-sm text-muted-foreground">
+                This journal entry could not be decrypted. Emotion and news can
+                still be saved; the stored notes were not overwritten.
+              </p>
+            ) : null}
             <Journaling
               content={journalContent}
               onChange={handleJournalChange}
@@ -585,7 +615,9 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
               onNewsSelection={handleNewsSelection}
               trades={trades}
               onApplyTagToAll={handleApplyTagToAll}
+              readOnly={journalUnread}
             />
+            </>
           ) : (
             <MindsetSummary
               date={selectedDate}

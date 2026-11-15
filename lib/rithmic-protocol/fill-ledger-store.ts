@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { prisma } from '@/lib/prisma'
+import { prisma, prismaBase } from '@/lib/prisma'
 import { RITHMIC_PROTOCOL_TRADE_TAG } from '@/lib/trade-id-utils'
 import type { RithmicProtocolFill } from './types'
 import { canonicalRithmicFillId, fillIdentityKey } from './dedupe-fills'
@@ -220,7 +220,7 @@ export async function deleteUnannotatedPhantomProtocolTrades(params: {
   db?: ProtocolStore
 }): Promise<number> {
   if (params.accountNumbers.length === 0) return 0
-  const db = params.db ?? prisma
+  const db = params.db ?? prismaBase
   const existing = (await db.trade.findMany({
     where: {
       userId: params.userId,
