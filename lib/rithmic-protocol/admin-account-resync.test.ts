@@ -1385,6 +1385,90 @@ describe('admin account resync scoping and safety', () => {
     expect(result.proposed?.uncoveredTrades ?? []).toEqual([])
   })
 
+  it('refuses RETIRED_MANUAL_TRADES when a stored trade still uses a retired manual fill', async () => {
+    const buySsboe = Date.parse('2026-09-30T14:00:00Z') / 1000
+    const sellSsboe = Date.parse('2026-09-30T14:05:00Z') / 1000
+    tradeFindMany.mockResolvedValue([
+      {
+        id: 't-retired',
+        pnl: 1.25,
+        tags: [RITHMIC_PROTOCOL_TRADE_TAG],
+        accountNumber: ACCOUNT,
+        instrument: 'MES',
+        side: 'Long',
+        quantity: 1,
+        entryPrice: '7800',
+        closePrice: '7801',
+        entryDate: '2026-09-30T14:00:00.000Z',
+        closeDate: '2026-09-30T14:05:00.000Z',
+        entryId: '1001',
+        closeId: 'manual-close',
+        comment: 'kept note',
+      },
+    ])
+    fillCount.mockResolvedValue(1)
+    fillFindMany.mockResolvedValue([
+      {
+        accountNumber: ACCOUNT,
+        accountId: 'acct-1',
+        identityKey: 'manual-close-row',
+        fillId: 'manual-close',
+        rawFillId: null,
+        symbol: 'MESZ6',
+        exchange: 'CME',
+        transactionType: 'SELL',
+        fillPrice: 7801,
+        fillSize: 1,
+        fillDate: '20260930',
+        fillTime: '14:05:00',
+        basketId: null,
+        sequenceNumber: null,
+        ssboe: sellSsboe,
+        usecs: null,
+        source: 'manual-retired',
+      },
+    ])
+    fetchAdminRebuildFills.mockResolvedValue(
+      fetchedFills([
+        {
+          accountId: ACCOUNT,
+          symbol: 'MESZ6',
+          transactionType: 'BUY',
+          fillPrice: 7800,
+          fillSize: 1,
+          fillId: '1001',
+          fillDate: '20260930',
+          ssboe: buySsboe,
+          source: 'history',
+        },
+        {
+          accountId: ACCOUNT,
+          symbol: 'MESZ6',
+          transactionType: 'SELL',
+          fillPrice: 7801,
+          fillSize: 1,
+          fillId: '88422',
+          fillDate: '20260930',
+          ssboe: sellSsboe,
+          source: 'history',
+        },
+      ]),
+    )
+    const result = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: true,
+      anchorDate: '2026-09-25',
+    })
+    expect(result.wouldRefuse).toBe(true)
+    expect(result.wouldRefuseReasons).toContain('RETIRED_MANUAL_TRADES')
+    expect(result.wouldRefuseReasons ?? []).not.toContain('UNCOVERED_TRADES')
+    expect(result.proposed?.retiredManualTrades?.map((trade) => trade.id)).toEqual([
+      't-retired',
+    ])
+    expect(result.error).toBeUndefined()
+  })
+
   it('refuses MANUAL_FILL_AMBIGUOUS when a manual fill is a minute off the plant fill', async () => {
     const ssboe = Date.parse('2026-09-30T15:07:00Z') / 1000
     tradeFindMany.mockResolvedValue([])

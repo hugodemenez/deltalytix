@@ -1,10 +1,27 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { prisma } from '@/lib/prisma'
+import { RITHMIC_PROTOCOL_TRADE_TAG } from '@/lib/trade-id-utils'
+import {
+  canonicalLedgerFillIds,
+  countRetiredManualTradesKept,
+  deriveTradesFromFillLedger,
+  phantomProtocolTradeIds,
+  planManualFillSyncEffects,
+  retiredManualFillIds,
+} from './fill-ledger'
+import { buildTradesFromRithmicFills } from './fills-to-trades'
 import type { RithmicProtocolFill } from './types'
 
 vi.mock('@/lib/prisma', () => {
   const client = {
     account: { findFirst: vi.fn() },
-    rithmicProtocolFill: { findMany: vi.fn(), createMany: vi.fn(), updateMany: vi.fn() },
+    rithmicProtocolFill: {
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
+      createMany: vi.fn(),
+      updateMany: vi.fn(),
+    },
+    trade: { findMany: vi.fn(async () => []) },
     $disconnect: vi.fn(),
   }
   return { prisma: client, prismaBase: client }
@@ -163,6 +180,168 @@ describe('retireManualRithmicProtocolFill', () => {
     expect(again.retireReason).toBe('plant fill arrived')
     expect(markRetired).toHaveBeenCalledTimes(1)
   })
+
+  it('lists derived trades and refuses an unacknowledged apply when one is annotated', async () => {
+    const trades = [
+      {
+        id: 'stored-manual-trade',
+        entryId: 'manual-gap',
+        closeId: '1002',
+        instrument: 'MES',
+        annotated: true,
+      },
+    ]
+    const findDerivedTrades = vi.fn(async () => trades)
+    const preview = await retireManualRithmicProtocolFill(
+      {
+        userId: 'user-1',
+        accountNumber: base.accountNumber,
+        fillId: 'manual-gap',
+        reason: 'wrong price',
+      },
+      { findManualFill, markRetired, findDerivedTrades },
+    )
+    expect(preview.ok).toBe(true)
+    if (!preview.ok) return
+    expect(preview.dryRun).toBe(true)
+    expect(preview.trades).toEqual(trades)
+    expect(markRetired).not.toHaveBeenCalled()
+    const refused = await retireManualRithmicProtocolFill(
+      {
+        userId: 'user-1',
+        accountNumber: base.accountNumber,
+        fillId: 'manual-gap',
+        reason: 'wrong price',
+        dryRun: false,
+      },
+      { findManualFill, markRetired, findDerivedTrades },
+    )
+    expect(refused.ok).toBe(false)
+    if (refused.ok) return
+    expect(refused.status).toBe('acknowledgement_required')
+    expect(refused.trades).toEqual(trades)
+    expect(markRetired).not.toHaveBeenCalled()
+    const applied = await retireManualRithmicProtocolFill(
+      {
+        userId: 'user-1',
+        accountNumber: base.accountNumber,
+        fillId: 'manual-gap',
+        reason: 'wrong price',
+        dryRun: false,
+        acknowledgeAnnotatedTrades: true,
+      },
+      { findManualFill, markRetired, findDerivedTrades },
+    )
+    expect(applied.ok).toBe(true)
+    if (!applied.ok) return
+    expect(applied.trades).toEqual(trades)
+    expect(markRetired).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('retire where clause', () => {
+  const findFirst = prisma.rithmicProtocolFill.findFirst as ReturnType<typeof vi.fn>
+  const updateMany = prisma.rithmicProtocolFill.updateMany as ReturnType<typeof vi.fn>
+  const findTrades = prisma.trade.findMany as ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    findFirst.mockReset()
+    updateMany.mockReset().mockResolvedValue({ count: 1 })
+    findTrades.mockReset().mockResolvedValue([])
+  })
+
+  it('scopes the lookup and the write to this user and account, and will not retire another source', async () => {
+    findFirst.mockResolvedValue(null)
+    const otherUser = await retireManualRithmicProtocolFill({
+      userId: 'user-a',
+      accountNumber: 'ACCT-A',
+      fillId: 'manual-belongs-to-user-b',
+      reason: 'not this user',
+      dryRun: false,
+    })
+    expect(otherUser.ok).toBe(false)
+    expect(findFirst).toHaveBeenCalledWith({
+      where: {
+        userId: 'user-a',
+        accountNumber: 'ACCT-A',
+        fillId: 'manual-belongs-to-user-b',
+      },
+      select: {
+        fillId: true,
+        source: true,
+        retiredAt: true,
+        retiredBy: true,
+        retireReason: true,
+      },
+    })
+    expect(updateMany).not.toHaveBeenCalled()
+
+    findFirst.mockResolvedValue(null)
+    const otherAccount = await retireManualRithmicProtocolFill({
+      userId: 'user-a',
+      accountNumber: 'ACCT-B',
+      fillId: 'manual-belongs-to-user-b',
+      reason: 'not this account',
+      dryRun: false,
+    })
+    expect(otherAccount.ok).toBe(false)
+    expect(findFirst).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: {
+          userId: 'user-a',
+          accountNumber: 'ACCT-B',
+          fillId: 'manual-belongs-to-user-b',
+        },
+      }),
+    )
+    expect(updateMany).not.toHaveBeenCalled()
+
+    findFirst.mockResolvedValue({ fillId: 'manual-plant', source: 'history' })
+    const plant = await retireManualRithmicProtocolFill({
+      userId: 'user-a',
+      accountNumber: 'ACCT-A',
+      fillId: 'manual-plant',
+      reason: 'plant row',
+      dryRun: false,
+    })
+    expect(plant.ok).toBe(false)
+    if (plant.ok) return
+    expect(plant.status).toBe('validation')
+    expect(updateMany).not.toHaveBeenCalled()
+    expect(findTrades).not.toHaveBeenCalled()
+
+    findFirst.mockResolvedValue({ fillId: 'manual-gap', source: 'manual' })
+    const applied = await retireManualRithmicProtocolFill({
+      userId: 'user-b',
+      accountNumber: 'ACCT-B',
+      fillId: 'manual-gap',
+      reason: 'this account only',
+      dryRun: false,
+    })
+    expect(applied.ok).toBe(true)
+    expect(findTrades).toHaveBeenCalledWith({
+      where: {
+        userId: 'user-b',
+        accountNumber: 'ACCT-B',
+        tags: { has: RITHMIC_PROTOCOL_TRADE_TAG },
+        OR: [{ entryId: 'manual-gap' }, { closeId: 'manual-gap' }],
+      },
+      select: expect.objectContaining({ id: true, entryId: true, closeId: true }),
+    })
+    expect(updateMany).toHaveBeenCalledWith({
+      where: {
+        userId: 'user-b',
+        accountNumber: 'ACCT-B',
+        fillId: 'manual-gap',
+        source: 'manual',
+      },
+      data: expect.objectContaining({
+        source: 'manual-retired',
+        retiredBy: 'admin',
+        retireReason: 'this account only',
+      }),
+    })
+  })
 })
 
 describe('parseManualFillCliArgs', () => {
@@ -244,6 +423,24 @@ describe('parseManualFillCliArgs', () => {
     expect(acknowledged.command).toBe('insert')
     expect(acknowledged.input.dryRun).toBe(false)
     expect(acknowledged.input.acknowledgeWarnings).toBe(true)
+    const annotated = parseManualFillCliArgs([
+      '--retire',
+      '--user-id',
+      base.userId,
+      '--account',
+      base.accountNumber,
+      '--fill-id',
+      'manual-gap',
+      '--reason',
+      'plant fill arrived',
+      '--apply',
+      '--acknowledge-annotated-trades',
+    ])
+    expect(annotated.ok).toBe(true)
+    if (!annotated.ok) return
+    expect(annotated.command).toBe('retire')
+    expect(annotated.input.dryRun).toBe(false)
+    expect(annotated.input.acknowledgeAnnotatedTrades).toBe(true)
   })
 
   it('rejects --dry-run together with --apply and a non-integer qty', () => {
@@ -429,5 +626,132 @@ describe('insertManualRithmicProtocolFill', () => {
     if (result.ok) return
     expect(result.status).toBe('conflict')
     expect(upsertFills).not.toHaveBeenCalled()
+  })
+})
+
+describe('retire then ordinary sync', () => {
+  const tick = new Map([['MES', { tickSize: 0.25, tickValue: 1.25 }]])
+
+  it('keeps annotated manual trades and reaps unannotated ones, with or without a near-miss plant twin', async () => {
+    const ssboe = Date.parse('2026-09-25T15:07:00Z') / 1000
+    const manual: RithmicProtocolFill = {
+      accountId: base.accountNumber,
+      symbol: 'MESZ6',
+      transactionType: 'BUY',
+      fillPrice: 7800,
+      fillSize: 1,
+      fillDate: '20260925',
+      fillId: 'manual-gap',
+      ssboe,
+      source: 'manual',
+    }
+    const close: RithmicProtocolFill = {
+      ...manual,
+      fillId: '1002',
+      transactionType: 'SELL',
+      fillPrice: 7801,
+      ssboe: ssboe + 60,
+      source: 'history',
+    }
+    const plant: RithmicProtocolFill = {
+      ...manual,
+      fillId: '88421',
+      fillPrice: 7800.5,
+      ssboe: ssboe + 4,
+      source: 'history',
+    }
+    const before = buildTradesFromRithmicFills(
+      deriveTradesFromFillLedger([manual, close], []).fills,
+      'user-1',
+      tick,
+    ).trades
+    expect(before).toHaveLength(1)
+    const plain = {
+      ...before[0],
+      id: 'stored-manual-trade',
+      comment: null,
+      tags: [RITHMIC_PROTOCOL_TRADE_TAG],
+    }
+    const noted = { ...plain, comment: 'kept note' }
+
+    async function retireThenSync(annotated: boolean, withTwin: boolean) {
+      const row: RithmicProtocolFill = { ...manual, source: 'manual' }
+      const markRetired = vi.fn(async () => {
+        row.source = 'manual-retired'
+      })
+      const retired = await retireManualRithmicProtocolFill(
+        {
+          userId: 'user-1',
+          accountNumber: base.accountNumber,
+          fillId: 'manual-gap',
+          reason: 'wrong price',
+          dryRun: false,
+          acknowledgeAnnotatedTrades: annotated,
+        },
+        {
+          findManualFill: async () => ({ fillId: 'manual-gap', source: 'manual' }),
+          markRetired,
+          findDerivedTrades: async () => [
+            {
+              id: plain.id,
+              entryId: 'manual-gap',
+              closeId: '1002',
+              instrument: 'MES',
+              annotated,
+            },
+          ],
+        },
+      )
+      expect(retired.ok).toBe(true)
+      expect(markRetired).toHaveBeenCalledTimes(1)
+      const ledger = [row, close]
+      const incoming = withTwin ? [plant] : []
+      if (withTwin) {
+        const blocked = deriveTradesFromFillLedger([manual, close], [plant])
+        expect(blocked.nearMisses.some((miss) => miss.reason.includes('price'))).toBe(true)
+      }
+      const prepared = deriveTradesFromFillLedger(ledger, incoming)
+      const derived = buildTradesFromRithmicFills(
+        planManualFillSyncEffects(prepared).fifoFills,
+        'user-1',
+        tick,
+      ).trades
+      const fills = [...ledger, ...incoming]
+      const existing = annotated ? noted : plain
+      return {
+        derived,
+        reaped: phantomProtocolTradeIds({
+          existing: [existing],
+          derived,
+          ledgerFillIds: canonicalLedgerFillIds(fills),
+        }),
+        kept: countRetiredManualTradesKept({
+          existing: [existing],
+          derived,
+          ledgerFillIds: canonicalLedgerFillIds(fills),
+          retiredFillIds: retiredManualFillIds(fills),
+        }),
+      }
+    }
+
+    const annotatedTwin = await retireThenSync(true, true)
+    expect(annotatedTwin.reaped).toEqual([])
+    expect(annotatedTwin.kept).toBe(1)
+    expect(annotatedTwin.derived.map((trade) => trade.entryId)).toEqual(['88421'])
+
+    const annotatedNone = await retireThenSync(true, false)
+    expect(annotatedNone.reaped).toEqual([])
+    expect(annotatedNone.kept).toBe(1)
+    expect(annotatedNone.derived).toEqual([])
+
+    const plainTwin = await retireThenSync(false, true)
+    expect(plainTwin.reaped).toEqual(['stored-manual-trade'])
+    expect(plainTwin.kept).toBe(0)
+    expect(plainTwin.derived.map((trade) => trade.entryId)).toEqual(['88421'])
+
+    const plainNone = await retireThenSync(false, false)
+    expect(plainNone.reaped).toEqual(['stored-manual-trade'])
+    expect(plainNone.kept).toBe(0)
+    expect(plainNone.derived).toEqual([])
   })
 })

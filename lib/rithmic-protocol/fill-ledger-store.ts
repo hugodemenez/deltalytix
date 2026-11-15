@@ -5,6 +5,7 @@ import type { RithmicProtocolFill } from './types'
 import { canonicalRithmicFillId, fillIdentityKey } from './dedupe-fills'
 import {
   type AnnotatedProtocolTrade,
+  countRetiredManualTradesKept,
   partitionIncomingFills,
   phantomProtocolTradeIds,
 } from './fill-ledger'
@@ -225,11 +226,15 @@ export async function deleteUnannotatedPhantomProtocolTrades(params: {
     closeId?: string | null
   }>
   ledgerFillIds: Set<string>
+  /** `manual-retired` fill ids still present on the ledger. Annotated trades that use them are counted, not deleted. */
+  retiredFillIds?: Set<string>
   /** Accounts whose symbol was skipped as a manual near-miss. Do not reap those trades. */
   retainAccountNumbers?: string[]
   db?: ProtocolStore
-}): Promise<number> {
-  if (params.accountNumbers.length === 0) return 0
+}): Promise<{ removed: number; retiredManualTradesKept: number }> {
+  if (params.accountNumbers.length === 0) {
+    return { removed: 0, retiredManualTradesKept: 0 }
+  }
   const db = params.db ?? prismaBase
   const existing = (await db.trade.findMany({
     where: {
@@ -255,13 +260,21 @@ export async function deleteUnannotatedPhantomProtocolTrades(params: {
     },
   })) as AnnotatedProtocolTrade[]
 
+  const classification = {
+    derived: params.derivedTrades,
+    ledgerFillIds: params.ledgerFillIds,
+  }
+  const retiredManualTradesKept = countRetiredManualTradesKept({
+    existing,
+    ...classification,
+    retiredFillIds: params.retiredFillIds ?? new Set(),
+  })
   const retainedAccounts = new Set(params.retainAccountNumbers ?? [])
   const ids = phantomProtocolTradeIds({
     existing: existing.filter((row) => !retainedAccounts.has(row.accountNumber ?? '')),
-    derived: params.derivedTrades,
-    ledgerFillIds: params.ledgerFillIds,
+    ...classification,
   })
-  if (ids.length === 0) return 0
+  if (ids.length === 0) return { removed: 0, retiredManualTradesKept }
 
   const result = await db.trade.deleteMany({
       where: {
@@ -270,5 +283,5 @@ export async function deleteUnannotatedPhantomProtocolTrades(params: {
         tags: { has: RITHMIC_PROTOCOL_TRADE_TAG },
       },
     })
-  return result.count
+  return { removed: result.count, retiredManualTradesKept }
 }

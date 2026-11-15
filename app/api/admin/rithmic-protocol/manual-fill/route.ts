@@ -81,6 +81,17 @@ export async function POST(request: NextRequest) {
         )
         return NextResponse.json(retired)
       }
+      if (retired.status === 'acknowledgement_required') {
+        return jsonError({
+          code: 'conflict',
+          message: 'Apply refused while an annotated trade still uses this manual fill.',
+          hint: 'Move the annotation off the listed trade, then delete that row or accept it and re-send dryRun: false with acknowledgeAnnotatedTrades: true. Annotated rows are never deleted automatically.',
+          details: (retired.trades ?? []).map((trade) => ({
+            field: 'trades',
+            message: `${trade.id} ${trade.instrument ?? ''} entry=${trade.entryId ?? ''} close=${trade.closeId ?? ''} annotated=${trade.annotated}`,
+          })),
+        })
+      }
       if (retired.status === 'not_found') {
         return jsonError({
           code: 'not_found',

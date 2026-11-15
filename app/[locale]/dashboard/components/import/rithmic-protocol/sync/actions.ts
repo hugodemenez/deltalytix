@@ -28,6 +28,7 @@ import {
   canonicalLedgerFillIds,
   deriveTradesFromFillLedger,
   planManualFillSyncEffects,
+  retiredManualFillIds,
 } from '@/lib/rithmic-protocol/fill-ledger'
 import {
   deleteUnannotatedPhantomProtocolTrades,
@@ -945,18 +946,24 @@ export async function getRithmicProtocolTrades(
     }
 
     guard.throwIfLost()
-    const phantomsRemoved = await deleteUnannotatedPhantomProtocolTrades({
+    const ledgerFills = [...storedFills, ...rawFills]
+    const phantoms = await deleteUnannotatedPhantomProtocolTrades({
       userId,
       accountNumbers: resolvedAccountIds,
       derivedTrades: trades,
-      ledgerFillIds: canonicalLedgerFillIds([...storedFills, ...rawFills]),
+      ledgerFillIds: canonicalLedgerFillIds(ledgerFills),
+      retiredFillIds: retiredManualFillIds(ledgerFills),
       retainAccountNumbers: manualEffects.retainAccountNumbers,
     })
-    if (phantomsRemoved > 0) {
-      syncStats.droppedByReason.phantoms_removed = phantomsRemoved
+    if (phantoms.removed > 0) {
+      syncStats.droppedByReason.phantoms_removed = phantoms.removed
       logger.info(
-        `Removed ${phantomsRemoved} unannotated ${SERVICE} overnight phantom trade(s)`,
+        `Removed ${phantoms.removed} unannotated ${SERVICE} overnight phantom trade(s)`,
       )
+    }
+    if (phantoms.retiredManualTradesKept > 0) {
+      syncStats.droppedByReason.retired_manual_trade_kept =
+        phantoms.retiredManualTradesKept
     }
 
     logSyncSummary(savedCount)

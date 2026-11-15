@@ -166,6 +166,7 @@ export type ProposedRebuildSnapshot = AccountProtocolSnapshot & {
   tradesCreated: number
   tradesKept: number
   uncoveredTrades: RebuildTradePreview[]
+  retiredManualTrades: RebuildTradePreview[]
   unmatchedAnnotatedTrades: RebuildTradePreview[]
 }
 
@@ -961,6 +962,19 @@ export async function resyncRithmicProtocolAccount(params: {
           inWindowExisting,
           [...windowIncoming, ...manualWindowFills],
         )
+        const retiredFillIds = new Set(
+          storedFills.flatMap((fill) => {
+            if (fill.source !== 'manual-retired') return []
+            const fillId = canonicalRithmicFillId(fill.fillId)
+            return fillId ? [fillId] : []
+          }),
+        )
+        const retiredManualTrades = uncovered.filter((trade) =>
+          referencesRetiredManualFill(trade, retiredFillIds),
+        )
+        const otherUncovered = uncovered.filter(
+          (trade) => !referencesRetiredManualFill(trade, retiredFillIds),
+        )
 
         const scopedPositions = bracket.positions.filter(
           (position) => position.accountId === accountNumber,
@@ -1114,8 +1128,13 @@ export async function resyncRithmicProtocolAccount(params: {
           storedFills,
           incomingFills: windowIncoming,
           existing,
-          uncoveredCount: uncovered.length,
+          uncoveredCount: otherUncovered.length,
         })
+        if (retiredManualTrades.length > 0) {
+          warnings.push(
+            `${retiredManualTrades.length} stored protocol trade(s) reference a retired manual fill. Live apply refuses with RETIRED_MANUAL_TRADES. Move the annotation and delete the row, or leave the trade. Annotated rows are never deleted.`,
+          )
+        }
         if (notFlat.length > 0) {
           warnings.push(openingNotFlatReport)
         }
@@ -1196,7 +1215,8 @@ export async function resyncRithmicProtocolAccount(params: {
           tradesDeleted: swap.toDelete.length,
           tradesCreated: attached.trades.length,
           tradesKept: swap.keepIds.length,
-          uncoveredTrades: uncovered.map(tradePreview),
+          uncoveredTrades: otherUncovered.map(tradePreview),
+          retiredManualTrades: retiredManualTrades.map(tradePreview),
           unmatchedAnnotatedTrades: attached.unmatched.map(tradePreview),
         })
 
@@ -1262,7 +1282,10 @@ export async function resyncRithmicProtocolAccount(params: {
         if (fifoTimestampTie) wouldRefuseReasons.push('FIFO_TIMESTAMP_TIE')
         if (ordinaryWouldReapKept) wouldRefuseReasons.push('ORDINARY_SYNC_REAP')
         if (duplicateIds.length > 0) wouldRefuseReasons.push('DUPLICATE_TRADE_IDS')
-        if (uncovered.length > 0) wouldRefuseReasons.push('UNCOVERED_TRADES')
+        if (retiredManualTrades.length > 0) {
+          wouldRefuseReasons.push('RETIRED_MANUAL_TRADES')
+        }
+        if (otherUncovered.length > 0) wouldRefuseReasons.push('UNCOVERED_TRADES')
         if (missingStoredFills.length > 0) {
           wouldRefuseReasons.push('STORED_FILL_MISSING_UPSTREAM')
         }
@@ -1554,6 +1577,7 @@ function proposedSnapshot(params: {
   tradesCreated: number
   tradesKept: number
   uncoveredTrades: RebuildTradePreview[]
+  retiredManualTrades: RebuildTradePreview[]
   unmatchedAnnotatedTrades: RebuildTradePreview[]
 }): ProposedRebuildSnapshot {
   return {
@@ -1577,8 +1601,20 @@ function proposedSnapshot(params: {
     tradesCreated: params.tradesCreated,
     tradesKept: params.tradesKept,
     uncoveredTrades: params.uncoveredTrades,
+    retiredManualTrades: params.retiredManualTrades,
     unmatchedAnnotatedTrades: params.unmatchedAnnotatedTrades,
   }
+}
+
+function referencesRetiredManualFill(
+  trade: { entryId?: string | null; closeId?: string | null },
+  retiredFillIds: Set<string>,
+): boolean {
+  const entry = canonicalRithmicFillId(trade.entryId)
+  const close = canonicalRithmicFillId(trade.closeId)
+  return Boolean(
+    (entry && retiredFillIds.has(entry)) || (close && retiredFillIds.has(close)),
+  )
 }
 
 function rebuildWarnings(params: {

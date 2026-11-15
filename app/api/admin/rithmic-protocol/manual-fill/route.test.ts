@@ -177,4 +177,37 @@ describe('POST /api/admin/rithmic-protocol/manual-fill', () => {
     )
     expect(insertManualRithmicProtocolFill).not.toHaveBeenCalled()
   })
+
+  it('refuses an unacknowledged retire of an annotated trade with 409', async () => {
+    authorizeAdminRequest.mockResolvedValue({ ok: true, via: 'cron' })
+    retireManualRithmicProtocolFill.mockResolvedValue({
+      ok: false,
+      status: 'acknowledgement_required',
+      errors: [{ field: 'acknowledgeAnnotatedTrades', message: 'Apply refused.' }],
+      trades: [
+        {
+          id: 'stored-manual-trade',
+          entryId: 'manual-gap',
+          closeId: '1002',
+          instrument: 'MES',
+          annotated: true,
+        },
+      ],
+    })
+    const response = await post({
+      action: 'retire',
+      userId: body.userId,
+      accountNumber: body.accountNumber,
+      fillId: 'manual-gap',
+      reason: 'wrong price',
+      dryRun: false,
+    })
+    expect(response.status).toBe(409)
+    const payload = await response.json()
+    expect(payload.error.code).toBe('conflict')
+    expect(payload.error.hint).toMatch(/acknowledgeAnnotatedTrades: true/)
+    expect(payload.error.hint).toMatch(/delete/)
+    expect(payload.error.details[0].message).toMatch(/stored-manual-trade/)
+    expect(insertManualRithmicProtocolFill).not.toHaveBeenCalled()
+  })
 })

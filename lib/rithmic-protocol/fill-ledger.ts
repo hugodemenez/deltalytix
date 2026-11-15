@@ -539,6 +539,50 @@ export function canonicalLedgerFillIds(
   return ids
 }
 
+export function retiredManualFillIds(
+  fills: Array<{ source?: string | null; fillId?: string | null }>,
+): Set<string> {
+  const ids = new Set<string>()
+  for (const fill of fills) {
+    if (fill.source !== 'manual-retired') continue
+    const fillId = canonicalRithmicFillId(fill.fillId)
+    if (fillId) ids.add(fillId)
+  }
+  return ids
+}
+
+export function tradeReferencesFillId(
+  trade: { entryId?: string | null; closeId?: string | null },
+  fillId: string,
+): boolean {
+  const target = canonicalRithmicFillId(fillId)
+  if (!target) return false
+  const entry = canonicalRithmicFillId(trade.entryId)
+  const close = canonicalRithmicFillId(trade.closeId)
+  return entry === target || close === target
+}
+
+/** Annotated trades still pointing at a retired manual fill. Ordinary sync reports these and does not delete them. */
+export function countRetiredManualTradesKept(params: {
+  existing: AnnotatedProtocolTrade[]
+  derived: Array<{ id: string } & RithmicProtocolFillPairIdentity>
+  ledgerFillIds: Set<string>
+  retiredFillIds: Set<string>
+}): number {
+  if (params.retiredFillIds.size === 0) return 0
+  let kept = 0
+  for (const row of params.existing) {
+    const entry = canonicalRithmicFillId(row.entryId)
+    const close = canonicalRithmicFillId(row.closeId)
+    const references =
+      (entry != null && params.retiredFillIds.has(entry)) ||
+      (close != null && params.retiredFillIds.has(close))
+    if (!references || !hasTradeJournalAnnotations(row)) continue
+    if (classifyStoredProtocolTrade(row, params) === 'keep') kept += 1
+  }
+  return kept
+}
+
 export function hasTradeJournalAnnotations(
   trade: AnnotatedProtocolTrade,
 ): boolean {

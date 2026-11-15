@@ -34,6 +34,10 @@
  *     --fill-id manual-FILL_ID \
  *     --reason "plant fill arrived; this patch was the wrong clock" \
  *     --apply
+ *
+ * If the preview lists an annotated trade, `--apply` is refused until
+ * `--acknowledge-annotated-trades` is also passed. The trade itself is
+ * never deleted.
  */
 import { prisma } from '../lib/prisma'
 import {

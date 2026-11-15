@@ -215,6 +215,12 @@ function errorMapping(error: string | undefined): {
         message: 'Annotated trades would not survive the rebuild.',
         hint: 'Inspect result.proposed.unmatchedAnnotatedTrades. Unmatched annotated rows must be resolved; the override is ignored.',
       }
+    case 'RETIRED_MANUAL_TRADES':
+      return {
+        code: 'conflict',
+        message: 'Stored trades still reference a retired manual fill.',
+        hint: 'Inspect result.proposed.retiredManualTrades. Move the annotation and delete the row, or accept the trade and leave it. Annotated rows are never deleted. This is not a generic uncovered-leg refusal.',
+      }
     case 'UNCOVERED_TRADES':
       return {
         code: 'conflict',

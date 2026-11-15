@@ -1,8 +1,12 @@
 import { createHash } from 'node:crypto'
 import { parseArgs } from 'node:util'
 import { prisma } from '@/lib/prisma'
+import { RITHMIC_PROTOCOL_TRADE_TAG } from '@/lib/trade-id-utils'
 import { fillIdentityKey } from './dedupe-fills'
-import { prepareRithmicProtocolFills } from './fill-ledger'
+import {
+  hasTradeJournalAnnotations,
+  prepareRithmicProtocolFills,
+} from './fill-ledger'
 import {
   loadRithmicProtocolFills,
   upsertRithmicProtocolFills,
@@ -436,6 +440,14 @@ export async function insertManualRithmicProtocolFill(
   }
 }
 
+export type ManualFillDerivedTrade = {
+  id: string
+  entryId: string | null
+  closeId: string | null
+  instrument: string | null
+  annotated: boolean
+}
+
 export type ManualFillRetireResult =
   | {
       ok: true
@@ -446,11 +458,13 @@ export type ManualFillRetireResult =
       retiredAt: string
       retiredBy: string
       retireReason: string
+      trades: ManualFillDerivedTrade[]
     }
   | {
       ok: false
-      status: 'validation' | 'not_found'
+      status: 'validation' | 'not_found' | 'acknowledgement_required'
       errors: ManualFillFieldError[]
+      trades?: ManualFillDerivedTrade[]
     }
 
 type RetiredManualRow = {
@@ -475,6 +489,11 @@ type RetireDeps = {
     retiredBy: string
     retireReason: string
   }) => Promise<void>
+  findDerivedTrades: (params: {
+    userId: string
+    accountNumber: string
+    fillId: string
+  }) => Promise<ManualFillDerivedTrade[]>
 }
 
 async function defaultFindManualFill(params: {
@@ -497,6 +516,41 @@ async function defaultFindManualFill(params: {
     },
   })
   return row
+}
+
+async function defaultFindDerivedTrades(params: {
+  userId: string
+  accountNumber: string
+  fillId: string
+}): Promise<ManualFillDerivedTrade[]> {
+  const rows = await prisma.trade.findMany({
+    where: {
+      userId: params.userId,
+      accountNumber: params.accountNumber,
+      tags: { has: RITHMIC_PROTOCOL_TRADE_TAG },
+      OR: [{ entryId: params.fillId }, { closeId: params.fillId }],
+    },
+    select: {
+      id: true,
+      entryId: true,
+      closeId: true,
+      instrument: true,
+      comment: true,
+      tags: true,
+      imageBase64: true,
+      imageBase64Second: true,
+      videoUrl: true,
+      images: true,
+      groupId: true,
+    },
+  })
+  return rows.map((row) => ({
+    id: row.id,
+    entryId: row.entryId,
+    closeId: row.closeId,
+    instrument: row.instrument,
+    annotated: hasTradeJournalAnnotations(row),
+  }))
 }
 
 async function defaultMarkRetired(params: {
@@ -564,16 +618,50 @@ export async function retireManualRithmicProtocolFill(
   if ('dryRun' in payload && typeof payload.dryRun !== 'boolean') {
     errors.push({ field: 'dryRun', message: 'dryRun must be a boolean when provided.' })
   }
+  if (
+    'acknowledgeAnnotatedTrades' in payload &&
+    typeof payload.acknowledgeAnnotatedTrades !== 'boolean'
+  ) {
+    errors.push({
+      field: 'acknowledgeAnnotatedTrades',
+      message: 'acknowledgeAnnotatedTrades must be a boolean when provided.',
+    })
+  }
   if (errors.length > 0) return { ok: false, status: 'validation', errors }
   const dryRun = payload.dryRun === false ? false : true
+  const acknowledgeAnnotatedTrades = payload.acknowledgeAnnotatedTrades === true
   const findManualFill = deps?.findManualFill ?? defaultFindManualFill
   const markRetired = deps?.markRetired ?? defaultMarkRetired
+  const findDerivedTrades = deps?.findDerivedTrades ?? defaultFindDerivedTrades
   const row = await findManualFill({ userId, accountNumber, fillId })
   if (!row) {
     return {
       ok: false,
       status: 'not_found',
       errors: [{ field: 'fillId', message: 'No manual fill with that id belongs to this account.' }],
+    }
+  }
+  if (row.source !== 'manual' && row.source !== 'manual-retired') {
+    return {
+      ok: false,
+      status: 'validation',
+      errors: [{ field: 'fillId', message: 'Only a manual fill can be retired.' }],
+    }
+  }
+  const trades = await findDerivedTrades({ userId, accountNumber, fillId })
+  const annotated = trades.some((trade) => trade.annotated)
+  if (!dryRun && annotated && !acknowledgeAnnotatedTrades) {
+    return {
+      ok: false,
+      status: 'acknowledgement_required',
+      errors: [
+        {
+          field: 'acknowledgeAnnotatedTrades',
+          message:
+            'Apply refused because a stored trade that uses this manual fill is annotated. Move the annotation and delete that row, or pass acknowledgeAnnotatedTrades: true to leave the row in place.',
+        },
+      ],
+      trades,
     }
   }
   if (row.source === 'manual-retired') {
@@ -589,13 +677,7 @@ export async function retireManualRithmicProtocolFill(
           : new Date().toISOString(),
       retiredBy: row.retiredBy || retiredBy,
       retireReason: row.retireReason || reason,
-    }
-  }
-  if (row.source !== 'manual') {
-    return {
-      ok: false,
-      status: 'validation',
-      errors: [{ field: 'fillId', message: 'Only a manual fill can be retired.' }],
+      trades,
     }
   }
   const retiredAt = new Date()
@@ -609,7 +691,7 @@ export async function retireManualRithmicProtocolFill(
       retireReason: reason,
     })
     console.info(
-      `[RITHMIC-MANUAL-FILL] retire userId=${userId} account=${accountNumber} fillId=${fillId} retiredBy=${retiredBy} reason=${JSON.stringify(reason)}`,
+      `[RITHMIC-MANUAL-FILL] retire userId=${userId} account=${accountNumber} fillId=${fillId} retiredBy=${retiredBy} reason=${JSON.stringify(reason)} trades=${trades.length}`,
     )
   }
   return {
@@ -621,6 +703,7 @@ export async function retireManualRithmicProtocolFill(
     retiredAt: retiredAt.toISOString(),
     retiredBy,
     retireReason: reason,
+    trades,
   }
 }
 
@@ -650,6 +733,7 @@ export function parseManualFillCliArgs(argv: string[]):
     'dry-run'?: boolean
     apply?: boolean
     'acknowledge-warnings'?: boolean
+    'acknowledge-annotated-trades'?: boolean
     retire?: boolean
     'fill-id'?: string
     reason?: string
@@ -670,6 +754,7 @@ export function parseManualFillCliArgs(argv: string[]):
         'dry-run': { type: 'boolean' },
         apply: { type: 'boolean' },
         'acknowledge-warnings': { type: 'boolean' },
+        'acknowledge-annotated-trades': { type: 'boolean' },
         retire: { type: 'boolean' },
         'fill-id': { type: 'string' },
         reason: { type: 'string' },
@@ -702,6 +787,7 @@ export function parseManualFillCliArgs(argv: string[]):
         fillId: values['fill-id'],
         reason: values.reason,
         dryRun: values.apply ? false : true,
+        acknowledgeAnnotatedTrades: values['acknowledge-annotated-trades'] === true,
       },
     }
   }
