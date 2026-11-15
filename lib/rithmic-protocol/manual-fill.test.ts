@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { RITHMIC_PROTOCOL_TRADE_TAG } from '@/lib/trade-id-utils'
 import {
   canonicalLedgerFillIds,
+  countDistinctManualTradesKept,
   countRetiredManualTradesKept,
   deriveTradesFromFillLedger,
   phantomProtocolTradeIds,
@@ -373,6 +374,25 @@ describe('confirmDistinctManualRithmicProtocolFill', () => {
     if (!acknowledged.ok) return
     expect(acknowledged.input.acknowledgeExactMatch).toBe(true)
     expect(acknowledged.input.acknowledgeUnrelated).toBe(true)
+    expect(acknowledged.input.acknowledgeAnnotatedTrades).toBe(false)
+    const annotated = parseManualFillCliArgs([
+      '--confirm-distinct',
+      '--apply',
+      '--acknowledge-annotated-trades',
+      '--user-id',
+      base.userId,
+      '--account',
+      base.accountNumber,
+      '--fill-id',
+      'manual-gap',
+      '--upstream-fill-id',
+      '88422',
+      '--reason',
+      'next session',
+    ])
+    expect(annotated.ok).toBe(true)
+    if (!annotated.ok) return
+    expect(annotated.input.acknowledgeAnnotatedTrades).toBe(true)
   })
 
   it('refuses a missing plant fill and an unacknowledged exact match', async () => {
@@ -552,29 +572,205 @@ describe('confirmDistinctManualRithmicProtocolFill', () => {
     expect(markDistinct).not.toHaveBeenCalled()
   })
 
-  it('judges the day-matched plant row when the same fill id is also on another symbol', async () => {
+  it('judges the picked split piece when that id is listed first on another symbol', async () => {
     const otherSymbol = {
       ...manualRow,
-      fillId: '88421',
+      fillId: '9100',
       source: 'history',
       symbol: 'MNQZ6',
       fillSize: 1,
     }
-    const sameBook = { ...manualRow, fillId: '88421', source: 'history', fillSize: 1 }
-    loadAccountFills.mockResolvedValue([manualRow, otherSymbol, sameBook])
+    const piece = {
+      ...manualRow,
+      fillId: '9100',
+      source: 'history',
+      fillSize: 1,
+    }
+    const largest = { ...piece, fillId: '9101', ssboe: manualRow.ssboe + 1 }
+    loadAccountFills.mockResolvedValue([manualRow, otherSymbol, piece, largest])
     const preview = await confirmDistinctManualRithmicProtocolFill(
       {
         userId: 'user-1',
         accountNumber: base.accountNumber,
         fillId: 'manual-gap',
-        upstreamFillId: '88421',
-        reason: 'same id, this symbol',
+        upstreamFillId: '9100',
+        reason: 'named the smaller piece',
       },
       { findManualFill, loadAccountFills, markDistinct },
     )
     expect(preview.ok).toBe(true)
     if (!preview.ok) return
-    expect(preview.relation).toEqual({ kind: 'near-miss', reason: 'qty', orderFillId: '88421' })
+    expect(preview.relation).toEqual({ kind: 'exact', orderFillId: '9101' })
+  })
+
+  it('keeps a basket order together when its pieces are more than 2s apart', async () => {
+    const early = {
+      ...manualRow,
+      fillId: '100',
+      source: 'history',
+      fillSize: 1,
+      ssboe: manualRow.ssboe - 3,
+      usecs: 0,
+      basketId: 'basket-1',
+    }
+    const late = {
+      ...early,
+      fillId: '101',
+      ssboe: manualRow.ssboe,
+      usecs: 250_000,
+    }
+    loadAccountFills.mockResolvedValue([manualRow, early, late])
+    const applied = await confirmDistinctManualRithmicProtocolFill(
+      {
+        userId: 'user-1',
+        accountNumber: base.accountNumber,
+        fillId: 'manual-gap',
+        upstreamFillId: '101',
+        reason: 'basket piece',
+        dryRun: false,
+      },
+      { findManualFill, loadAccountFills, markDistinct },
+    )
+    expect(applied.ok).toBe(false)
+    if (applied.ok) return
+    expect(applied.status).toBe('acknowledgement_required')
+    expect(applied.relation).toEqual({ kind: 'exact', orderFillId: '101' })
+    expect(markDistinct).not.toHaveBeenCalled()
+  })
+
+  it('treats a chained piece more than 2s from the first as that order', async () => {
+    const manual = { ...manualRow, fillSize: 3, ssboe: manualRow.ssboe + 4 }
+    findManualFill.mockResolvedValue(manual)
+    const first = {
+      ...manualRow,
+      fillId: '300',
+      source: 'history',
+      fillSize: 1,
+      ssboe: manualRow.ssboe,
+    }
+    const middle = { ...first, fillId: '100', ssboe: manualRow.ssboe + 2 }
+    const end = { ...first, fillId: '200', ssboe: manualRow.ssboe + 4 }
+    loadAccountFills.mockResolvedValue([manual, first, middle, end])
+    const preview = await confirmDistinctManualRithmicProtocolFill(
+      {
+        userId: 'user-1',
+        accountNumber: base.accountNumber,
+        fillId: 'manual-gap',
+        upstreamFillId: '200',
+        reason: 'end of a chained order',
+      },
+      { findManualFill, loadAccountFills, markDistinct },
+    )
+    expect(preview.ok).toBe(true)
+    if (!preview.ok) return
+    expect(preview.relation).toEqual({ kind: 'exact', orderFillId: '300' })
+  })
+
+  it('refuses confirm-distinct when re-pairing would leave an annotated manual trade', async () => {
+    const ssboe = manualRow.ssboe
+    const plant = {
+      accountId: base.accountNumber,
+      symbol: 'MESZ6',
+      transactionType: 'BUY',
+      fillPrice: 5810.25,
+      fillSize: 2,
+      fillId: '88421',
+      fillDate: '20260925',
+      ssboe: ssboe - 45,
+      source: 'history' as const,
+    }
+    const manual = {
+      ...plant,
+      fillId: 'manual-gap',
+      ssboe,
+      source: 'manual' as const,
+      confirmedDistinctFillId: '88421',
+    }
+    const close = {
+      ...plant,
+      transactionType: 'SELL',
+      fillPrice: 5810.5,
+      fillId: '1002',
+      ssboe: ssboe + 75,
+    }
+    const extraClose = { ...close, fillPrice: 5811, fillId: '1003', ssboe: ssboe + 180 }
+    const prepared = prepareRithmicProtocolFills([plant, manual, close, extraClose])
+    const { trades } = buildTradesFromRithmicFills(
+      prepared.fills,
+      'user-1',
+      new Map([['MES', { tickSize: 0.25, tickValue: 1.25 }]]),
+    )
+    expect(trades.map((trade) => [trade.entryId, trade.closeId])).toEqual([
+      ['88421', '1002'],
+      ['manual-gap', '1003'],
+    ])
+    const stored = {
+      id: 'stored-manual-trade',
+      accountNumber: base.accountNumber,
+      instrument: 'MES',
+      side: 'Long',
+      quantity: 2,
+      entryPrice: '5810.25',
+      closePrice: '5810.5',
+      entryDate: new Date(ssboe * 1000).toISOString(),
+      closeDate: new Date((ssboe + 75) * 1000).toISOString(),
+      entryId: 'manual-gap',
+      closeId: '1002',
+      comment: 'kept note',
+      tags: [RITHMIC_PROTOCOL_TRADE_TAG],
+    }
+    expect(
+      countDistinctManualTradesKept({
+        existing: [stored],
+        derived: trades,
+        ledgerFillIds: new Set(['manual-gap', '88421', '1002', '1003']),
+        distinctPlantIdByManualFillId: new Map([['manual-gap', '88421']]),
+      }),
+    ).toBe(0)
+    const findDerivedTrades = vi.fn(async () => [
+      {
+        id: 'stored-manual-trade',
+        entryId: 'manual-gap',
+        closeId: '1002',
+        instrument: 'MES',
+        annotated: true,
+      },
+    ])
+    loadAccountFills.mockResolvedValue([
+      manualRow,
+      { ...manualRow, fillId: '88421', source: 'history', ssboe: ssboe - 45 },
+    ])
+    const refused = await confirmDistinctManualRithmicProtocolFill(
+      {
+        userId: 'user-1',
+        accountNumber: base.accountNumber,
+        fillId: 'manual-gap',
+        upstreamFillId: '88421',
+        reason: 'the plant fill is a different buy',
+        dryRun: false,
+      },
+      { findManualFill, loadAccountFills, markDistinct, findDerivedTrades },
+    )
+    expect(refused.ok).toBe(false)
+    if (refused.ok) return
+    expect(refused.status).toBe('acknowledgement_required')
+    expect(refused.errors[0]?.field).toBe('acknowledgeAnnotatedTrades')
+    expect(refused.trades?.map((trade) => trade.id)).toEqual(['stored-manual-trade'])
+    expect(markDistinct).not.toHaveBeenCalled()
+    const allowed = await confirmDistinctManualRithmicProtocolFill(
+      {
+        userId: 'user-1',
+        accountNumber: base.accountNumber,
+        fillId: 'manual-gap',
+        upstreamFillId: '88421',
+        reason: 'the plant fill is a different buy',
+        dryRun: false,
+        acknowledgeAnnotatedTrades: true,
+      },
+      { findManualFill, loadAccountFills, markDistinct, findDerivedTrades },
+    )
+    expect(allowed.ok).toBe(true)
+    expect(markDistinct).toHaveBeenCalledTimes(1)
   })
 
   it('stores a split piece as the consolidated order id', async () => {

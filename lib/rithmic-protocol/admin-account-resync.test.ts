@@ -1469,6 +1469,107 @@ describe('admin account resync scoping and safety', () => {
     expect(result.error).toBeUndefined()
   })
 
+  it('warns when an annotated manual trade stays beside a confirm-distinct plant trade', async () => {
+    const buySsboe = Date.parse('2026-09-30T14:00:00Z') / 1000
+    const manualSsboe = buySsboe + 10
+    const sellSsboe = Date.parse('2026-09-30T14:05:00Z') / 1000
+    tradeFindMany.mockResolvedValue([
+      {
+        id: 't-distinct',
+        pnl: 1.25,
+        tags: [RITHMIC_PROTOCOL_TRADE_TAG],
+        accountNumber: ACCOUNT,
+        instrument: 'MES',
+        side: 'Long',
+        quantity: 1,
+        entryPrice: '7800',
+        closePrice: '7801',
+        entryDate: '2026-09-30T14:00:10.000Z',
+        closeDate: '2026-09-30T14:05:00.000Z',
+        entryId: 'manual-gap',
+        closeId: '1002',
+        comment: 'kept note',
+      },
+    ])
+    fillCount.mockResolvedValue(2)
+    fillFindMany.mockResolvedValue([
+      {
+        accountNumber: ACCOUNT,
+        accountId: 'acct-1',
+        identityKey: 'manual-gap-row',
+        fillId: 'manual-gap',
+        rawFillId: null,
+        symbol: 'MESZ6',
+        exchange: 'CME',
+        transactionType: 'BUY',
+        fillPrice: 7800,
+        fillSize: 1,
+        fillDate: '20260930',
+        fillTime: '14:00:10',
+        basketId: null,
+        sequenceNumber: null,
+        ssboe: manualSsboe,
+        usecs: null,
+        source: 'manual',
+        confirmedDistinctFillId: '88421',
+      },
+      {
+        accountNumber: ACCOUNT,
+        accountId: 'acct-1',
+        identityKey: 'close-row',
+        fillId: '1002',
+        rawFillId: null,
+        symbol: 'MESZ6',
+        exchange: 'CME',
+        transactionType: 'SELL',
+        fillPrice: 7801,
+        fillSize: 1,
+        fillDate: '20260930',
+        fillTime: '14:05:00',
+        basketId: null,
+        sequenceNumber: null,
+        ssboe: sellSsboe,
+        usecs: null,
+        source: 'history',
+      },
+    ])
+    fetchAdminRebuildFills.mockResolvedValue(
+      fetchedFills([
+        {
+          accountId: ACCOUNT,
+          symbol: 'MESZ6',
+          transactionType: 'BUY',
+          fillPrice: 7800,
+          fillSize: 1,
+          fillId: '88421',
+          fillDate: '20260930',
+          ssboe: buySsboe,
+          source: 'history',
+        },
+        {
+          accountId: ACCOUNT,
+          symbol: 'MESZ6',
+          transactionType: 'SELL',
+          fillPrice: 7801,
+          fillSize: 1,
+          fillId: '1002',
+          fillDate: '20260930',
+          ssboe: sellSsboe,
+          source: 'history',
+        },
+      ]),
+    )
+    const result = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: true,
+      anchorDate: '2026-09-25',
+    })
+    expect(result.warnings?.some((warning) => warning.includes('confirm-distinct'))).toBe(
+      true,
+    )
+  })
+
   it('refuses MANUAL_FILL_AMBIGUOUS when a manual fill is a minute off the plant fill', async () => {
     const ssboe = Date.parse('2026-09-30T15:07:00Z') / 1000
     tradeFindMany.mockResolvedValue([])

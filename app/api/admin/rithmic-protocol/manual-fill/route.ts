@@ -115,16 +115,47 @@ export async function POST(request: NextRequest) {
         confirmedDistinctBy: actor,
       })
       if (!marked.ok && marked.status === 'acknowledgement_required') {
+        const annotated = marked.errors?.some(
+          (error) => error.field === 'acknowledgeAnnotatedTrades',
+        )
         const unrelated = marked.relation?.kind === 'unrelated'
+        const relation = marked.relation
+        const details = [
+          ...(marked.errors ?? []),
+          ...(relation
+            ? [
+                {
+                  field: 'relation',
+                  message:
+                    relation.kind === 'near-miss'
+                      ? `near-miss ${relation.reason}`
+                      : relation.kind,
+                },
+                { field: 'orderFillId', message: relation.orderFillId },
+              ]
+            : []),
+          {
+            field: 'previousConfirmedDistinctFillId',
+            message: marked.previousConfirmedDistinctFillId ?? '',
+          },
+          ...(marked.trades ?? []).map((trade) => ({
+            field: 'trades',
+            message: `${trade.id} ${trade.instrument ?? ''} entry=${trade.entryId ?? ''} close=${trade.closeId ?? ''} annotated=${trade.annotated}`,
+          })),
+        ]
         return jsonError({
           code: 'conflict',
-          message: unrelated
-            ? 'Confirm-distinct refused because that plant fill is unrelated to the manual.'
-            : 'Confirm-distinct refused because that plant fill matches the manual exactly.',
-          hint: unrelated
-            ? 'Re-send dryRun: false with acknowledgeUnrelated: true only if this plant fill should stay distinct from the manual.'
-            : 'Re-send dryRun: false with acknowledgeExactMatch: true only if both executions should count.',
-          details: marked.errors,
+          message: annotated
+            ? 'Confirm-distinct refused while an annotated trade still uses this manual fill.'
+            : unrelated
+              ? 'Confirm-distinct refused because that plant fill is unrelated to the manual.'
+              : 'Confirm-distinct refused because that plant fill matches the manual exactly.',
+          hint: annotated
+            ? 'Move the annotation if you want to keep it, delete the stored row, then run a sync or rebuild. Then re-send dryRun: false with acknowledgeAnnotatedTrades: true.'
+            : unrelated
+              ? 'Re-send dryRun: false with acknowledgeUnrelated: true only if this plant fill should stay distinct from the manual.'
+              : 'Re-send dryRun: false with acknowledgeExactMatch: true only if both executions should count.',
+          details,
         })
       }
       if (marked.ok) {

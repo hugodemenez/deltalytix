@@ -257,7 +257,8 @@ describe('POST /api/admin/rithmic-protocol/manual-fill', () => {
     confirmDistinctManualRithmicProtocolFill.mockResolvedValue({
       ok: false,
       status: 'acknowledgement_required',
-      relation: { kind: 'exact' },
+      relation: { kind: 'exact', orderFillId: '88421' },
+      previousConfirmedDistinctFillId: '7700',
       errors: [{ field: 'acknowledgeExactMatch', message: 'exact match' }],
     })
     const response = await post({
@@ -273,6 +274,55 @@ describe('POST /api/admin/rithmic-protocol/manual-fill', () => {
     const payload = await response.json()
     expect(payload.error.code).toBe('conflict')
     expect(payload.error.hint).toMatch(/acknowledgeExactMatch: true/)
+    expect(payload.error.details).toEqual(
+      expect.arrayContaining([
+        { field: 'relation', message: 'exact' },
+        { field: 'orderFillId', message: '88421' },
+        { field: 'previousConfirmedDistinctFillId', message: '7700' },
+      ]),
+    )
+  })
+
+  it('refuses confirm-distinct while an annotated trade uses the manual fill', async () => {
+    authorizeAdminRequest.mockResolvedValue({ ok: true, via: 'cron' })
+    confirmDistinctManualRithmicProtocolFill.mockResolvedValue({
+      ok: false,
+      status: 'acknowledgement_required',
+      relation: { kind: 'near-miss', reason: 'clock', orderFillId: '88421' },
+      previousConfirmedDistinctFillId: null,
+      trades: [
+        {
+          id: 'stored-manual-trade',
+          entryId: 'manual-gap',
+          closeId: '1002',
+          instrument: 'MES',
+          annotated: true,
+        },
+      ],
+      errors: [{ field: 'acknowledgeAnnotatedTrades', message: 'annotated' }],
+    })
+    const response = await post({
+      action: 'confirm-distinct',
+      userId: body.userId,
+      accountNumber: body.accountNumber,
+      fillId: 'manual-gap',
+      upstreamFillId: '88421',
+      reason: 'different buy',
+      dryRun: false,
+    })
+    expect(response.status).toBe(409)
+    const payload = await response.json()
+    expect(payload.error.message).toMatch(/annotated trade/)
+    expect(payload.error.hint).toMatch(/acknowledgeAnnotatedTrades: true/)
+    expect(payload.error.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: 'trades',
+          message: expect.stringMatching(/stored-manual-trade/),
+        }),
+        { field: 'orderFillId', message: '88421' },
+      ]),
+    )
   })
 
   it('refuses an unacknowledged unrelated confirm-distinct with 409', async () => {

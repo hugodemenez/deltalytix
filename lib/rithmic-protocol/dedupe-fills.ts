@@ -531,6 +531,35 @@ export function consolidateOrderFills(
   return out.sort((a, b) => (rank.get(a) ?? 0) - (rank.get(b) ?? 0))
 }
 
+/**
+ * Consolidated fill id of the order `piece` belongs to, using the same
+ * basket and ±2s clustering as `consolidateOrderFills`. A piece in a chain
+ * longer than 2s still maps to that order's id.
+ */
+export function consolidatedFillIdForPiece(
+  fills: RithmicProtocolFill[],
+  piece: RithmicProtocolFill,
+): string | null {
+  const pieceId = canonicalRithmicFillId(piece.fillId)
+  if (!pieceId) return null
+  const key = orderGroupKey(piece)
+  const sameGroup = fills.filter((fill) => {
+    if (fill.source === 'manual' || fill.source === 'manual-retired') return false
+    if (orderGroupKey(fill) !== key) return false
+    if (piece.source === 'replay') return fill.source === 'replay'
+    return fill.source !== 'replay'
+  })
+  for (const cluster of clusterOneSource(sameGroup, RITHMIC_PROTOCOL_ORDER_PIECE_WINDOW_MS)) {
+    if (
+      !cluster.fills.some((fill) => canonicalRithmicFillId(fill.fillId) === pieceId)
+    ) {
+      continue
+    }
+    return canonicalRithmicFillId(mergeCluster(cluster).fillId) ?? null
+  }
+  return null
+}
+
 export type RithmicProtocolStoredLegRow = RithmicProtocolFillPairIdentity & {
   id?: string
   side?: string | null

@@ -3,12 +3,12 @@ import type { RithmicProtocolFill } from './types'
 import {
   canonicalRithmicFillId,
   consolidateOrderFills,
+  consolidatedFillIdForPiece,
   dedupeFillsWithStats,
   fillDayKey,
   fillIdentityKey,
   preferHistoryFills,
   resolveRithmicProtocolPersistedId,
-  RITHMIC_PROTOCOL_ORDER_PIECE_WINDOW_MS,
   RITHMIC_PROTOCOL_TIMESTAMP_TOLERANCE_MS,
   type DedupeFillsStats,
   type RithmicProtocolFillPairIdentity,
@@ -284,24 +284,11 @@ export function manualFillRelation(
 function samePreparedOrder(
   named: RithmicProtocolFill,
   representative: RithmicProtocolFill,
+  book: RithmicProtocolFill[],
 ): boolean {
-  if (canonicalRithmicFillId(named.fillId) === canonicalRithmicFillId(representative.fillId)) {
-    return true
-  }
-  if ((named.accountId || '') !== (representative.accountId || '')) return false
-  const namedSymbol = (named.symbol || '').trim().toUpperCase()
-  const representativeSymbol = (representative.symbol || '').trim().toUpperCase()
-  if (!namedSymbol || namedSymbol !== representativeSymbol) return false
-  if (fillSide(named.transactionType) !== fillSide(representative.transactionType)) return false
-  const namedPrice = Number(named.fillPrice || named.avgFillPrice || 0)
-  const representativePrice = Number(
-    representative.fillPrice || representative.avgFillPrice || 0,
-  )
-  if (Math.abs(namedPrice - representativePrice) > 1e-6) return false
-  const namedMs = fillTimestampMs(named)
-  const representativeMs = fillTimestampMs(representative)
-  if (!(namedMs > 0) || !(representativeMs > 0)) return false
-  return Math.abs(namedMs - representativeMs) <= RITHMIC_PROTOCOL_ORDER_PIECE_WINDOW_MS
+  const representativeId = canonicalRithmicFillId(representative.fillId)
+  const orderId = consolidatedFillIdForPiece(book, named)
+  return Boolean(orderId && representativeId && orderId === representativeId)
 }
 
 export type ManualFillBookRelation =
@@ -338,7 +325,7 @@ export function manualFillBookRelation(
   const retirement = prepared.retirements.find(
     (item) => canonicalRithmicFillId(item.manual.fillId) === manualId,
   )
-  if (retirement && samePreparedOrder(upstream, retirement.upstream)) {
+  if (retirement && samePreparedOrder(upstream, retirement.upstream, cleared)) {
     return {
       kind: 'exact',
       orderFillId: canonicalRithmicFillId(retirement.upstream.fillId) ?? namedId,
@@ -347,7 +334,7 @@ export function manualFillBookRelation(
   const near = prepared.nearMisses.find(
     (item) =>
       canonicalRithmicFillId(item.manual.fillId) === manualId &&
-      samePreparedOrder(upstream, item.upstream),
+      samePreparedOrder(upstream, item.upstream, cleared),
   )
   if (near) {
     return {

@@ -12,6 +12,7 @@ import {
 import { fillSide } from './fills-to-trades'
 import {
   loadRithmicProtocolFills,
+  rowToFill,
   upsertRithmicProtocolFills,
 } from './fill-ledger-store'
 import type { RithmicProtocolFill } from './types'
@@ -724,6 +725,7 @@ export type ManualFillDistinctResult =
       confirmDistinctReason: string
       relation: ManualFillDistinctRelation
       previousConfirmedDistinctFillId: string | null
+      trades: ManualFillDerivedTrade[]
     }
   | {
       ok: false
@@ -731,6 +733,7 @@ export type ManualFillDistinctResult =
       errors: ManualFillFieldError[]
       relation?: ManualFillDistinctRelation
       previousConfirmedDistinctFillId?: string | null
+      trades?: ManualFillDerivedTrade[]
     }
 
 type DistinctRow = {
@@ -744,6 +747,10 @@ type DistinctRow = {
   fillDate: string | null
   fillTime: string | null
   ssboe: number | null
+  usecs: number | null
+  basketId: string | null
+  exchange: string | null
+  sequenceNumber: string | null
   confirmedDistinctFillId: string | null
   confirmedDistinctAt: Date | null
   confirmedDistinctBy: string | null
@@ -761,6 +768,10 @@ const DISTINCT_FILL_SELECT = {
   fillDate: true,
   fillTime: true,
   ssboe: true,
+  usecs: true,
+  basketId: true,
+  exchange: true,
+  sequenceNumber: true,
   confirmedDistinctFillId: true,
   confirmedDistinctAt: true,
   confirmedDistinctBy: true,
@@ -768,24 +779,26 @@ const DISTINCT_FILL_SELECT = {
 } as const
 
 function distinctRowToFill(row: DistinctRow): RithmicProtocolFill {
-  return {
-    accountId: row.accountNumber,
+  return rowToFill({
+    accountNumber: row.accountNumber,
+    accountId: null,
+    identityKey: '',
+    fillId: row.fillId,
+    rawFillId: null,
     symbol: row.symbol,
+    exchange: row.exchange,
     transactionType: row.transactionType,
     fillPrice: row.fillPrice,
     fillSize: row.fillSize,
-    fillId: row.fillId,
-    fillDate: row.fillDate ?? undefined,
-    fillTime: row.fillTime ?? undefined,
-    ssboe: row.ssboe ?? undefined,
-    source:
-      row.source === 'replay' ||
-      row.source === 'manual' ||
-      row.source === 'manual-retired'
-        ? row.source
-        : 'history',
-    confirmedDistinctFillId: row.confirmedDistinctFillId ?? undefined,
-  }
+    fillDate: row.fillDate,
+    fillTime: row.fillTime,
+    basketId: row.basketId,
+    sequenceNumber: row.sequenceNumber,
+    ssboe: row.ssboe,
+    usecs: row.usecs,
+    source: row.source,
+    confirmedDistinctFillId: row.confirmedDistinctFillId,
+  })
 }
 
 async function defaultFindDistinctFill(params: {
@@ -873,6 +886,7 @@ export async function confirmDistinctManualRithmicProtocolFill(
     findManualFill?: typeof defaultFindDistinctFill
     loadAccountFills?: typeof defaultLoadAccountFills
     markDistinct?: typeof defaultMarkDistinct
+    findDerivedTrades?: typeof defaultFindDerivedTrades
   },
 ): Promise<ManualFillDistinctResult> {
   const payload = readObject(input)
@@ -927,13 +941,24 @@ export async function confirmDistinctManualRithmicProtocolFill(
       message: 'acknowledgeUnrelated must be a boolean when provided.',
     })
   }
+  if (
+    'acknowledgeAnnotatedTrades' in payload &&
+    typeof payload.acknowledgeAnnotatedTrades !== 'boolean'
+  ) {
+    errors.push({
+      field: 'acknowledgeAnnotatedTrades',
+      message: 'acknowledgeAnnotatedTrades must be a boolean when provided.',
+    })
+  }
   if (errors.length > 0) return { ok: false, status: 'validation', errors }
   const dryRun = payload.dryRun === false ? false : true
   const acknowledgeExactMatch = payload.acknowledgeExactMatch === true
   const acknowledgeUnrelated = payload.acknowledgeUnrelated === true
+  const acknowledgeAnnotatedTrades = payload.acknowledgeAnnotatedTrades === true
   const findManualFill = deps?.findManualFill ?? defaultFindDistinctFill
   const loadAccountFills = deps?.loadAccountFills ?? defaultLoadAccountFills
   const markDistinct = deps?.markDistinct ?? defaultMarkDistinct
+  const findDerivedTrades = deps?.findDerivedTrades ?? defaultFindDerivedTrades
   const row = await findManualFill({ userId, accountNumber, fillId })
   if (!row) {
     return {
@@ -971,6 +996,8 @@ export async function confirmDistinctManualRithmicProtocolFill(
   )
   const orderFillId = relation.orderFillId
   const previousConfirmedDistinctFillId = row.confirmedDistinctFillId
+  const trades = await findDerivedTrades({ userId, accountNumber, fillId })
+  const annotated = trades.some((trade) => trade.annotated)
   if (relation.kind === 'exact' && !dryRun && !acknowledgeExactMatch) {
     return {
       ok: false,
@@ -984,6 +1011,7 @@ export async function confirmDistinctManualRithmicProtocolFill(
             'That plant fill matches this manual exactly. Pass acknowledgeExactMatch: true only if both executions should count.',
         },
       ],
+      trades,
     }
   }
   if (relation.kind === 'unrelated' && !dryRun && !acknowledgeUnrelated) {
@@ -997,6 +1025,23 @@ export async function confirmDistinctManualRithmicProtocolFill(
           field: 'acknowledgeUnrelated',
           message:
             'That plant fill is unrelated to this manual. Pass acknowledgeUnrelated: true only if it should stay distinct anyway.',
+        },
+      ],
+      trades,
+    }
+  }
+  if (!dryRun && annotated && !acknowledgeAnnotatedTrades) {
+    return {
+      ok: false,
+      status: 'acknowledgement_required',
+      relation,
+      previousConfirmedDistinctFillId,
+      trades,
+      errors: [
+        {
+          field: 'acknowledgeAnnotatedTrades',
+          message:
+            'Apply refused because a stored trade that uses this manual fill is annotated. Move the annotation if you want to keep it, delete the stored row, then run a sync or rebuild. Then re-send confirm-distinct with acknowledgeAnnotatedTrades: true.',
         },
       ],
     }
@@ -1013,6 +1058,7 @@ export async function confirmDistinctManualRithmicProtocolFill(
       confirmDistinctReason: row.confirmDistinctReason || reason,
       relation,
       previousConfirmedDistinctFillId,
+      trades,
     }
   }
   const confirmedDistinctAt = new Date()
@@ -1041,6 +1087,7 @@ export async function confirmDistinctManualRithmicProtocolFill(
     confirmDistinctReason: reason,
     relation,
     previousConfirmedDistinctFillId,
+    trades,
   }
 }
 
@@ -1146,6 +1193,7 @@ export function parseManualFillCliArgs(argv: string[]):
         dryRun: values.apply ? false : true,
         acknowledgeExactMatch: values['acknowledge-exact-match'] === true,
         acknowledgeUnrelated: values['acknowledge-unrelated'] === true,
+        acknowledgeAnnotatedTrades: values['acknowledge-annotated-trades'] === true,
       },
     }
   }
