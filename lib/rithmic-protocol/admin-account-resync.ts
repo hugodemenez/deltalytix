@@ -77,6 +77,7 @@ import {
   type FillLedgerNet,
   type RebuildTradeRef,
   duplicateRebuildTradeIds,
+  confirmedDistinctMarkers,
   deriveTradesFromFillLedger,
   mergeFillLedgers,
   partitionIncomingFills,
@@ -1118,6 +1119,7 @@ export async function resyncRithmicProtocolAccount(params: {
           existing,
           derived: ordinaryWithIds,
           ledgerFillIds,
+          distinctPlantIdByManualFillId: confirmedDistinctMarkers(storedFills),
         })
         const ordinaryWouldReapKept = phantomIds.some((id) =>
           swap.keepIds.includes(id),

@@ -1289,3 +1289,91 @@ describe('ordinary sync after a manual fill is superseded', () => {
     expect(kept[0]?.pnl).toBe(existing[0]?.pnl)
   })
 })
+
+describe('confirm-distinct does not replace the manual trade', () => {
+  const stored = {
+    id: 'stored-manual-trade',
+    accountNumber: ACCOUNT,
+    instrument: 'MES',
+    side: 'Long',
+    quantity: 2,
+    entryPrice: '7800',
+    closePrice: '7801',
+    entryDate: '2026-09-25T15:07:45.000Z',
+    closeDate: '2026-09-25T15:09:00.000Z',
+    entryId: 'manual-gap',
+    closeId: '1002',
+    tags: [RITHMIC_PROTOCOL_TRADE_TAG],
+  }
+  const plantTrade = {
+    id: 'plant-trade',
+    accountNumber: ACCOUNT,
+    instrument: 'MES',
+    side: 'Long',
+    quantity: 2,
+    entryPrice: '7800',
+    closePrice: '7801',
+    entryDate: '2026-09-25T15:07:00.000Z',
+    closeDate: '2026-09-25T15:09:00.000Z',
+    entryId: '88421',
+    closeId: '1002',
+  }
+  const manualTrade = {
+    ...plantTrade,
+    id: 'manual-trade',
+    entryId: 'manual-gap',
+    entryDate: stored.entryDate,
+  }
+
+  it('is not a rematch when the batch still has the manual leg or the plant fill is marked distinct', () => {
+    expect(
+      manualTradeReplacedByPlantTrade(stored, plantTrade, {
+        derivedBatch: [plantTrade, manualTrade],
+      }),
+    ).toBe(false)
+    expect(
+      manualTradeReplacedByPlantTrade(stored, plantTrade, {
+        distinctPlantIdByManualFillId: new Map([['manual-gap', '88421']]),
+      }),
+    ).toBe(false)
+    expect(
+      classifyStoredProtocolTrade(stored, {
+        derived: [plantTrade],
+        ledgerFillIds: new Set(['manual-gap', '1002', '88421']),
+        distinctPlantIdByManualFillId: new Map([['manual-gap', '88421']]),
+      }),
+    ).toBe('reap')
+  })
+
+  it('still rematches when only one of two manual legs is replaced', () => {
+    const both = {
+      ...stored,
+      id: 'both-manual',
+      entryId: 'manual-a',
+      closeId: 'manual-b',
+      quantity: 1,
+      entryPrice: '7800',
+      closePrice: '7801',
+      entryDate: '2026-09-25T15:07:00.000Z',
+      closeDate: '2026-09-25T15:08:00.000Z',
+      comment: 'kept note',
+    }
+    const replacedEntry = {
+      ...both,
+      id: 'plant-one-leg',
+      entryId: '88421',
+      entryDate: '2026-09-25T15:07:04.000Z',
+    }
+    expect(
+      manualTradeReplacedByPlantTrade(both, replacedEntry, {
+        derivedBatch: [replacedEntry],
+      }),
+    ).toBe(true)
+    expect(
+      classifyStoredProtocolTrade(both, {
+        derived: [replacedEntry],
+        ledgerFillIds: new Set(['manual-a', 'manual-b', '88421']),
+      }),
+    ).toBe('rematch')
+  })
+})

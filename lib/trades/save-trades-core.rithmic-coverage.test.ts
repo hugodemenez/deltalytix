@@ -26,6 +26,9 @@ vi.mock("@/server/connections", () => ({
 }))
 
 import type { Trade } from "@/prisma/generated/prisma/client"
+import { prepareRithmicProtocolFills } from "@/lib/rithmic-protocol/fill-ledger"
+import { buildTradesFromRithmicFills } from "@/lib/rithmic-protocol/fills-to-trades"
+import { deleteUnannotatedPhantomProtocolTrades } from "@/lib/rithmic-protocol/fill-ledger-store"
 import { saveTradesCore } from "./save-trades-core"
 
 const ACCOUNT = "LFE050-I7X0S9B3-TEST001"
@@ -203,6 +206,170 @@ describe("saveTradesCore Rithmic coverage guard", () => {
     expect(byEntry.get("manual-gap")).toBe("stored-manual-trade")
     expect(byEntry.get("88421")).not.toBe("stored-manual-trade")
     expect(result.numberOfTradesAdded).toBe(2)
+  })
+
+  it("does not store a confirm-distinct plant fill on the manual trade, and reap removes that row", async () => {
+    const storedManual = {
+      id: "stored-manual-trade",
+      accountNumber: ACCOUNT,
+      instrument: "MES",
+      side: "Long",
+      quantity: 2,
+      entryPrice: "7800",
+      closePrice: "7801",
+      entryDate: "2026-09-25T15:07:45.000+00:00",
+      closeDate: "2026-09-25T15:09:00.000+00:00",
+      entryId: "manual-gap",
+      closeId: "1002",
+      comment: null,
+      tags: ["rithmic-protocol"],
+    }
+    findMany.mockImplementation(async (args: { where?: { tags?: unknown } }) =>
+      args?.where?.tags ? [storedManual] : [],
+    )
+    fillFindMany.mockResolvedValue([
+      { fillId: "manual-gap", confirmedDistinctFillId: "88421" },
+    ])
+    createMany.mockResolvedValue({ count: 1 })
+    const plant = {
+      ...syncTrade,
+      quantity: 2,
+      entryId: "88421",
+      closeId: "1002",
+      entryPrice: "7800",
+      closePrice: "7801",
+      entryDate: "2026-09-25T15:07:00.000+00:00",
+      closeDate: "2026-09-25T15:09:00.000+00:00",
+      side: "Long",
+      pnl: 10,
+      commission: 0,
+    } as Trade
+    await saveTradesCore([plant], { userId: "u1" })
+    const inserted = createMany.mock.calls[0][0].data as Array<{ id: string }>
+    expect(inserted).toHaveLength(1)
+    expect(inserted[0]?.id).not.toBe("stored-manual-trade")
+
+    const tradeDeleteMany = vi.fn(async () => ({ count: 1 }))
+    const reaped = await deleteUnannotatedPhantomProtocolTrades({
+      userId: "u1",
+      accountNumbers: [ACCOUNT],
+      derivedTrades: [plant],
+      ledgerFillIds: new Set(["manual-gap", "1002", "88421"]),
+      distinctPlantIdByManualFillId: new Map([["manual-gap", "88421"]]),
+      db: {
+        trade: {
+          findMany: async () => [storedManual],
+          deleteMany: tradeDeleteMany,
+        },
+      } as never,
+    })
+    expect(reaped).toEqual({ removed: 1, retiredManualTradesKept: 0 })
+    expect(tradeDeleteMany).toHaveBeenCalledTimes(1)
+  })
+
+  it("reuses the stored id when a plant fill replaces only one manual leg", async () => {
+    const storedBoth = {
+      id: "stored-both-manual",
+      accountNumber: ACCOUNT,
+      instrument: "MES",
+      side: "Long",
+      quantity: 1,
+      entryPrice: "7800",
+      closePrice: "7801",
+      entryDate: "2026-09-25T15:07:00.000+00:00",
+      closeDate: "2026-09-25T15:08:00.000+00:00",
+      entryId: "manual-a",
+      closeId: "manual-b",
+    }
+    findMany.mockImplementation(async (args: { where?: { tags?: unknown } }) =>
+      args?.where?.tags ? [storedBoth] : [],
+    )
+    createMany.mockResolvedValue({ count: 0 })
+    const replaced = {
+      ...syncTrade,
+      quantity: 1,
+      entryId: "88421",
+      closeId: "manual-b",
+      entryPrice: "7800",
+      closePrice: "7801",
+      entryDate: "2026-09-25T15:07:04.000+00:00",
+      closeDate: "2026-09-25T15:08:00.000+00:00",
+      side: "Long",
+      pnl: 5,
+      commission: 0,
+    } as Trade
+    await saveTradesCore([replaced], { userId: "u1" })
+    const inserted = createMany.mock.calls[0][0].data as Array<{ id: string }>
+    expect(inserted[0]?.id).toBe("stored-both-manual")
+  })
+
+  it("derives only the plant trade from a marked fill and does not reuse the manual row", async () => {
+    const ssboe = Date.parse("2026-09-25T15:07:45Z") / 1000
+    const manual = {
+      accountId: ACCOUNT,
+      symbol: "MESZ6",
+      transactionType: "BUY",
+      fillPrice: 7800,
+      fillSize: 2,
+      fillId: "manual-gap",
+      fillDate: "20260925",
+      ssboe,
+      source: "manual" as const,
+      confirmedDistinctFillId: "88421",
+    }
+    const plantFill = {
+      ...manual,
+      fillId: "88421",
+      ssboe: ssboe - 45,
+      source: "history" as const,
+      confirmedDistinctFillId: undefined,
+    }
+    const close = {
+      ...plantFill,
+      fillId: "1002",
+      transactionType: "SELL",
+      fillPrice: 7801,
+      ssboe: ssboe + 75,
+    }
+    const prepared = prepareRithmicProtocolFills([manual, plantFill, close])
+    expect(prepared.nearMisses).toEqual([])
+    const { trades, openSkipped } = buildTradesFromRithmicFills(
+      prepared.fills,
+      "u1",
+      new Map([["MES", { tickSize: 0.25, tickValue: 1.25 }]]),
+    )
+    expect(openSkipped).toBe(2)
+    expect(trades).toHaveLength(1)
+    expect(trades[0]?.entryId).toBe("88421")
+    expect(trades[0]?.closeId).toBe("1002")
+
+    findMany.mockImplementation(async (args: { where?: { tags?: unknown } }) =>
+      args?.where?.tags
+        ? [
+            {
+              id: "stored-manual-trade",
+              accountNumber: ACCOUNT,
+              instrument: "MES",
+              side: "Long",
+              quantity: 2,
+              entryPrice: "7800",
+              closePrice: "7801",
+              entryDate: "2026-09-25T15:07:45.000+00:00",
+              closeDate: "2026-09-25T15:09:00.000+00:00",
+              entryId: "manual-gap",
+              closeId: "1002",
+            },
+          ]
+        : [],
+    )
+    fillFindMany.mockResolvedValue([
+      { fillId: "manual-gap", confirmedDistinctFillId: "88421" },
+    ])
+    createMany.mockResolvedValue({ count: 1 })
+    await saveTradesCore(trades, { userId: "u1" })
+    const inserted = createMany.mock.calls.at(-1)?.[0].data as Array<{ id: string }>
+    expect(inserted).toHaveLength(1)
+    expect(inserted[0]?.id).not.toBe("stored-manual-trade")
   })
 
   it("a new trade on the same account is still inserted", async () => {

@@ -115,10 +115,15 @@ export async function POST(request: NextRequest) {
         confirmedDistinctBy: actor,
       })
       if (!marked.ok && marked.status === 'acknowledgement_required') {
+        const unrelated = marked.relation?.kind === 'unrelated'
         return jsonError({
           code: 'conflict',
-          message: 'Confirm-distinct refused because that plant fill matches the manual exactly.',
-          hint: 'Re-send dryRun: false with acknowledgeExactMatch: true only if both executions should count.',
+          message: unrelated
+            ? 'Confirm-distinct refused because that plant fill is unrelated to the manual.'
+            : 'Confirm-distinct refused because that plant fill matches the manual exactly.',
+          hint: unrelated
+            ? 'Re-send dryRun: false with acknowledgeUnrelated: true only if this plant fill should stay distinct from the manual.'
+            : 'Re-send dryRun: false with acknowledgeExactMatch: true only if both executions should count.',
           details: marked.errors,
         })
       }
@@ -129,9 +134,12 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(marked)
       }
       if (marked.status === 'not_found') {
+        const missingPlant = marked.errors?.some((error) => error.field === 'upstreamFillId')
         return jsonError({
           code: 'not_found',
-          message: 'No manual fill with that id belongs to this account.',
+          message: missingPlant
+            ? 'No plant fill with that id, symbol, and side belongs to this account.'
+            : 'No manual fill with that id belongs to this account.',
           hint: 'Pass the manual- fill id, the plant fill id, userId, and accountNumber.',
           details: marked.errors,
         })

@@ -230,6 +230,8 @@ export async function deleteUnannotatedPhantomProtocolTrades(params: {
   ledgerFillIds: Set<string>
   /** `manual-retired` fill ids still present on the ledger. Annotated trades that use them are counted, not deleted. */
   retiredFillIds?: Set<string>
+  /** Manual fill id → plant fill id confirmed as a different execution. */
+  distinctPlantIdByManualFillId?: ReadonlyMap<string, string>
   /** Accounts whose symbol was skipped as a manual near-miss. Do not reap those trades. */
   retainAccountNumbers?: string[]
   db?: ProtocolStore
@@ -269,6 +271,7 @@ export async function deleteUnannotatedPhantomProtocolTrades(params: {
   const classification = {
     derived: params.derivedTrades,
     ledgerFillIds: params.ledgerFillIds,
+    distinctPlantIdByManualFillId: params.distinctPlantIdByManualFillId,
   }
   const retiredManualTradesKept = countRetiredManualTradesKept({
     existing,

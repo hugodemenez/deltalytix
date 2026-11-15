@@ -5,7 +5,7 @@ import { RITHMIC_PROTOCOL_TRADE_TAG } from '@/lib/trade-id-utils'
 import { fillIdentityKey } from './dedupe-fills'
 import {
   hasTradeJournalAnnotations,
-  manualFillRelation,
+  manualFillBookRelation,
   prepareRithmicProtocolFills,
 } from './fill-ledger'
 import { fillSide } from './fills-to-trades'
@@ -725,12 +725,14 @@ export type ManualFillDistinctResult =
       confirmedDistinctBy: string
       confirmDistinctReason: string
       relation: ManualFillDistinctRelation
+      previousConfirmedDistinctFillId: string | null
     }
   | {
       ok: false
       status: 'validation' | 'not_found' | 'acknowledgement_required'
       errors: ManualFillFieldError[]
       relation?: ManualFillDistinctRelation
+      previousConfirmedDistinctFillId?: string | null
     }
 
 type DistinctRow = {
@@ -802,19 +804,38 @@ async function defaultFindDistinctFill(params: {
   })
 }
 
-async function defaultFindUpstreamFill(params: {
+async function defaultLoadAccountFills(params: {
   userId: string
   accountNumber: string
-  fillId: string
-}): Promise<DistinctRow | null> {
-  return prisma.rithmicProtocolFill.findFirst({
+}): Promise<DistinctRow[]> {
+  return prisma.rithmicProtocolFill.findMany({
     where: {
       userId: params.userId,
       accountNumber: params.accountNumber,
-      fillId: params.fillId,
     },
     select: DISTINCT_FILL_SELECT,
   })
+}
+
+function pickUpstreamFill(
+  rows: DistinctRow[],
+  manual: DistinctRow,
+  upstreamFillId: string,
+): DistinctRow | null {
+  const sameId = rows.filter(
+    (row) =>
+      row.fillId === upstreamFillId &&
+      row.source !== 'manual' &&
+      row.source !== 'manual-retired' &&
+      row.symbol.trim().toUpperCase() === manual.symbol.trim().toUpperCase() &&
+      fillSide(row.transactionType) === fillSide(manual.transactionType),
+  )
+  if (sameId.length === 0) return null
+  const manualDay = (manual.fillDate ?? '').replace(/-/g, '')
+  return (
+    sameId.find((row) => (row.fillDate ?? '').replace(/-/g, '') === manualDay) ??
+    sameId[0]
+  )
 }
 
 async function defaultMarkDistinct(params: {
@@ -851,7 +872,7 @@ export async function confirmDistinctManualRithmicProtocolFill(
   input: unknown,
   deps?: {
     findManualFill?: typeof defaultFindDistinctFill
-    findUpstreamFill?: typeof defaultFindUpstreamFill
+    loadAccountFills?: typeof defaultLoadAccountFills
     markDistinct?: typeof defaultMarkDistinct
   },
 ): Promise<ManualFillDistinctResult> {
@@ -901,11 +922,18 @@ export async function confirmDistinctManualRithmicProtocolFill(
       message: 'acknowledgeExactMatch must be a boolean when provided.',
     })
   }
+  if ('acknowledgeUnrelated' in payload && typeof payload.acknowledgeUnrelated !== 'boolean') {
+    errors.push({
+      field: 'acknowledgeUnrelated',
+      message: 'acknowledgeUnrelated must be a boolean when provided.',
+    })
+  }
   if (errors.length > 0) return { ok: false, status: 'validation', errors }
   const dryRun = payload.dryRun === false ? false : true
   const acknowledgeExactMatch = payload.acknowledgeExactMatch === true
+  const acknowledgeUnrelated = payload.acknowledgeUnrelated === true
   const findManualFill = deps?.findManualFill ?? defaultFindDistinctFill
-  const findUpstreamFill = deps?.findUpstreamFill ?? defaultFindUpstreamFill
+  const loadAccountFills = deps?.loadAccountFills ?? defaultLoadAccountFills
   const markDistinct = deps?.markDistinct ?? defaultMarkDistinct
   const row = await findManualFill({ userId, accountNumber, fillId })
   if (!row) {
@@ -922,36 +950,53 @@ export async function confirmDistinctManualRithmicProtocolFill(
       errors: [{ field: 'fillId', message: 'Only a manual fill can be marked distinct.' }],
     }
   }
-  const upstream = await findUpstreamFill({ userId, accountNumber, fillId: upstreamFillId })
-  const sameBook =
-    upstream != null &&
-    upstream.source !== 'manual' &&
-    upstream.source !== 'manual-retired' &&
-    upstream.symbol.trim().toUpperCase() === row.symbol.trim().toUpperCase() &&
-    fillSide(upstream.transactionType) === fillSide(row.transactionType)
-  if (!upstream || !sameBook) {
+  const accountFills = await loadAccountFills({ userId, accountNumber })
+  const upstream = pickUpstreamFill(accountFills, row, upstreamFillId)
+  if (!upstream) {
     return {
       ok: false,
       status: 'not_found',
       errors: [
         {
           field: 'upstreamFillId',
-          message: 'No plant fill with that id, symbol, and side belongs to this account.',
+          message:
+            'No plant fill with that id, symbol, and side belongs to this account.',
         },
       ],
     }
   }
-  const relation = manualFillRelation(distinctRowToFill(row), distinctRowToFill(upstream))
+  const relation = manualFillBookRelation(
+    accountFills.map(distinctRowToFill),
+    fillId,
+    upstreamFillId,
+  )
+  const previousConfirmedDistinctFillId = row.confirmedDistinctFillId
   if (relation.kind === 'exact' && !dryRun && !acknowledgeExactMatch) {
     return {
       ok: false,
       status: 'acknowledgement_required',
       relation,
+      previousConfirmedDistinctFillId,
       errors: [
         {
           field: 'acknowledgeExactMatch',
           message:
             'That plant fill matches this manual exactly. Pass acknowledgeExactMatch: true only if both executions should count.',
+        },
+      ],
+    }
+  }
+  if (relation.kind === 'unrelated' && !dryRun && !acknowledgeUnrelated) {
+    return {
+      ok: false,
+      status: 'acknowledgement_required',
+      relation,
+      previousConfirmedDistinctFillId,
+      errors: [
+        {
+          field: 'acknowledgeUnrelated',
+          message:
+            'That plant fill is unrelated to this manual. Pass acknowledgeUnrelated: true only if it should stay distinct anyway.',
         },
       ],
     }
@@ -967,6 +1012,7 @@ export async function confirmDistinctManualRithmicProtocolFill(
       confirmedDistinctBy: row.confirmedDistinctBy || confirmedDistinctBy,
       confirmDistinctReason: row.confirmDistinctReason || reason,
       relation,
+      previousConfirmedDistinctFillId,
     }
   }
   const confirmedDistinctAt = new Date()
@@ -994,6 +1040,7 @@ export async function confirmDistinctManualRithmicProtocolFill(
     confirmedDistinctBy,
     confirmDistinctReason: reason,
     relation,
+    previousConfirmedDistinctFillId,
   }
 }
 
@@ -1026,6 +1073,8 @@ export function parseManualFillCliArgs(argv: string[]):
     'acknowledge-annotated-trades'?: boolean
     retire?: boolean
     'confirm-distinct'?: boolean
+    'acknowledge-exact-match'?: boolean
+    'acknowledge-unrelated'?: boolean
     'fill-id'?: string
     'upstream-fill-id'?: string
     reason?: string
@@ -1049,6 +1098,8 @@ export function parseManualFillCliArgs(argv: string[]):
         'acknowledge-annotated-trades': { type: 'boolean' },
         retire: { type: 'boolean' },
         'confirm-distinct': { type: 'boolean' },
+        'acknowledge-exact-match': { type: 'boolean' },
+        'acknowledge-unrelated': { type: 'boolean' },
         'fill-id': { type: 'string' },
         'upstream-fill-id': { type: 'string' },
         reason: { type: 'string' },
@@ -1093,6 +1144,8 @@ export function parseManualFillCliArgs(argv: string[]):
         upstreamFillId: values['upstream-fill-id'],
         reason: values.reason,
         dryRun: values.apply ? false : true,
+        acknowledgeExactMatch: values['acknowledge-exact-match'] === true,
+        acknowledgeUnrelated: values['acknowledge-unrelated'] === true,
       },
     }
   }

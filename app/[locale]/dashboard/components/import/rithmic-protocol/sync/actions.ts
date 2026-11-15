@@ -26,6 +26,7 @@ import {
 import {
   buildLedgerSeenIndex,
   canonicalLedgerFillIds,
+  confirmedDistinctMarkers,
   deriveTradesFromFillLedger,
   planManualFillSyncEffects,
   retiredManualFillIds,
@@ -953,6 +954,7 @@ export async function getRithmicProtocolTrades(
       derivedTrades: trades,
       ledgerFillIds: canonicalLedgerFillIds(ledgerFills),
       retiredFillIds: retiredManualFillIds(ledgerFills),
+      distinctPlantIdByManualFillId: confirmedDistinctMarkers(ledgerFills),
       retainAccountNumbers: manualEffects.retainAccountNumbers,
     })
     if (phantoms.removed > 0) {

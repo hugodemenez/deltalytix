@@ -8,6 +8,7 @@ import {
   fillIdentityKey,
   preferHistoryFills,
   resolveRithmicProtocolPersistedId,
+  RITHMIC_PROTOCOL_ORDER_PIECE_WINDOW_MS,
   RITHMIC_PROTOCOL_TIMESTAMP_TOLERANCE_MS,
   type DedupeFillsStats,
   type RithmicProtocolFillPairIdentity,
@@ -277,6 +278,79 @@ export function manualFillRelation(
   if (manualFillMatchesUpstream(unmarked, upstream)) return { kind: 'exact' }
   const reason = manualNearMissReason(unmarked, upstream)
   if (reason) return { kind: 'near-miss', reason }
+  return { kind: 'unrelated' }
+}
+
+function samePreparedOrder(
+  named: RithmicProtocolFill,
+  representative: RithmicProtocolFill,
+): boolean {
+  if (canonicalRithmicFillId(named.fillId) === canonicalRithmicFillId(representative.fillId)) {
+    return true
+  }
+  if ((named.accountId || '') !== (representative.accountId || '')) return false
+  const namedSymbol = (named.symbol || '').trim().toUpperCase()
+  const representativeSymbol = (representative.symbol || '').trim().toUpperCase()
+  if (!namedSymbol || namedSymbol !== representativeSymbol) return false
+  if (fillSide(named.transactionType) !== fillSide(representative.transactionType)) return false
+  const namedPrice = Number(named.fillPrice || named.avgFillPrice || 0)
+  const representativePrice = Number(
+    representative.fillPrice || representative.avgFillPrice || 0,
+  )
+  if (Math.abs(namedPrice - representativePrice) > 1e-6) return false
+  const namedMs = fillTimestampMs(named)
+  const representativeMs = fillTimestampMs(representative)
+  if (!(namedMs > 0) || !(representativeMs > 0)) return false
+  return Math.abs(namedMs - representativeMs) <= RITHMIC_PROTOCOL_ORDER_PIECE_WINDOW_MS
+}
+
+/**
+ * How the named plant fill relates to the manual after plant fills are
+ * consolidated. A split piece is judged by the order it belongs to.
+ */
+export function manualFillBookRelation(
+  fills: RithmicProtocolFill[],
+  manualFillId: string,
+  upstreamFillId: string,
+): { kind: 'exact' } | { kind: 'near-miss'; reason: string } | { kind: 'unrelated' } {
+  const manualId = canonicalRithmicFillId(manualFillId)
+  const namedId = canonicalRithmicFillId(upstreamFillId)
+  if (!manualId || !namedId) return { kind: 'unrelated' }
+  const cleared = fills.map((fill) =>
+    fill.source === 'manual' && canonicalRithmicFillId(fill.fillId) === manualId
+      ? { ...fill, confirmedDistinctFillId: undefined }
+      : fill,
+  )
+  const prepared = prepareRithmicProtocolFills(cleared)
+  const named = cleared.find(
+    (fill) =>
+      fill.source !== 'manual' &&
+      fill.source !== 'manual-retired' &&
+      canonicalRithmicFillId(fill.fillId) === namedId,
+  )
+  const retirement = prepared.retirements.find(
+    (item) => canonicalRithmicFillId(item.manual.fillId) === manualId,
+  )
+  if (
+    retirement &&
+    named &&
+    samePreparedOrder(named, retirement.upstream)
+  ) {
+    return { kind: 'exact' }
+  }
+  if (
+    retirement &&
+    canonicalRithmicFillId(retirement.upstream.fillId) === namedId
+  ) {
+    return { kind: 'exact' }
+  }
+  const near = prepared.nearMisses.find(
+    (item) =>
+      canonicalRithmicFillId(item.manual.fillId) === manualId &&
+      named &&
+      samePreparedOrder(named, item.upstream),
+  )
+  if (near) return { kind: 'near-miss', reason: near.reason }
   return { kind: 'unrelated' }
 }
 
@@ -562,6 +636,23 @@ export function canonicalLedgerFillIds(
   return ids
 }
 
+export function confirmedDistinctMarkers(
+  fills: Array<{
+    source?: string | null
+    fillId?: string | null
+    confirmedDistinctFillId?: string | null
+  }>,
+): Map<string, string> {
+  const markers = new Map<string, string>()
+  for (const fill of fills) {
+    if (fill.source !== 'manual') continue
+    const manualId = canonicalRithmicFillId(fill.fillId)
+    const plantId = canonicalRithmicFillId(fill.confirmedDistinctFillId)
+    if (manualId && plantId) markers.set(manualId, plantId)
+  }
+  return markers
+}
+
 export function retiredManualFillIds(
   fills: Array<{ source?: string | null; fillId?: string | null }>,
 ): Set<string> {
@@ -591,6 +682,7 @@ export function countRetiredManualTradesKept(params: {
   derived: Array<{ id: string } & RithmicProtocolFillPairIdentity>
   ledgerFillIds: Set<string>
   retiredFillIds: Set<string>
+  distinctPlantIdByManualFillId?: ReadonlyMap<string, string>
 }): number {
   if (params.retiredFillIds.size === 0) return 0
   let kept = 0
@@ -734,6 +826,7 @@ export function phantomProtocolTradeIds(params: {
   existing: AnnotatedProtocolTrade[]
   derived: Array<{ id: string } & RithmicProtocolFillPairIdentity>
   ledgerFillIds: Set<string>
+  distinctPlantIdByManualFillId?: ReadonlyMap<string, string>
 }): string[] {
   const toDelete: string[] = []
   for (const row of params.existing) {
@@ -808,9 +901,17 @@ function manualLegIds(trade: {
 
 function batchStillCarriesManualLeg(
   stored: { entryId?: string | null; closeId?: string | null },
+  derived: { entryId?: string | null; closeId?: string | null },
   context: ManualReplacementContext | undefined,
 ): boolean {
-  const legs = manualLegIds(stored)
+  const derivedEntry = canonicalRithmicFillId(derived.entryId)
+  const derivedClose = canonicalRithmicFillId(derived.closeId)
+  // A leg this candidate still carries is not evidence that another trade
+  // kept the manual. Only a replaced leg that some other derived trade
+  // still uses blocks the rematch.
+  const legs = manualLegIds(stored).filter(
+    (leg) => leg !== derivedEntry && leg !== derivedClose,
+  )
   if (legs.length === 0 || !context?.derivedBatch) return false
   return context.derivedBatch.some((trade) => {
     const entry = canonicalRithmicFillId(trade.entryId)
@@ -914,7 +1015,7 @@ export function manualTradeReplacedByPlantTrade(
   if (!(entryManual || closeManual)) return false
   if (
     context &&
-    (batchStillCarriesManualLeg(stored, context) ||
+    (batchStillCarriesManualLeg(stored, derived, context) ||
       markedDistinctFromPlant(stored, derived, context))
   ) {
     return false

@@ -251,4 +251,75 @@ describe('POST /api/admin/rithmic-protocol/manual-fill', () => {
     expect(insertManualRithmicProtocolFill).not.toHaveBeenCalled()
     expect(retireManualRithmicProtocolFill).not.toHaveBeenCalled()
   })
+
+  it('refuses an unacknowledged exact confirm-distinct with 409', async () => {
+    authorizeAdminRequest.mockResolvedValue({ ok: true, via: 'cron' })
+    confirmDistinctManualRithmicProtocolFill.mockResolvedValue({
+      ok: false,
+      status: 'acknowledgement_required',
+      relation: { kind: 'exact' },
+      errors: [{ field: 'acknowledgeExactMatch', message: 'exact match' }],
+    })
+    const response = await post({
+      action: 'confirm-distinct',
+      userId: body.userId,
+      accountNumber: body.accountNumber,
+      fillId: 'manual-gap',
+      upstreamFillId: '88421',
+      reason: 'this is the patch',
+      dryRun: false,
+    })
+    expect(response.status).toBe(409)
+    const payload = await response.json()
+    expect(payload.error.code).toBe('conflict')
+    expect(payload.error.hint).toMatch(/acknowledgeExactMatch: true/)
+  })
+
+  it('refuses an unacknowledged unrelated confirm-distinct with 409', async () => {
+    authorizeAdminRequest.mockResolvedValue({ ok: true, via: 'cron' })
+    confirmDistinctManualRithmicProtocolFill.mockResolvedValue({
+      ok: false,
+      status: 'acknowledgement_required',
+      relation: { kind: 'unrelated' },
+      errors: [{ field: 'acknowledgeUnrelated', message: 'unrelated' }],
+    })
+    const response = await post({
+      action: 'confirm-distinct',
+      userId: body.userId,
+      accountNumber: body.accountNumber,
+      fillId: 'manual-gap',
+      upstreamFillId: '90000',
+      reason: 'different session',
+      dryRun: false,
+    })
+    expect(response.status).toBe(409)
+    const payload = await response.json()
+    expect(payload.error.message).toMatch(/unrelated/)
+    expect(payload.error.hint).toMatch(/acknowledgeUnrelated: true/)
+  })
+
+  it('names a missing plant fill instead of the manual row', async () => {
+    authorizeAdminRequest.mockResolvedValue({ ok: true, via: 'cron' })
+    confirmDistinctManualRithmicProtocolFill.mockResolvedValue({
+      ok: false,
+      status: 'not_found',
+      errors: [
+        {
+          field: 'upstreamFillId',
+          message: 'No plant fill with that id, symbol, and side belongs to this account.',
+        },
+      ],
+    })
+    const response = await post({
+      action: 'confirm-distinct',
+      userId: body.userId,
+      accountNumber: body.accountNumber,
+      fillId: 'manual-gap',
+      upstreamFillId: '90000',
+      reason: 'different session',
+    })
+    expect(response.status).toBe(404)
+    const payload = await response.json()
+    expect(payload.error.message).toMatch(/plant fill/)
+  })
 })

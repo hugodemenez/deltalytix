@@ -48,6 +48,9 @@
  *     --upstream-fill-id PLANT_FILL_ID \
  *     --reason "next-session fill, not this patch" \
  *     --apply
+ *
+ * `--apply` is refused when the plant fill is an exact match or unrelated.
+ * Re-send with `--acknowledge-exact-match` or `--acknowledge-unrelated`.
  */
 import { prisma } from '../lib/prisma'
 import {

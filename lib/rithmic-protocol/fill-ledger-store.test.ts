@@ -201,6 +201,7 @@ describe('deleteUnannotatedPhantomProtocolTrades', () => {
   async function reap(
     row: typeof stored,
     derived: typeof plant,
+    markers?: Map<string, string>,
   ) {
     const tradeFindMany = vi.fn(
       async (args: { select?: Record<string, boolean> }) => {
@@ -219,6 +220,7 @@ describe('deleteUnannotatedPhantomProtocolTrades', () => {
       derivedTrades: [derived],
       ledgerFillIds: new Set(['manual-gap', '1002', '88421']),
       retiredFillIds: new Set(['manual-gap']),
+      distinctPlantIdByManualFillId: markers,
       db: {
         trade: { findMany: tradeFindMany, deleteMany: tradeDeleteMany },
       } as never,
@@ -260,5 +262,13 @@ describe('deleteUnannotatedPhantomProtocolTrades', () => {
     const exact = await reap(stored, plant)
     expect(exact.result).toEqual({ removed: 0, retiredManualTradesKept: 0 })
     expect(exact.tradeDeleteMany).not.toHaveBeenCalled()
+
+    const markers = new Map([['manual-gap', '88421']])
+    const distinctPlain = await reap(stored, plant, markers)
+    expect(distinctPlain.result).toEqual({ removed: 1, retiredManualTradesKept: 0 })
+    expect(distinctPlain.tradeDeleteMany).toHaveBeenCalledTimes(1)
+    const distinctNoted = await reap(noted, plant, markers)
+    expect(distinctNoted.result).toEqual({ removed: 0, retiredManualTradesKept: 1 })
+    expect(distinctNoted.tradeDeleteMany).not.toHaveBeenCalled()
   })
 })
