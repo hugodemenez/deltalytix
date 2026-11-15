@@ -368,6 +368,54 @@ describe('POST /api/admin/rithmic-protocol/manual-fill', () => {
     )
   })
 
+  it('says when another near-miss on the account defers reap', async () => {
+    authorizeAdminRequest.mockResolvedValue({ ok: true, via: 'cron' })
+    confirmDistinctManualRithmicProtocolFill.mockResolvedValue({
+      ok: false,
+      status: 'acknowledgement_required',
+      relation: { kind: 'near-miss', reason: 'clock', orderFillId: '88421' },
+      previousConfirmedDistinctFillId: null,
+      trades: [
+        {
+          id: 'stored-manual-trade',
+          entryId: 'manual-gap',
+          closeId: '1002',
+          instrument: 'MES',
+          annotated: false,
+        },
+      ],
+      errors: [{ field: 'acknowledgeReapDeferred', message: 'reap stays off' }],
+      tradeEffects: {
+        displaced: 1,
+        annotated: 0,
+        nextBookBlocked: false,
+        reapDeferred: true,
+      },
+    })
+    const response = await post({
+      action: 'confirm-distinct',
+      userId: body.userId,
+      accountNumber: body.accountNumber,
+      fillId: 'manual-gap',
+      upstreamFillId: '88421',
+      reason: 'different buy',
+      dryRun: false,
+    })
+    expect(response.status).toBe(409)
+    const payload = await response.json()
+    expect(payload.error.message).toMatch(/displaced rows/)
+    expect(payload.error.hint).toMatch(/acknowledgeReapDeferred: true/)
+    expect(payload.error.details).toEqual(
+      expect.arrayContaining([
+        {
+          field: 'reapDeferred',
+          message: expect.stringMatching(/keeps reap off/),
+        },
+        { field: 'displacedTrades', message: '1' },
+      ]),
+    )
+  })
+
   it('refuses an unacknowledged unrelated confirm-distinct with 409', async () => {
     authorizeAdminRequest.mockResolvedValue({ ok: true, via: 'cron' })
     confirmDistinctManualRithmicProtocolFill.mockResolvedValue({

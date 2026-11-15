@@ -118,6 +118,9 @@ export async function POST(request: NextRequest) {
         const annotated = marked.errors?.some(
           (error) => error.field === 'acknowledgeAnnotatedTrades',
         )
+        const reapDeferred = marked.errors?.some(
+          (error) => error.field === 'acknowledgeReapDeferred',
+        )
         const unrelated = marked.relation?.kind === 'unrelated'
         const relation = marked.relation
         const details = [
@@ -155,6 +158,15 @@ export async function POST(request: NextRequest) {
                       },
                     ]
                   : []),
+                ...(marked.tradeEffects.reapDeferred
+                  ? [
+                      {
+                        field: 'reapDeferred',
+                        message:
+                          'Another near-miss on this account keeps reap off. The next sync can leave these displaced rows beside the new pairs until that near-miss is resolved.',
+                      },
+                    ]
+                  : []),
               ]
             : []),
         ]
@@ -162,14 +174,18 @@ export async function POST(request: NextRequest) {
           code: 'conflict',
           message: annotated
             ? 'Confirm-distinct refused while an annotated trade would lose its fill pair.'
-            : unrelated
-              ? 'Confirm-distinct refused because that plant fill is unrelated to the manual.'
-              : 'Confirm-distinct refused because that plant fill matches the manual exactly.',
+            : reapDeferred
+              ? 'Confirm-distinct refused because another near-miss on this account keeps the displaced rows.'
+              : unrelated
+                ? 'Confirm-distinct refused because that plant fill is unrelated to the manual.'
+                : 'Confirm-distinct refused because that plant fill matches the manual exactly.',
           hint: annotated
             ? 'Move the annotation if you want to keep it, delete the stored row, then run a sync or rebuild. Then re-send dryRun: false with acknowledgeAnnotatedTrades: true.'
-            : unrelated
-              ? 'Re-send dryRun: false with acknowledgeUnrelated: true only if this plant fill should stay distinct from the manual.'
-              : 'Re-send dryRun: false with acknowledgeExactMatch: true only if both executions should count.',
+            : reapDeferred
+              ? 'Re-send dryRun: false with acknowledgeReapDeferred: true only if the next sync may leave the displaced rows until every near-miss on this account is resolved.'
+              : unrelated
+                ? 'Re-send dryRun: false with acknowledgeUnrelated: true only if this plant fill should stay distinct from the manual.'
+                : 'Re-send dryRun: false with acknowledgeExactMatch: true only if both executions should count.',
           details,
         })
       }

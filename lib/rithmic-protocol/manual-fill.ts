@@ -458,6 +458,12 @@ export type ManualFillTradeEffects = {
   annotated: number
   /** The proposed marker still leaves a near-miss on this symbol, so sync will not derive a book. */
   nextBookBlocked: boolean
+  /**
+   * A near-miss remains somewhere on this account after the marker.
+   * Sync skips reap for the whole account, so displaced rows stay until
+   * that near-miss is resolved.
+   */
+  reapDeferred: boolean
 }
 
 export type ManualFillRetireResult =
@@ -1009,14 +1015,28 @@ function displacedStoredTrades(
   return { trades, nextBookBlocked }
 }
 
+/** Any remaining near-miss retains the whole account, so sync will not reap. */
+function accountReapDeferred(
+  fills: RithmicProtocolFill[],
+  manualId: string,
+  orderFillId: string,
+): boolean {
+  return (
+    prepareRithmicProtocolFills(withProposedDistinctMarker(fills, manualId, orderFillId))
+      .nearMisses.length > 0
+  )
+}
+
 function tradeEffectCounts(
   trades: ManualFillDerivedTrade[],
   nextBookBlocked: boolean,
+  reapDeferred: boolean,
 ): ManualFillTradeEffects {
   return {
     displaced: trades.length,
     annotated: trades.filter((trade) => trade.annotated).length,
     nextBookBlocked,
+    reapDeferred,
   }
 }
 
@@ -1095,11 +1115,18 @@ export async function confirmDistinctManualRithmicProtocolFill(
       message: 'acknowledgeAnnotatedTrades must be a boolean when provided.',
     })
   }
+  if ('acknowledgeReapDeferred' in payload && typeof payload.acknowledgeReapDeferred !== 'boolean') {
+    errors.push({
+      field: 'acknowledgeReapDeferred',
+      message: 'acknowledgeReapDeferred must be a boolean when provided.',
+    })
+  }
   if (errors.length > 0) return { ok: false, status: 'validation', errors }
   const dryRun = payload.dryRun === false ? false : true
   const acknowledgeExactMatch = payload.acknowledgeExactMatch === true
   const acknowledgeUnrelated = payload.acknowledgeUnrelated === true
   const acknowledgeAnnotatedTrades = payload.acknowledgeAnnotatedTrades === true
+  const acknowledgeReapDeferred = payload.acknowledgeReapDeferred === true
   const findManualFill = deps?.findManualFill ?? defaultFindDistinctFill
   const loadAccountFills = deps?.loadAccountFills ?? defaultLoadAccountFills
   const markDistinct = deps?.markDistinct ?? defaultMarkDistinct
@@ -1152,7 +1179,8 @@ export async function confirmDistinctManualRithmicProtocolFill(
     row.symbol,
   )
   const trades = displaced.trades
-  const tradeEffects = tradeEffectCounts(trades, displaced.nextBookBlocked)
+  const reapDeferred = accountReapDeferred(book, fillId, orderFillId)
+  const tradeEffects = tradeEffectCounts(trades, displaced.nextBookBlocked, reapDeferred)
   const annotated = trades.some((trade) => trade.annotated)
   if (relation.kind === 'exact' && !dryRun && !acknowledgeExactMatch) {
     return {
@@ -1201,6 +1229,23 @@ export async function confirmDistinctManualRithmicProtocolFill(
           field: 'acknowledgeAnnotatedTrades',
           message:
             'Apply refused because a stored trade whose fill pair this marker removes is annotated. Move the annotation if you want to keep it, delete the stored row, then run a sync or rebuild. Then re-send confirm-distinct with acknowledgeAnnotatedTrades: true.',
+        },
+      ],
+    }
+  }
+  if (!dryRun && tradeEffects.displaced > 0 && reapDeferred && !acknowledgeReapDeferred) {
+    return {
+      ok: false,
+      status: 'acknowledgement_required',
+      relation,
+      previousConfirmedDistinctFillId,
+      trades,
+      tradeEffects,
+      errors: [
+        {
+          field: 'acknowledgeReapDeferred',
+          message:
+            'Apply refused because another near-miss on this account keeps reap off. The next sync can insert the new pairs beside these displaced rows until that near-miss is resolved. Pass acknowledgeReapDeferred: true only if that double count is acceptable.',
         },
       ],
     }
@@ -1283,6 +1328,7 @@ export function parseManualFillCliArgs(argv: string[]):
     'confirm-distinct'?: boolean
     'acknowledge-exact-match'?: boolean
     'acknowledge-unrelated'?: boolean
+    'acknowledge-reap-deferred'?: boolean
     'fill-id'?: string
     'upstream-fill-id'?: string
     reason?: string
@@ -1308,6 +1354,7 @@ export function parseManualFillCliArgs(argv: string[]):
         'confirm-distinct': { type: 'boolean' },
         'acknowledge-exact-match': { type: 'boolean' },
         'acknowledge-unrelated': { type: 'boolean' },
+        'acknowledge-reap-deferred': { type: 'boolean' },
         'fill-id': { type: 'string' },
         'upstream-fill-id': { type: 'string' },
         reason: { type: 'string' },
@@ -1355,6 +1402,7 @@ export function parseManualFillCliArgs(argv: string[]):
         acknowledgeExactMatch: values['acknowledge-exact-match'] === true,
         acknowledgeUnrelated: values['acknowledge-unrelated'] === true,
         acknowledgeAnnotatedTrades: values['acknowledge-annotated-trades'] === true,
+        acknowledgeReapDeferred: values['acknowledge-reap-deferred'] === true,
       },
     }
   }

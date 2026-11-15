@@ -375,6 +375,7 @@ describe('confirmDistinctManualRithmicProtocolFill', () => {
     expect(acknowledged.input.acknowledgeExactMatch).toBe(true)
     expect(acknowledged.input.acknowledgeUnrelated).toBe(true)
     expect(acknowledged.input.acknowledgeAnnotatedTrades).toBe(false)
+    expect(acknowledged.input.acknowledgeReapDeferred).toBe(false)
     const annotated = parseManualFillCliArgs([
       '--confirm-distinct',
       '--apply',
@@ -393,6 +394,24 @@ describe('confirmDistinctManualRithmicProtocolFill', () => {
     expect(annotated.ok).toBe(true)
     if (!annotated.ok) return
     expect(annotated.input.acknowledgeAnnotatedTrades).toBe(true)
+    const deferred = parseManualFillCliArgs([
+      '--confirm-distinct',
+      '--apply',
+      '--acknowledge-reap-deferred',
+      '--user-id',
+      base.userId,
+      '--account',
+      base.accountNumber,
+      '--fill-id',
+      'manual-gap',
+      '--upstream-fill-id',
+      '88422',
+      '--reason',
+      'next session',
+    ])
+    expect(deferred.ok).toBe(true)
+    if (!deferred.ok) return
+    expect(deferred.input.acknowledgeReapDeferred).toBe(true)
   })
 
   it('refuses a missing plant fill and an unacknowledged exact match', async () => {
@@ -944,7 +963,12 @@ describe('confirmDistinctManualRithmicProtocolFill', () => {
     if (refused.ok) return
     expect(refused.errors[0]?.field).toBe('acknowledgeAnnotatedTrades')
     expect(refused.trades?.map((trade) => trade.id)).toEqual(['stored-freed', 'stored-manual'])
-    expect(refused.tradeEffects).toEqual({ displaced: 2, annotated: 1, nextBookBlocked: false })
+    expect(refused.tradeEffects).toEqual({
+      displaced: 2,
+      annotated: 1,
+      nextBookBlocked: false,
+      reapDeferred: false,
+    })
     expect(markDistinct).not.toHaveBeenCalled()
   })
 
@@ -1088,6 +1112,99 @@ describe('confirmDistinctManualRithmicProtocolFill', () => {
     expect(markDistinct).not.toHaveBeenCalled()
   })
 
+  it('refuses confirm-distinct while another symbol on the account still has a near-miss', async () => {
+    const ssboe = manualRow.ssboe
+    loadAccountFills.mockResolvedValue([
+      manualRow,
+      { ...manualRow, fillId: '88421', source: 'history', ssboe: ssboe - 45 },
+      {
+        ...manualRow,
+        fillId: '1002',
+        source: 'history',
+        transactionType: 'SELL',
+        fillPrice: 5810.5,
+        ssboe: ssboe + 75,
+      },
+      {
+        ...manualRow,
+        fillId: '1003',
+        source: 'history',
+        transactionType: 'SELL',
+        fillPrice: 5811,
+        ssboe: ssboe + 180,
+      },
+      {
+        ...manualRow,
+        fillId: 'manual-other',
+        symbol: 'MNQH7',
+        ssboe: ssboe - 86_400,
+      },
+      {
+        ...manualRow,
+        fillId: '99001',
+        symbol: 'MNQH7',
+        source: 'history',
+        ssboe: ssboe - 86_400 - 45,
+      },
+    ])
+    const findDerivedTrades = vi.fn(async () => [
+      {
+        id: 'stored-manual-trade',
+        entryId: 'manual-gap',
+        closeId: '1002',
+        instrument: 'MES',
+        annotated: false,
+      },
+    ])
+    const input = {
+      userId: 'user-1',
+      accountNumber: base.accountNumber,
+      fillId: 'manual-gap',
+      upstreamFillId: '88421',
+      reason: 'this near-miss is a different buy',
+    }
+    const preview = await confirmDistinctManualRithmicProtocolFill(input, {
+      findManualFill,
+      loadAccountFills,
+      markDistinct,
+      findDerivedTrades,
+    })
+    expect(preview.ok).toBe(true)
+    if (!preview.ok) return
+    expect(preview.dryRun).toBe(true)
+    expect(preview.relation.kind).toBe('near-miss')
+    expect(preview.tradeEffects).toEqual({
+      displaced: 1,
+      annotated: 0,
+      nextBookBlocked: false,
+      reapDeferred: true,
+    })
+    expect(markDistinct).not.toHaveBeenCalled()
+    const refused = await confirmDistinctManualRithmicProtocolFill(
+      { ...input, dryRun: false },
+      { findManualFill, loadAccountFills, markDistinct, findDerivedTrades },
+    )
+    expect(refused.ok).toBe(false)
+    if (refused.ok) return
+    expect(refused.errors[0]?.field).toBe('acknowledgeReapDeferred')
+    expect(refused.trades?.map((trade) => trade.id)).toEqual(['stored-manual-trade'])
+    expect(refused.tradeEffects).toEqual({
+      displaced: 1,
+      annotated: 0,
+      nextBookBlocked: false,
+      reapDeferred: true,
+    })
+    expect(markDistinct).not.toHaveBeenCalled()
+    const allowed = await confirmDistinctManualRithmicProtocolFill(
+      { ...input, dryRun: false, acknowledgeReapDeferred: true },
+      { findManualFill, loadAccountFills, markDistinct, findDerivedTrades },
+    )
+    expect(allowed.ok).toBe(true)
+    if (!allowed.ok) return
+    expect(allowed.tradeEffects.reapDeferred).toBe(true)
+    expect(markDistinct).toHaveBeenCalledTimes(1)
+  })
+
   it('gates an annotated trade shifted by a cascading re-pair', async () => {
     const ssboe = manualRow.ssboe
     const one = { ...manualRow, fillSize: 1 }
@@ -1153,7 +1270,12 @@ describe('confirmDistinctManualRithmicProtocolFill', () => {
     if (refused.ok) return
     expect(refused.errors[0]?.field).toBe('acknowledgeAnnotatedTrades')
     expect(refused.trades?.map((trade) => trade.id)).toEqual(['stored-pc', 'stored-qx'])
-    expect(refused.tradeEffects).toEqual({ displaced: 2, annotated: 1, nextBookBlocked: false })
+    expect(refused.tradeEffects).toEqual({
+      displaced: 2,
+      annotated: 1,
+      nextBookBlocked: false,
+      reapDeferred: false,
+    })
     expect(markDistinct).not.toHaveBeenCalled()
   })
 
@@ -1208,6 +1330,7 @@ describe('confirmDistinctManualRithmicProtocolFill', () => {
       displaced: 1,
       annotated: 1,
       nextBookBlocked: false,
+      reapDeferred: false,
     })
     expect(markDistinct).not.toHaveBeenCalled()
   })

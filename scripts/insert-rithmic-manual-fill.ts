@@ -56,6 +56,9 @@
  * A near-miss uses those stored rows, because sync is not deriving the book.
  * If one is annotated, `--apply` also needs `--acknowledge-annotated-trades`.
  * A book that stays blocked says so in the result.
+ * If another near-miss remains on the account, reap stays off for every
+ * symbol. `--apply` then needs `--acknowledge-reap-deferred` whenever a
+ * stored pair would be displaced.
  */
 import { prisma } from '../lib/prisma'
 import {
