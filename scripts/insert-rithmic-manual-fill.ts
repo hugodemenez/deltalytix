@@ -38,6 +38,11 @@ async function main() {
     return
   }
   const result = await insertManualRithmicProtocolFill(parsed.input)
+  if (result.ok) {
+    for (const warning of result.warnings) {
+      process.stderr.write(`[RITHMIC-MANUAL-FILL] warning: ${warning}\n`)
+    }
+  }
   const stream = result.ok ? process.stdout : process.stderr
   stream.write(`${JSON.stringify(result)}\n`)
   if (!result.ok) process.exitCode = 1

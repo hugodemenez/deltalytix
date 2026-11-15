@@ -7,6 +7,7 @@ import {
   fillIdentityKey,
   preferHistoryFills,
   resolveRithmicProtocolPersistedId,
+  RITHMIC_PROTOCOL_TIMESTAMP_TOLERANCE_MS,
   type DedupeFillsStats,
   type RithmicProtocolFillPairIdentity,
 } from './dedupe-fills'
@@ -88,16 +89,21 @@ export function summarizeFillLedgerNets(
 export function prepareRithmicProtocolFills(
   fills: RithmicProtocolFill[],
 ): { fills: RithmicProtocolFill[]; stats: DedupeFillsStats } {
-  const withoutSupersededManuals = preferUpstreamOverMatchingManualFills(fills)
-  const preferred = preferHistoryFills(withoutSupersededManuals)
+  const manuals = fills.filter((fill) => fill.source === 'manual')
+  const upstream = fills.filter((fill) => fill.source !== 'manual')
+  // Collapse plant fills first. A replay twin that history throws away must
+  // not retire a manual patch, and split pieces must be one order before the
+  // quantity check.
+  const preferred = preferHistoryFills(upstream)
   const deduped = dedupeFillsWithStats(preferred)
   const consolidated = consolidateOrderFills(deduped.fills)
+  const reconciled = reconcileManualFills(manuals, consolidated)
   return {
-    fills: consolidated,
+    fills: reconciled,
     stats: {
       received: fills.length,
       afterDedup: deduped.fills.length,
-      afterConsolidate: consolidated.length,
+      afterConsolidate: reconciled.length,
       dropped: { ...deduped.stats.dropped },
     },
   }
@@ -155,24 +161,53 @@ export function shouldReplaceStoredFill(
 
 /**
  * Same execution as a manual patch: same account, symbol, side, quantity,
- * and price, with clocks within a few seconds. Quantity is part of the
- * match so a 1-lot plant fill cannot retire a 2-lot patch.
+ * and price. The clock window covers the history/replay gap (seen up to
+ * about 10s, allowed through 30s). Quantity is part of the match so a
+ * 1-lot plant fill cannot retire a 2-lot patch; split pieces are summed
+ * before this runs.
  */
-export const MANUAL_FILL_UPSTREAM_MATCH_MS = 5_000
+export const MANUAL_FILL_UPSTREAM_MATCH_MS = 30_000
 
-export function manualFillMatchesUpstream(
+/** Same book and a close clock, but not an exact execution. Warn, do not drop. */
+export const MANUAL_FILL_NEAR_MISS_MS = RITHMIC_PROTOCOL_TIMESTAMP_TOLERANCE_MS
+
+const MANUAL_DAY_SHIFT_MS = 24 * 60 * 60 * 1000
+
+function sameManualBook(
   manual: RithmicProtocolFill,
   upstream: RithmicProtocolFill,
-  toleranceMs = MANUAL_FILL_UPSTREAM_MATCH_MS,
 ): boolean {
   if (manual.source !== 'manual' || upstream.source === 'manual') return false
   if ((manual.accountId || '') !== (upstream.accountId || '')) return false
   const manualSymbol = (manual.symbol || '').trim().toUpperCase()
   const upstreamSymbol = (upstream.symbol || '').trim().toUpperCase()
   if (!manualSymbol || manualSymbol !== upstreamSymbol) return false
-  if (fillSide(manual.transactionType) !== fillSide(upstream.transactionType)) {
-    return false
+  return fillSide(manual.transactionType) === fillSide(upstream.transactionType)
+}
+
+function fillClockDeltaMs(
+  manual: RithmicProtocolFill,
+  upstream: RithmicProtocolFill,
+): number | null {
+  const manualMs = fillTimestampMs(manual)
+  const upstreamMs = fillTimestampMs(upstream)
+  if (!(manualMs > 0) || !(upstreamMs > 0)) return null
+  const delta = Math.abs(manualMs - upstreamMs)
+  const upstreamLacksSsboe = !(typeof upstream.ssboe === 'number' && upstream.ssboe > 0)
+  // A plant row with only fill_date/fill_time can land a session-day off the
+  // manual's UTC ssboe while the clock-of-day is the same instant.
+  if (upstreamLacksSsboe && Math.abs(delta - MANUAL_DAY_SHIFT_MS) < delta) {
+    return Math.abs(delta - MANUAL_DAY_SHIFT_MS)
   }
+  return delta
+}
+
+export function manualFillMatchesUpstream(
+  manual: RithmicProtocolFill,
+  upstream: RithmicProtocolFill,
+  toleranceMs = MANUAL_FILL_UPSTREAM_MATCH_MS,
+): boolean {
+  if (!sameManualBook(manual, upstream)) return false
   const manualQty = Math.abs(Number(manual.fillSize) || 0)
   const upstreamQty = Math.abs(Number(upstream.fillSize) || 0)
   if (!(manualQty > 0) || Math.abs(manualQty - upstreamQty) > 1e-6) return false
@@ -180,41 +215,104 @@ export function manualFillMatchesUpstream(
   const upstreamPrice = Number(upstream.fillPrice || upstream.avgFillPrice || 0)
   if (!Number.isFinite(manualPrice) || !Number.isFinite(upstreamPrice)) return false
   if (Math.abs(manualPrice - upstreamPrice) > 1e-6) return false
-  const manualMs = fillTimestampMs(manual)
-  const upstreamMs = fillTimestampMs(upstream)
-  if (!(manualMs > 0) || !(upstreamMs > 0)) return false
-  return Math.abs(manualMs - upstreamMs) <= toleranceMs
+  const delta = fillClockDeltaMs(manual, upstream)
+  return delta != null && delta <= toleranceMs
+}
+
+function manualNearMissReason(
+  manual: RithmicProtocolFill,
+  upstream: RithmicProtocolFill,
+): string | null {
+  if (!sameManualBook(manual, upstream)) return null
+  if (manualFillMatchesUpstream(manual, upstream)) return null
+  const delta = fillClockDeltaMs(manual, upstream)
+  if (delta == null || delta > MANUAL_FILL_NEAR_MISS_MS) return null
+  const reasons: string[] = []
+  const manualQty = Math.abs(Number(manual.fillSize) || 0)
+  const upstreamQty = Math.abs(Number(upstream.fillSize) || 0)
+  if (Math.abs(manualQty - upstreamQty) > 1e-6) reasons.push('qty')
+  const manualPrice = Number(manual.fillPrice || manual.avgFillPrice || 0)
+  const upstreamPrice = Number(upstream.fillPrice || upstream.avgFillPrice || 0)
+  if (Math.abs(manualPrice - upstreamPrice) > 1e-6) reasons.push('price')
+  if (delta > MANUAL_FILL_UPSTREAM_MATCH_MS) reasons.push('clock')
+  return reasons.join('+') || 'clock'
 }
 
 /**
- * Drop a manual row from the working book when an upstream fill is the same
- * execution. The stored row is left in the database; the next merge brings
- * it back if that upstream fill disappears. Prefer the closest clock.
+ * Retire each manual against the already-consolidated upstream book.
+ * One upstream fill retires at most one manual. A near miss stays in the
+ * book and is logged so the lots are not doubled without a trace.
  */
+export function reconcileManualFills(
+  manuals: RithmicProtocolFill[],
+  consolidatedUpstream: RithmicProtocolFill[],
+): RithmicProtocolFill[] {
+  if (manuals.length === 0) return consolidatedUpstream
+  const used = new Set<RithmicProtocolFill>()
+  const kept: RithmicProtocolFill[] = []
+  const ordered = [...manuals].sort(
+    (left, right) => fillTimestampMs(left) - fillTimestampMs(right),
+  )
+  for (const manual of ordered) {
+    let best: RithmicProtocolFill | undefined
+    let bestDt = Number.POSITIVE_INFINITY
+    for (const candidate of consolidatedUpstream) {
+      if (used.has(candidate)) continue
+      if (!manualFillMatchesUpstream(manual, candidate)) continue
+      const delta = fillClockDeltaMs(manual, candidate) ?? Number.POSITIVE_INFINITY
+      if (delta < bestDt) {
+        best = candidate
+        bestDt = delta
+      }
+    }
+    if (best) {
+      used.add(best)
+      console.info(
+        `[RITHMIC-MANUAL-FILL] preferring upstream fillId=${best.fillId ?? ''} over manual fillId=${manual.fillId ?? ''} account=${manual.accountId} symbol=${(manual.symbol || '').trim().toUpperCase()} dtMs=${bestDt}`,
+      )
+      continue
+    }
+    kept.push(manual)
+    let near: RithmicProtocolFill | undefined
+    let nearReason = ''
+    let nearDt = Number.POSITIVE_INFINITY
+    for (const candidate of consolidatedUpstream) {
+      const delta = fillClockDeltaMs(manual, candidate) ?? Number.POSITIVE_INFINITY
+      if (manualFillMatchesUpstream(manual, candidate) && used.has(candidate)) {
+        if (delta < nearDt) {
+          near = candidate
+          nearReason = 'already-matched'
+          nearDt = delta
+        }
+        continue
+      }
+      const reason = manualNearMissReason(manual, candidate)
+      if (!reason) continue
+      if (delta < nearDt) {
+        near = candidate
+        nearReason = reason
+        nearDt = delta
+      }
+    }
+    if (near) {
+      console.warn(
+        `[RITHMIC-MANUAL-FILL] near-miss manual fillId=${manual.fillId ?? ''} upstream fillId=${near.fillId ?? ''} account=${manual.accountId} symbol=${(manual.symbol || '').trim().toUpperCase()} reason=${nearReason} dtMs=${nearDt}`,
+      )
+    }
+  }
+  return [...consolidatedUpstream, ...kept]
+}
+
+/** @deprecated Use reconcileManualFills on the consolidated upstream book. */
 export function preferUpstreamOverMatchingManualFills(
   fills: RithmicProtocolFill[],
 ): RithmicProtocolFill[] {
+  const manuals = fills.filter((fill) => fill.source === 'manual')
   const upstream = fills.filter((fill) => fill.source !== 'manual')
-  if (upstream.length === 0 || upstream.length === fills.length) return fills
-  return fills.filter((fill) => {
-    if (fill.source !== 'manual') return true
-    let best: RithmicProtocolFill | undefined
-    let bestDt = Number.POSITIVE_INFINITY
-    const manualMs = fillTimestampMs(fill)
-    for (const candidate of upstream) {
-      if (!manualFillMatchesUpstream(fill, candidate)) continue
-      const dt = Math.abs(fillTimestampMs(candidate) - manualMs)
-      if (dt < bestDt) {
-        best = candidate
-        bestDt = dt
-      }
-    }
-    if (!best) return true
-    console.info(
-      `[RITHMIC-MANUAL-FILL] preferring upstream fillId=${best.fillId ?? ''} over manual fillId=${fill.fillId ?? ''} account=${fill.accountId} symbol=${(fill.symbol || '').trim().toUpperCase()} dtMs=${bestDt}`,
-    )
-    return false
-  })
+  const preferred = preferHistoryFills(upstream)
+  const deduped = dedupeFillsWithStats(preferred)
+  const consolidated = consolidateOrderFills(deduped.fills)
+  return reconcileManualFills(manuals, consolidated)
 }
 
 export function mergeFillLedgers(
@@ -230,7 +328,10 @@ export function mergeFillLedgers(
       byKey.set(key, fill)
     }
   }
-  return preferUpstreamOverMatchingManualFills([...byKey.values()])
+  // Identity merge only. Retirement happens in prepare, against the
+  // consolidated plant book, so a replay twin cannot retire a manual fill
+  // and then be dropped itself.
+  return [...byKey.values()]
 }
 
 export function partitionIncomingFills(
@@ -457,12 +558,115 @@ export function phantomProtocolTradeIds(params: {
     const entryId = canonicalRithmicFillId(row.entryId)
     const closeId = canonicalRithmicFillId(row.closeId)
     if (!entryId || !closeId) continue
+    const replaced = params.derived.some((incoming) =>
+      manualTradeReplacedByPlantTrade(row, incoming),
+    )
     if (!params.ledgerFillIds.has(entryId) || !params.ledgerFillIds.has(closeId)) {
-      continue
+      // The manual row stays in the fill table after supersession, so both
+      // legs are usually still listed. If a leg id was already rewritten,
+      // still reap the old manual-id trade once a plant trade replaced it.
+      if (!replaced) continue
     }
-    toDelete.push(row.id)
+    if (
+      replaced ||
+      (params.ledgerFillIds.has(entryId) && params.ledgerFillIds.has(closeId))
+    ) {
+      toDelete.push(row.id)
+    }
   }
   return toDelete
+}
+
+function isManualProtocolFillId(id: string | null | undefined): boolean {
+  const canonical = canonicalRithmicFillId(id)
+  return Boolean(canonical?.startsWith('manual-'))
+}
+
+function tradeClockMs(value: string | null | undefined): number | null {
+  if (!value) return null
+  const ms = Date.parse(value)
+  return Number.isNaN(ms) ? null : ms
+}
+
+/** Stored round-trip used a manual leg; the derived trade is the plant fill that replaced it. */
+export function manualTradeReplacedByPlantTrade(
+  stored: RithmicProtocolFillPairIdentity & {
+    side?: string | null
+    quantity?: number | null
+    entryPrice?: string | number | null
+    closePrice?: string | number | null
+  },
+  derived: RithmicProtocolFillPairIdentity & {
+    side?: string | null
+    quantity?: number | null
+    entryPrice?: string | number | null
+    closePrice?: string | number | null
+  },
+): boolean {
+  const storedEntry = canonicalRithmicFillId(stored.entryId)
+  const storedClose = canonicalRithmicFillId(stored.closeId)
+  const derivedEntry = canonicalRithmicFillId(derived.entryId)
+  const derivedClose = canonicalRithmicFillId(derived.closeId)
+  if (!storedEntry || !storedClose || !derivedEntry || !derivedClose) return false
+  const entryManual = isManualProtocolFillId(storedEntry)
+  const closeManual = isManualProtocolFillId(storedClose)
+  if (!entryManual && !closeManual) return false
+  if ((stored.accountNumber ?? '') !== (derived.accountNumber ?? '')) return false
+  if ((stored.instrument ?? '') !== (derived.instrument ?? '')) return false
+  if (
+    stored.quantity != null &&
+    derived.quantity != null &&
+    Number(stored.quantity) !== Number(derived.quantity)
+  ) {
+    return false
+  }
+  if (
+    stored.side &&
+    derived.side &&
+    stored.side.toLowerCase() !== derived.side.toLowerCase()
+  ) {
+    return false
+  }
+  const entryPrice = Number(stored.entryPrice)
+  const derivedEntryPrice = Number(derived.entryPrice)
+  const closePrice = Number(stored.closePrice)
+  const derivedClosePrice = Number(derived.closePrice)
+  if (
+    Number.isFinite(entryPrice) &&
+    Number.isFinite(derivedEntryPrice) &&
+    Math.abs(entryPrice - derivedEntryPrice) > 1e-6
+  ) {
+    return false
+  }
+  if (
+    Number.isFinite(closePrice) &&
+    Number.isFinite(derivedClosePrice) &&
+    Math.abs(closePrice - derivedClosePrice) > 1e-6
+  ) {
+    return false
+  }
+  const entryDt = clockDelta(stored.entryDate, derived.entryDate)
+  const closeDt = clockDelta(stored.closeDate, derived.closeDate)
+  if (entryDt == null || closeDt == null) return false
+  if (entryDt > MANUAL_FILL_NEAR_MISS_MS || closeDt > MANUAL_FILL_NEAR_MISS_MS) {
+    return false
+  }
+  if (!entryManual && storedEntry !== derivedEntry) return false
+  if (!closeManual && storedClose !== derivedClose) return false
+  if (entryManual && storedEntry === derivedEntry && closeManual && storedClose === derivedClose) {
+    return false
+  }
+  return entryManual || closeManual
+}
+
+function clockDelta(
+  left: string | null | undefined,
+  right: string | null | undefined,
+): number | null {
+  const leftMs = tradeClockMs(left)
+  const rightMs = tradeClockMs(right)
+  if (leftMs == null || rightMs == null) return null
+  return Math.abs(leftMs - rightMs)
 }
 
 export function deriveTradesFromFillLedger(

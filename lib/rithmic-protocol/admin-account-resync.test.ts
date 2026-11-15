@@ -958,7 +958,9 @@ describe('admin account resync scoping and safety', () => {
       sellLots: 330,
     })
     expect(preview.proposed?.openingNotFlatReport).toContain('P_0=+2')
-    expect(preview.diagnostics?.positions).toEqual([{ symbol: 'MESZ6', p0: 2 }])
+    expect(preview.diagnostics?.positions).toEqual([
+      { symbol: 'MESZ6', netQuantity: 2, p0: 2 },
+    ])
     expect(tradeDeleteMany).not.toHaveBeenCalled()
   })
 
@@ -1313,6 +1315,74 @@ describe('admin account resync scoping and safety', () => {
     } finally {
       info.mockRestore()
     }
+  })
+
+  it('covers an existing trade whose close id is a manual fill', async () => {
+    const buySsboe = Date.parse('2026-09-30T14:00:00Z') / 1000
+    const sellSsboe = Date.parse('2026-09-30T14:05:00Z') / 1000
+    tradeFindMany.mockResolvedValue([
+      {
+        id: 't-manual',
+        pnl: 1.25,
+        tags: [RITHMIC_PROTOCOL_TRADE_TAG],
+        accountNumber: ACCOUNT,
+        instrument: 'MES',
+        side: 'Long',
+        quantity: 1,
+        entryPrice: '7800',
+        closePrice: '7801',
+        entryDate: '2026-09-30T14:00:00.000Z',
+        closeDate: '2026-09-30T14:05:00.000Z',
+        entryId: '1001',
+        closeId: 'manual-close',
+      },
+    ])
+    fillCount.mockResolvedValue(1)
+    fillFindMany.mockResolvedValue([
+      {
+        accountNumber: ACCOUNT,
+        accountId: 'acct-1',
+        identityKey: 'manual-close-row',
+        fillId: 'manual-close',
+        rawFillId: null,
+        symbol: 'MESZ6',
+        exchange: 'CME',
+        transactionType: 'SELL',
+        fillPrice: 7801,
+        fillSize: 1,
+        fillDate: '20260930',
+        fillTime: '14:05:00',
+        basketId: null,
+        sequenceNumber: null,
+        ssboe: sellSsboe,
+        usecs: null,
+        source: 'manual',
+      },
+    ])
+    fetchAdminRebuildFills.mockResolvedValue(
+      fetchedFills([
+        {
+          accountId: ACCOUNT,
+          symbol: 'MESZ6',
+          transactionType: 'BUY',
+          fillPrice: 7800,
+          fillSize: 1,
+          fillId: '1001',
+          fillDate: '20260930',
+          ssboe: buySsboe,
+          source: 'history',
+        },
+      ]),
+    )
+    const result = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: true,
+      anchorDate: '2026-09-25',
+    })
+    expect(result.wouldRefuseReasons ?? []).not.toContain('UNCOVERED_TRADES')
+    expect(result.error).not.toBe('UNCOVERED_TRADES')
+    expect(result.proposed?.uncoveredTrades ?? []).toEqual([])
   })
 
   it('FIFO on a flat Jérémie window produces no phantom shorts', async () => {

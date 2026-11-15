@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import { parseArgs } from 'node:util'
 import { prisma } from '@/lib/prisma'
 import { fillIdentityKey } from './dedupe-fills'
+import { prepareRithmicProtocolFills } from './fill-ledger'
 import {
   loadRithmicProtocolFills,
   upsertRithmicProtocolFills,
@@ -40,6 +41,7 @@ export type ManualFillInsertResult =
       identityKey: string
       note: string
       fill: RithmicProtocolFill
+      warnings: string[]
     }
   | {
       ok: false
@@ -262,6 +264,19 @@ export function buildManualFill(value: ValidatedManualFill): RithmicProtocolFill
   }
 }
 
+function upstreamSupersedeWarning(
+  stored: RithmicProtocolFill[],
+  fill: RithmicProtocolFill,
+): string | null {
+  const withoutThis = stored.filter((row) => row.fillId !== fill.fillId)
+  const book = prepareRithmicProtocolFills([...withoutThis, fill])
+  const survived = book.fills.some(
+    (row) => row.source === 'manual' && row.fillId === fill.fillId,
+  )
+  if (survived) return null
+  return 'An upstream fill matches this manual fill. FIFO will use the upstream fill, so this patch will not add lots.'
+}
+
 function logManualFill(
   action: 'dry-run' | 'insert' | 'exists',
   value: ValidatedManualFill,
@@ -321,6 +336,11 @@ export async function insertManualRithmicProtocolFill(
     userId: value.userId,
     accountNumbers: [value.accountNumber],
   })
+  const supersede = upstreamSupersedeWarning(stored, fill)
+  const warnings = supersede ? [supersede] : []
+  for (const warning of warnings) {
+    console.warn(`[RITHMIC-MANUAL-FILL] ${warning}`)
+  }
   const existing = stored.find(
     (row) => fillIdentityKey(row) === identityKey || row.fillId === fill.fillId,
   )
@@ -335,6 +355,7 @@ export async function insertManualRithmicProtocolFill(
         identityKey,
         note: value.note,
         fill: existing,
+        warnings,
       }
     }
     return {
@@ -359,6 +380,7 @@ export async function insertManualRithmicProtocolFill(
       identityKey,
       note: value.note,
       fill,
+      warnings,
     }
   }
 
@@ -377,6 +399,7 @@ export async function insertManualRithmicProtocolFill(
     identityKey,
     note: value.note,
     fill,
+    warnings,
   }
 }
 

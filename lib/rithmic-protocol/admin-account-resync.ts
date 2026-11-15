@@ -196,7 +196,7 @@ export type AdminAccountResyncResult = {
       historyStatus?: string
       resolved?: boolean
     }>
-    positions?: Array<{ symbol: string; p0: number }>
+    positions?: Array<{ symbol: string; netQuantity: number; p0: number }>
   }
 }
 
@@ -958,7 +958,7 @@ export async function resyncRithmicProtocolAccount(params: {
         )
         const uncovered = uncoveredTradesByFillIdentity(
           inWindowExisting,
-          windowIncoming,
+          [...windowIncoming, ...manualWindowFills],
         )
 
         const scopedPositions = bracket.positions.filter(
@@ -1231,6 +1231,7 @@ export async function resyncRithmicProtocolAccount(params: {
           })),
           positions: notFlat.slice(0, ADMIN_DIAGNOSTIC_LIMIT).map((row) => ({
             symbol: row.symbol,
+            netQuantity: row.p0,
             p0: row.p0,
           })),
         }

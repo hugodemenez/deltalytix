@@ -545,6 +545,7 @@ type Leg = {
   price: number
   timeMs: number
   remaining: number
+  fillId: string
 }
 
 function tradeLegs(row: RithmicProtocolStoredLegRow): [Leg, Leg] | null {
@@ -565,20 +566,51 @@ function tradeLegs(row: RithmicProtocolStoredLegRow): [Leg, Leg] | null {
   const isLong = String(row.side ?? '').trim().toLowerCase() === 'long'
   const key = `${row.accountNumber ?? ''}|${row.instrument ?? ''}`
   return [
-    { key, direction: isLong ? 'B' : 'S', price: entryPrice, timeMs: entryMs, remaining: quantity },
-    { key, direction: isLong ? 'S' : 'B', price: closePrice, timeMs: closeMs, remaining: quantity },
+    {
+      key,
+      direction: isLong ? 'B' : 'S',
+      price: entryPrice,
+      timeMs: entryMs,
+      remaining: quantity,
+      fillId: canonicalRithmicFillId(row.entryId) ?? '',
+    },
+    {
+      key,
+      direction: isLong ? 'S' : 'B',
+      price: closePrice,
+      timeMs: closeMs,
+      remaining: quantity,
+      fillId: canonicalRithmicFillId(row.closeId) ?? '',
+    },
   ]
 }
 
 function takeLeg(pool: Leg[], want: Leg, toleranceMs: number): Leg | undefined {
-  return pool.find(
-    (leg) =>
-      leg.remaining > 0 &&
-      leg.key === want.key &&
-      leg.direction === want.direction &&
-      leg.price === want.price &&
-      Math.abs(leg.timeMs - want.timeMs) <= toleranceMs,
-  )
+  return pool.find((leg) => {
+    if (
+      !(
+        leg.remaining > 0 &&
+        leg.key === want.key &&
+        leg.direction === want.direction &&
+        leg.price === want.price &&
+        Math.abs(leg.timeMs - want.timeMs) <= toleranceMs
+      )
+    ) {
+      return false
+    }
+    // A stored manual leg does not cover the plant fill that replaced it.
+    // Otherwise the replacement round-trip is skipped and phantom reap
+    // then deletes the only copy.
+    if (
+      leg.fillId.startsWith('manual-') &&
+      want.fillId &&
+      !want.fillId.startsWith('manual-') &&
+      leg.fillId !== want.fillId
+    ) {
+      return false
+    }
+    return true
+  })
 }
 
 /**

@@ -144,6 +144,28 @@ describe('insertManualRithmicProtocolFill', () => {
     upsertFills.mockReset().mockResolvedValue({ inserted: 1, updated: 0, skipped: 0 })
   })
 
+  it('warns on preview when a stored upstream fill would supersede the manual', async () => {
+    const preview = await insertManualRithmicProtocolFill(base, {
+      findAccount,
+      loadFills,
+      upsertFills,
+    })
+    if (!preview.ok) throw new Error('preview failed')
+    loadFills.mockResolvedValue([
+      { ...preview.fill, source: 'history', fillId: '88421' },
+    ])
+    const warned = await insertManualRithmicProtocolFill(base, {
+      findAccount,
+      loadFills,
+      upsertFills,
+    })
+    expect(warned.ok).toBe(true)
+    if (!warned.ok) return
+    expect(warned.dryRun).toBe(true)
+    expect(warned.warnings[0]).toMatch(/upstream fill matches/)
+    expect(upsertFills).not.toHaveBeenCalled()
+  })
+
   it('dry-run builds one manual- fill and does not write', async () => {
     const result = await insertManualRithmicProtocolFill(base, {
       findAccount,
