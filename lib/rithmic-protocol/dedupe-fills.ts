@@ -531,17 +531,10 @@ export function consolidateOrderFills(
   return out.sort((a, b) => (rank.get(a) ?? 0) - (rank.get(b) ?? 0))
 }
 
-/**
- * Consolidated fill id of the order `piece` belongs to, using the same
- * basket and ±2s clustering as `consolidateOrderFills`. A piece in a chain
- * longer than 2s still maps to that order's id.
- */
-export function consolidatedFillIdForPiece(
+function plantOrderClusters(
   fills: RithmicProtocolFill[],
   piece: RithmicProtocolFill,
-): string | null {
-  const pieceId = canonicalRithmicFillId(piece.fillId)
-  if (!pieceId) return null
+): OrderCluster[] {
   const key = orderGroupKey(piece)
   const sameGroup = fills.filter((fill) => {
     if (fill.source === 'manual' || fill.source === 'manual-retired') return false
@@ -549,15 +542,61 @@ export function consolidatedFillIdForPiece(
     if (piece.source === 'replay') return fill.source === 'replay'
     return fill.source !== 'replay'
   })
-  for (const cluster of clusterOneSource(sameGroup, RITHMIC_PROTOCOL_ORDER_PIECE_WINDOW_MS)) {
-    if (
-      !cluster.fills.some((fill) => canonicalRithmicFillId(fill.fillId) === pieceId)
-    ) {
-      continue
-    }
-    return canonicalRithmicFillId(mergeCluster(cluster).fillId) ?? null
+  return clusterOneSource(sameGroup, RITHMIC_PROTOCOL_ORDER_PIECE_WINDOW_MS)
+}
+
+/** The cluster that contains this row, not an earlier session that reused its fill id. */
+function clusterForNamedPiece(
+  fills: RithmicProtocolFill[],
+  piece: RithmicProtocolFill,
+): OrderCluster | null {
+  const pieceId = canonicalRithmicFillId(piece.fillId)
+  if (!pieceId) return null
+  const namedMs = sourceTimestampMs(piece)
+  for (const cluster of plantOrderClusters(fills, piece)) {
+    const hit = cluster.fills.some((fill) => {
+      if (canonicalRithmicFillId(fill.fillId) !== pieceId) return false
+      const fillMs = sourceTimestampMs(fill)
+      if (namedMs == null || fillMs == null) return namedMs == null && fillMs == null
+      return fillMs === namedMs
+    })
+    if (hit) return cluster
   }
   return null
+}
+
+/**
+ * Consolidated fill id of the order `piece` belongs to, using the same
+ * basket and ±2s clustering as `consolidateOrderFills`. A piece in a chain
+ * longer than 2s still maps to that order's id. A recycled fill id matches
+ * the row with the same timestamp, not the earliest session.
+ */
+export function consolidatedFillIdForPiece(
+  fills: RithmicProtocolFill[],
+  piece: RithmicProtocolFill,
+): string | null {
+  const cluster = clusterForNamedPiece(fills, piece)
+  if (!cluster) return null
+  return canonicalRithmicFillId(mergeCluster(cluster).fillId) ?? null
+}
+
+/** Piece ids of the named row's order, including the consolidated id. */
+export function orderMemberFillIds(
+  fills: RithmicProtocolFill[],
+  piece: RithmicProtocolFill,
+): string[] {
+  const cluster = clusterForNamedPiece(fills, piece)
+  const ids = new Set<string>()
+  const namedId = canonicalRithmicFillId(piece.fillId)
+  if (namedId) ids.add(namedId)
+  if (!cluster) return [...ids]
+  for (const fill of cluster.fills) {
+    const id = canonicalRithmicFillId(fill.fillId)
+    if (id) ids.add(id)
+  }
+  const consolidated = canonicalRithmicFillId(mergeCluster(cluster).fillId)
+  if (consolidated) ids.add(consolidated)
+  return [...ids]
 }
 
 export type RithmicProtocolStoredLegRow = RithmicProtocolFillPairIdentity & {

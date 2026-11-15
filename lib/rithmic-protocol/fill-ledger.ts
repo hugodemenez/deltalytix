@@ -286,7 +286,11 @@ function samePreparedOrder(
   representative: RithmicProtocolFill,
   book: RithmicProtocolFill[],
 ): boolean {
+  const namedId = canonicalRithmicFillId(named.fillId)
   const representativeId = canonicalRithmicFillId(representative.fillId)
+  // A single fill is its own order. Id equality over-gates a recycled id
+  // and never names a different order.
+  if (namedId && representativeId && namedId === representativeId) return true
   const orderId = consolidatedFillIdForPiece(book, named)
   return Boolean(orderId && representativeId && orderId === representativeId)
 }

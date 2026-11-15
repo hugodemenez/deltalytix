@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import { parseArgs } from 'node:util'
 import { prisma } from '@/lib/prisma'
 import { RITHMIC_PROTOCOL_TRADE_TAG } from '@/lib/trade-id-utils'
-import { fillIdentityKey } from './dedupe-fills'
+import { fillIdentityKey, orderMemberFillIds } from './dedupe-fills'
 import {
   hasTradeJournalAnnotations,
   manualFillBookRelation,
@@ -496,7 +496,8 @@ type RetireDeps = {
   findDerivedTrades: (params: {
     userId: string
     accountNumber: string
-    fillId: string
+    fillId?: string
+    fillIds?: string[]
   }) => Promise<ManualFillDerivedTrade[]>
 }
 
@@ -522,17 +523,30 @@ async function defaultFindManualFill(params: {
   return row
 }
 
+function derivedTradeFillIds(params: { fillId?: string; fillIds?: string[] }): string[] {
+  const ids = new Set<string>()
+  if (params.fillId) ids.add(params.fillId)
+  for (const id of params.fillIds ?? []) {
+    if (id) ids.add(id)
+  }
+  return [...ids]
+}
+
 async function defaultFindDerivedTrades(params: {
   userId: string
   accountNumber: string
-  fillId: string
+  fillId?: string
+  fillIds?: string[]
 }): Promise<ManualFillDerivedTrade[]> {
+  const ids = derivedTradeFillIds(params)
+  if (ids.length === 0) return []
+  const leg = ids.length === 1 ? ids[0] : { in: ids }
   const rows = await prisma.trade.findMany({
     where: {
       userId: params.userId,
       accountNumber: params.accountNumber,
       tags: { has: RITHMIC_PROTOCOL_TRADE_TAG },
-      OR: [{ entryId: params.fillId }, { closeId: params.fillId }],
+      OR: [{ entryId: leg }, { closeId: leg }],
     },
     select: {
       id: true,
@@ -989,14 +1003,20 @@ export async function confirmDistinctManualRithmicProtocolFill(
       ],
     }
   }
-  const relation = manualFillBookRelation(
-    accountFills.map(distinctRowToFill),
-    fillId,
-    distinctRowToFill(upstream),
-  )
+  const book = accountFills.map(distinctRowToFill)
+  const upstreamFill = distinctRowToFill(upstream)
+  const relation = manualFillBookRelation(book, fillId, upstreamFill)
   const orderFillId = relation.orderFillId
   const previousConfirmedDistinctFillId = row.confirmedDistinctFillId
-  const trades = await findDerivedTrades({ userId, accountNumber, fillId })
+  // Exact and near-miss markers re-pair the plant order. Trades on that
+  // order, including a split piece, are gated with the manual leg.
+  const plantIds =
+    relation.kind === 'unrelated' ? [] : orderMemberFillIds(book, upstreamFill)
+  const trades = await findDerivedTrades({
+    userId,
+    accountNumber,
+    fillIds: [fillId, orderFillId, ...plantIds],
+  })
   const annotated = trades.some((trade) => trade.annotated)
   if (relation.kind === 'exact' && !dryRun && !acknowledgeExactMatch) {
     return {
@@ -1041,7 +1061,7 @@ export async function confirmDistinctManualRithmicProtocolFill(
         {
           field: 'acknowledgeAnnotatedTrades',
           message:
-            'Apply refused because a stored trade that uses this manual fill is annotated. Move the annotation if you want to keep it, delete the stored row, then run a sync or rebuild. Then re-send confirm-distinct with acknowledgeAnnotatedTrades: true.',
+            'Apply refused because a stored trade that uses this manual fill or the plant order is annotated. Move the annotation if you want to keep it, delete the stored row, then run a sync or rebuild. Then re-send confirm-distinct with acknowledgeAnnotatedTrades: true.',
         },
       ],
     }

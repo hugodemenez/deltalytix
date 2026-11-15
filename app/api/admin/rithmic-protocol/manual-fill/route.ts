@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
         return jsonError({
           code: 'conflict',
           message: annotated
-            ? 'Confirm-distinct refused while an annotated trade still uses this manual fill.'
+            ? 'Confirm-distinct refused while an annotated trade still uses this manual fill or the plant order.'
             : unrelated
               ? 'Confirm-distinct refused because that plant fill is unrelated to the manual.'
               : 'Confirm-distinct refused because that plant fill matches the manual exactly.',
