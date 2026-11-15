@@ -2,14 +2,15 @@ import { createHash } from 'node:crypto'
 import { parseArgs } from 'node:util'
 import { prisma } from '@/lib/prisma'
 import { RITHMIC_PROTOCOL_TRADE_TAG } from '@/lib/trade-id-utils'
-import { fillIdentityKey, orderMemberFillIds } from './dedupe-fills'
+import { canonicalRithmicFillId, fillIdentityKey } from './dedupe-fills'
 import {
   hasTradeJournalAnnotations,
   manualFillBookRelation,
+  planManualFillSyncEffects,
   prepareRithmicProtocolFills,
   type ManualFillBookRelation,
 } from './fill-ledger'
-import { fillSide } from './fills-to-trades'
+import { buildTradesFromRithmicFills, fillSide, normalizeInstrument } from './fills-to-trades'
 import {
   loadRithmicProtocolFills,
   rowToFill,
@@ -452,6 +453,11 @@ export type ManualFillDerivedTrade = {
   annotated: boolean
 }
 
+export type ManualFillTradeEffects = {
+  displaced: number
+  annotated: number
+}
+
 export type ManualFillRetireResult =
   | {
       ok: true
@@ -539,7 +545,35 @@ async function defaultFindDerivedTrades(params: {
   fillIds?: string[]
 }): Promise<ManualFillDerivedTrade[]> {
   const ids = derivedTradeFillIds(params)
-  if (ids.length === 0) return []
+  if (ids.length === 0) {
+    const rows = await prisma.trade.findMany({
+      where: {
+        userId: params.userId,
+        accountNumber: params.accountNumber,
+        tags: { has: RITHMIC_PROTOCOL_TRADE_TAG },
+      },
+      select: {
+        id: true,
+        entryId: true,
+        closeId: true,
+        instrument: true,
+        comment: true,
+        tags: true,
+        imageBase64: true,
+        imageBase64Second: true,
+        videoUrl: true,
+        images: true,
+        groupId: true,
+      },
+    })
+    return rows.map((row) => ({
+      id: row.id,
+      entryId: row.entryId,
+      closeId: row.closeId,
+      instrument: row.instrument,
+      annotated: hasTradeJournalAnnotations(row),
+    }))
+  }
   const leg = ids.length === 1 ? ids[0] : { in: ids }
   const rows = await prisma.trade.findMany({
     where: {
@@ -740,6 +774,7 @@ export type ManualFillDistinctResult =
       relation: ManualFillDistinctRelation
       previousConfirmedDistinctFillId: string | null
       trades: ManualFillDerivedTrade[]
+      tradeEffects: ManualFillTradeEffects
     }
   | {
       ok: false
@@ -748,6 +783,7 @@ export type ManualFillDistinctResult =
       relation?: ManualFillDistinctRelation
       previousConfirmedDistinctFillId?: string | null
       trades?: ManualFillDerivedTrade[]
+      tradeEffects?: ManualFillTradeEffects
     }
 
 type DistinctRow = {
@@ -889,6 +925,73 @@ async function defaultMarkDistinct(params: {
   })
 }
 
+function fillsOnInstrument(
+  fills: RithmicProtocolFill[],
+  symbol: string,
+): RithmicProtocolFill[] {
+  const instrument = normalizeInstrument(symbol)
+  return fills.filter((fill) => normalizeInstrument(fill.symbol || '') === instrument)
+}
+
+function protocolPairKey(entry?: string | null, close?: string | null): string | null {
+  const entryId = canonicalRithmicFillId(entry)
+  const closeId = canonicalRithmicFillId(close)
+  if (!entryId || !closeId) return null
+  return `${entryId}|${closeId}`
+}
+
+/** Closed pairs sync would persist for this symbol, markers and all. */
+function syncProtocolPairKeys(fills: RithmicProtocolFill[], userId: string): Set<string> {
+  const prepared = prepareRithmicProtocolFills(fills)
+  const { fifoFills } = planManualFillSyncEffects(prepared)
+  const { trades } = buildTradesFromRithmicFills(fifoFills, userId, new Map())
+  const keys = new Set<string>()
+  for (const trade of trades) {
+    const key = protocolPairKey(trade.entryId, trade.closeId)
+    if (key) keys.add(key)
+  }
+  return keys
+}
+
+function withProposedDistinctMarker(
+  fills: RithmicProtocolFill[],
+  manualId: string,
+  orderFillId: string,
+): RithmicProtocolFill[] {
+  return fills.map((fill) =>
+    fill.source === 'manual' && canonicalRithmicFillId(fill.fillId) === manualId
+      ? { ...fill, confirmedDistinctFillId: orderFillId }
+      : fill,
+  )
+}
+
+/**
+ * Stored trades whose pair sync derives now and would not derive once this
+ * marker is written. An overwrite clears the previous marker on the same row.
+ */
+function displacedStoredTrades(
+  stored: ManualFillDerivedTrade[],
+  current: RithmicProtocolFill[],
+  proposed: RithmicProtocolFill[],
+  userId: string,
+): ManualFillDerivedTrade[] {
+  const now = syncProtocolPairKeys(current, userId)
+  const next = syncProtocolPairKeys(proposed, userId)
+  return stored
+    .filter((trade) => {
+      const key = protocolPairKey(trade.entryId, trade.closeId)
+      return key != null && now.has(key) && !next.has(key)
+    })
+    .sort((left, right) => left.id.localeCompare(right.id))
+}
+
+function tradeEffectCounts(trades: ManualFillDerivedTrade[]): ManualFillTradeEffects {
+  return {
+    displaced: trades.length,
+    annotated: trades.filter((trade) => trade.annotated).length,
+  }
+}
+
 /**
  * Mark one manual fill as a different execution from one plant fill.
  * Preview is the default. Reconcile then neither matches nor near-misses
@@ -1008,15 +1111,11 @@ export async function confirmDistinctManualRithmicProtocolFill(
   const relation = manualFillBookRelation(book, fillId, upstreamFill)
   const orderFillId = relation.orderFillId
   const previousConfirmedDistinctFillId = row.confirmedDistinctFillId
-  // Exact and near-miss markers re-pair the plant order. Trades on that
-  // order, including a split piece, are gated with the manual leg.
-  const plantIds =
-    relation.kind === 'unrelated' ? [] : orderMemberFillIds(book, upstreamFill)
-  const trades = await findDerivedTrades({
-    userId,
-    accountNumber,
-    fillIds: [fillId, orderFillId, ...plantIds],
-  })
+  const symbolBook = fillsOnInstrument(book, row.symbol)
+  const proposedBook = withProposedDistinctMarker(symbolBook, fillId, orderFillId)
+  const storedTrades = await findDerivedTrades({ userId, accountNumber })
+  const trades = displacedStoredTrades(storedTrades, symbolBook, proposedBook, userId)
+  const tradeEffects = tradeEffectCounts(trades)
   const annotated = trades.some((trade) => trade.annotated)
   if (relation.kind === 'exact' && !dryRun && !acknowledgeExactMatch) {
     return {
@@ -1032,6 +1131,7 @@ export async function confirmDistinctManualRithmicProtocolFill(
         },
       ],
       trades,
+      tradeEffects,
     }
   }
   if (relation.kind === 'unrelated' && !dryRun && !acknowledgeUnrelated) {
@@ -1048,6 +1148,7 @@ export async function confirmDistinctManualRithmicProtocolFill(
         },
       ],
       trades,
+      tradeEffects,
     }
   }
   if (!dryRun && annotated && !acknowledgeAnnotatedTrades) {
@@ -1057,11 +1158,12 @@ export async function confirmDistinctManualRithmicProtocolFill(
       relation,
       previousConfirmedDistinctFillId,
       trades,
+      tradeEffects,
       errors: [
         {
           field: 'acknowledgeAnnotatedTrades',
           message:
-            'Apply refused because a stored trade that uses this manual fill or the plant order is annotated. Move the annotation if you want to keep it, delete the stored row, then run a sync or rebuild. Then re-send confirm-distinct with acknowledgeAnnotatedTrades: true.',
+            'Apply refused because a stored trade whose fill pair this marker removes is annotated. Move the annotation if you want to keep it, delete the stored row, then run a sync or rebuild. Then re-send confirm-distinct with acknowledgeAnnotatedTrades: true.',
         },
       ],
     }
@@ -1079,6 +1181,7 @@ export async function confirmDistinctManualRithmicProtocolFill(
       relation,
       previousConfirmedDistinctFillId,
       trades,
+      tradeEffects,
     }
   }
   const confirmedDistinctAt = new Date()
@@ -1108,6 +1211,7 @@ export async function confirmDistinctManualRithmicProtocolFill(
     relation,
     previousConfirmedDistinctFillId,
     trades,
+    tradeEffects,
   }
 }
 

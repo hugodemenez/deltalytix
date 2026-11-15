@@ -52,8 +52,8 @@
  * `--apply` is refused when the plant fill is an exact match or unrelated.
  * Re-send with `--acknowledge-exact-match` or `--acknowledge-unrelated`.
  * A split piece is stored as the consolidated order id.
- * If a stored trade on the manual leg or the plant order is annotated,
- * `--apply` also needs `--acknowledge-annotated-trades`.
+ * Preview lists stored trades whose fill pair would disappear. If one is
+ * annotated, `--apply` also needs `--acknowledge-annotated-trades`.
  */
 import { prisma } from '../lib/prisma'
 import {

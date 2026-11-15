@@ -142,11 +142,17 @@ export async function POST(request: NextRequest) {
             field: 'trades',
             message: `${trade.id} ${trade.instrument ?? ''} entry=${trade.entryId ?? ''} close=${trade.closeId ?? ''} annotated=${trade.annotated}`,
           })),
+          ...(marked.tradeEffects
+            ? [
+                { field: 'displacedTrades', message: String(marked.tradeEffects.displaced) },
+                { field: 'annotatedTrades', message: String(marked.tradeEffects.annotated) },
+              ]
+            : []),
         ]
         return jsonError({
           code: 'conflict',
           message: annotated
-            ? 'Confirm-distinct refused while an annotated trade still uses this manual fill or the plant order.'
+            ? 'Confirm-distinct refused while an annotated trade would lose its fill pair.'
             : unrelated
               ? 'Confirm-distinct refused because that plant fill is unrelated to the manual.'
               : 'Confirm-distinct refused because that plant fill matches the manual exactly.',

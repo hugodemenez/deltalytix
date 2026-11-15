@@ -300,6 +300,7 @@ describe('POST /api/admin/rithmic-protocol/manual-fill', () => {
         },
       ],
       errors: [{ field: 'acknowledgeAnnotatedTrades', message: 'annotated' }],
+      tradeEffects: { displaced: 1, annotated: 1 },
     })
     const response = await post({
       action: 'confirm-distinct',
@@ -321,6 +322,8 @@ describe('POST /api/admin/rithmic-protocol/manual-fill', () => {
           message: expect.stringMatching(/stored-manual-trade/),
         }),
         { field: 'orderFillId', message: '88421' },
+        { field: 'displacedTrades', message: '1' },
+        { field: 'annotatedTrades', message: '1' },
       ]),
     )
   })
