@@ -1385,6 +1385,68 @@ describe('admin account resync scoping and safety', () => {
     expect(result.proposed?.uncoveredTrades ?? []).toEqual([])
   })
 
+  it('refuses MANUAL_FILL_AMBIGUOUS when a manual fill is a minute off the plant fill', async () => {
+    const ssboe = Date.parse('2026-09-30T15:07:00Z') / 1000
+    tradeFindMany.mockResolvedValue([])
+    fillCount.mockResolvedValue(1)
+    fillFindMany.mockResolvedValue([
+      {
+        accountNumber: ACCOUNT,
+        accountId: 'acct-1',
+        identityKey: 'manual-row',
+        fillId: 'manual-gap',
+        rawFillId: null,
+        symbol: 'MESZ6',
+        exchange: 'CME',
+        transactionType: 'BUY',
+        fillPrice: 7800,
+        fillSize: 1,
+        fillDate: '20260930',
+        fillTime: '15:07:00',
+        basketId: null,
+        sequenceNumber: null,
+        ssboe,
+        usecs: null,
+        source: 'manual',
+      },
+    ])
+    fetchAdminRebuildFills.mockResolvedValue(
+      fetchedFills([
+        {
+          accountId: ACCOUNT,
+          symbol: 'MESZ6',
+          transactionType: 'BUY',
+          fillPrice: 7800,
+          fillSize: 1,
+          fillId: '88421',
+          fillDate: '20260930',
+          ssboe: ssboe + 45,
+          source: 'history',
+        },
+        {
+          accountId: ACCOUNT,
+          symbol: 'MESZ6',
+          transactionType: 'SELL',
+          fillPrice: 7801,
+          fillSize: 1,
+          fillId: '88422',
+          fillDate: '20260930',
+          ssboe: ssboe + 120,
+          source: 'history',
+        },
+      ]),
+    )
+    const result = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: true,
+      anchorDate: '2026-09-25',
+    })
+    expect(result.wouldRefuse).toBe(true)
+    expect(result.wouldRefuseReasons).toContain('MANUAL_FILL_AMBIGUOUS')
+    expect(result.error).toBeUndefined()
+  })
+
   it('FIFO on a flat Jérémie window produces no phantom shorts', async () => {
     tradeFindMany.mockResolvedValue([])
     fillCount.mockResolvedValue(0)

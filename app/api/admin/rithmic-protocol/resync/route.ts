@@ -248,6 +248,12 @@ function errorMapping(error: string | undefined): {
         message: 'The stored Protocol credential is incomplete.',
         hint: 'Re-authenticate the connection, then retry.',
       }
+    case 'MANUAL_FILL_AMBIGUOUS':
+      return {
+        code: 'conflict',
+        message: 'A manual fill is close to an upstream fill but does not match it.',
+        hint: 'Quantity, price, or clock is outside the 30 second exact match. Correct the manual fill, or remove it, before deriving that symbol. Ordinary sync skips the symbol and records manual_fill_ambiguous.',
+      }
     case 'OPENING_NOT_FLAT':
       return {
         code: 'conflict',

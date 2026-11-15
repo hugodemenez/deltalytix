@@ -88,7 +88,11 @@ export function summarizeFillLedgerNets(
  */
 export function prepareRithmicProtocolFills(
   fills: RithmicProtocolFill[],
-): { fills: RithmicProtocolFill[]; stats: DedupeFillsStats } {
+): {
+  fills: RithmicProtocolFill[]
+  nearMisses: ManualFillNearMiss[]
+  stats: DedupeFillsStats
+} {
   const manuals = fills.filter((fill) => fill.source === 'manual')
   const upstream = fills.filter((fill) => fill.source !== 'manual')
   // Collapse plant fills first. A replay twin that history throws away must
@@ -99,11 +103,12 @@ export function prepareRithmicProtocolFills(
   const consolidated = consolidateOrderFills(deduped.fills)
   const reconciled = reconcileManualFills(manuals, consolidated)
   return {
-    fills: reconciled,
+    fills: reconciled.fills,
+    nearMisses: reconciled.nearMisses,
     stats: {
       received: fills.length,
       afterDedup: deduped.fills.length,
-      afterConsolidate: reconciled.length,
+      afterConsolidate: reconciled.fills.length,
       dropped: { ...deduped.stats.dropped },
     },
   }
@@ -171,8 +176,6 @@ export const MANUAL_FILL_UPSTREAM_MATCH_MS = 30_000
 /** Same book and a close clock, but not an exact execution. Warn, do not drop. */
 export const MANUAL_FILL_NEAR_MISS_MS = RITHMIC_PROTOCOL_TIMESTAMP_TOLERANCE_MS
 
-const MANUAL_DAY_SHIFT_MS = 24 * 60 * 60 * 1000
-
 function sameManualBook(
   manual: RithmicProtocolFill,
   upstream: RithmicProtocolFill,
@@ -192,14 +195,13 @@ function fillClockDeltaMs(
   const manualMs = fillTimestampMs(manual)
   const upstreamMs = fillTimestampMs(upstream)
   if (!(manualMs > 0) || !(upstreamMs > 0)) return null
-  const delta = Math.abs(manualMs - upstreamMs)
-  const upstreamLacksSsboe = !(typeof upstream.ssboe === 'number' && upstream.ssboe > 0)
-  // A plant row with only fill_date/fill_time can land a session-day off the
-  // manual's UTC ssboe while the clock-of-day is the same instant.
-  if (upstreamLacksSsboe && Math.abs(delta - MANUAL_DAY_SHIFT_MS) < delta) {
-    return Math.abs(delta - MANUAL_DAY_SHIFT_MS)
-  }
-  return delta
+  return Math.abs(manualMs - upstreamMs)
+}
+
+function plantFillLacksClock(fill: RithmicProtocolFill): boolean {
+  const noSsboe = !(typeof fill.ssboe === 'number' && fill.ssboe > 0)
+  const noTime = !String(fill.fillTime ?? '').trim()
+  return noSsboe && noTime
 }
 
 export function manualFillMatchesUpstream(
@@ -225,6 +227,9 @@ function manualNearMissReason(
 ): string | null {
   if (!sameManualBook(manual, upstream)) return null
   if (manualFillMatchesUpstream(manual, upstream)) return null
+  // No ssboe and no fill_time collapses to midnight, outside the 2 minute
+  // window, and would otherwise be counted again with no warning.
+  if (plantFillLacksClock(upstream)) return 'no-clock'
   const delta = fillClockDeltaMs(manual, upstream)
   if (delta == null || delta > MANUAL_FILL_NEAR_MISS_MS) return null
   const reasons: string[] = []
@@ -238,18 +243,25 @@ function manualNearMissReason(
   return reasons.join('+') || 'clock'
 }
 
+export type ManualFillNearMiss = {
+  manual: RithmicProtocolFill
+  upstream: RithmicProtocolFill
+  reason: string
+}
+
 /**
  * Retire each manual against the already-consolidated upstream book.
- * One upstream fill retires at most one manual. A near miss stays in the
- * book and is logged so the lots are not doubled without a trace.
+ * One upstream fill retires at most one manual. Near misses are returned
+ * so callers can refuse the rebuild and skip FIFO for that symbol.
  */
 export function reconcileManualFills(
   manuals: RithmicProtocolFill[],
   consolidatedUpstream: RithmicProtocolFill[],
-): RithmicProtocolFill[] {
-  if (manuals.length === 0) return consolidatedUpstream
+): { fills: RithmicProtocolFill[]; nearMisses: ManualFillNearMiss[] } {
+  if (manuals.length === 0) return { fills: consolidatedUpstream, nearMisses: [] }
   const used = new Set<RithmicProtocolFill>()
   const kept: RithmicProtocolFill[] = []
+  const nearMisses: ManualFillNearMiss[] = []
   const ordered = [...manuals].sort(
     (left, right) => fillTimestampMs(left) - fillTimestampMs(right),
   )
@@ -295,12 +307,27 @@ export function reconcileManualFills(
       }
     }
     if (near) {
+      nearMisses.push({ manual, upstream: near, reason: nearReason })
       console.warn(
         `[RITHMIC-MANUAL-FILL] near-miss manual fillId=${manual.fillId ?? ''} upstream fillId=${near.fillId ?? ''} account=${manual.accountId} symbol=${(manual.symbol || '').trim().toUpperCase()} reason=${nearReason} dtMs=${nearDt}`,
       )
     }
   }
-  return [...consolidatedUpstream, ...kept]
+  return { fills: [...consolidatedUpstream, ...kept], nearMisses }
+}
+
+export function manualFillBookKey(fill: { accountId: string; symbol: string }): string {
+  return `${fill.accountId}|${(fill.symbol || '').trim().toUpperCase()}`
+}
+
+/** Drop every fill on a book that has a manual near-miss so FIFO cannot count both. */
+export function omitAmbiguousManualBooks(
+  fills: RithmicProtocolFill[],
+  nearMisses: ManualFillNearMiss[],
+): RithmicProtocolFill[] {
+  if (nearMisses.length === 0) return fills
+  const blocked = new Set(nearMisses.map((miss) => manualFillBookKey(miss.manual)))
+  return fills.filter((fill) => !blocked.has(manualFillBookKey(fill)))
 }
 
 /** @deprecated Use reconcileManualFills on the consolidated upstream book. */
@@ -312,7 +339,7 @@ export function preferUpstreamOverMatchingManualFills(
   const preferred = preferHistoryFills(upstream)
   const deduped = dedupeFillsWithStats(preferred)
   const consolidated = consolidateOrderFills(deduped.fills)
-  return reconcileManualFills(manuals, consolidated)
+  return reconcileManualFills(manuals, consolidated).fills
 }
 
 export function mergeFillLedgers(
@@ -542,39 +569,41 @@ export function phantomProtocolTradeIds(params: {
   derived: Array<{ id: string } & RithmicProtocolFillPairIdentity>
   ledgerFillIds: Set<string>
 }): string[] {
-  const matchedExistingIds = new Set<string>()
-  for (const incoming of params.derived) {
-    const existingId = resolveRithmicProtocolPersistedId(
-      incoming,
-      params.existing,
-    )
-    if (existingId) matchedExistingIds.add(existingId)
-  }
-
   const toDelete: string[] = []
   for (const row of params.existing) {
-    if (matchedExistingIds.has(row.id)) continue
-    if (hasTradeJournalAnnotations(row)) continue
-    const entryId = canonicalRithmicFillId(row.entryId)
-    const closeId = canonicalRithmicFillId(row.closeId)
-    if (!entryId || !closeId) continue
-    const replaced = params.derived.some((incoming) =>
-      manualTradeReplacedByPlantTrade(row, incoming),
-    )
-    if (!params.ledgerFillIds.has(entryId) || !params.ledgerFillIds.has(closeId)) {
-      // The manual row stays in the fill table after supersession, so both
-      // legs are usually still listed. If a leg id was already rewritten,
-      // still reap the old manual-id trade once a plant trade replaced it.
-      if (!replaced) continue
-    }
-    if (
-      replaced ||
-      (params.ledgerFillIds.has(entryId) && params.ledgerFillIds.has(closeId))
-    ) {
-      toDelete.push(row.id)
-    }
+    if (classifyStoredProtocolTrade(row, params) === 'reap') toDelete.push(row.id)
   }
   return toDelete
+}
+
+/**
+ * `rematch` is the replaced branch: a plant trade took over this manual-id
+ * row, so the row stays (annotations included) and is not inserted again.
+ * `reap` deletes an unannotated leftover. `keep` leaves every other row.
+ */
+export function classifyStoredProtocolTrade(
+  row: AnnotatedProtocolTrade,
+  params: {
+    derived: Array<{ id: string } & RithmicProtocolFillPairIdentity>
+    ledgerFillIds: Set<string>
+  },
+): 'rematch' | 'reap' | 'keep' {
+  const replaced = params.derived.some((incoming) =>
+    manualTradeReplacedByPlantTrade(row, incoming),
+  )
+  if (replaced) return 'rematch'
+  if (hasTradeJournalAnnotations(row)) return 'keep'
+  const matched = params.derived.some(
+    (incoming) => resolveRithmicProtocolPersistedId(incoming, [row]) === row.id,
+  )
+  if (matched) return 'keep'
+  const entryId = canonicalRithmicFillId(row.entryId)
+  const closeId = canonicalRithmicFillId(row.closeId)
+  if (!entryId || !closeId) return 'keep'
+  if (!params.ledgerFillIds.has(entryId) || !params.ledgerFillIds.has(closeId)) {
+    return 'keep'
+  }
+  return 'reap'
 }
 
 function isManualProtocolFillId(id: string | null | undefined): boolean {
@@ -672,6 +701,38 @@ function clockDelta(
 export function deriveTradesFromFillLedger(
   stored: RithmicProtocolFill[],
   incoming: RithmicProtocolFill[],
-): { fills: RithmicProtocolFill[]; stats: DedupeFillsStats } {
+): {
+  fills: RithmicProtocolFill[]
+  nearMisses: ManualFillNearMiss[]
+  stats: DedupeFillsStats
+} {
   return prepareRithmicProtocolFills(mergeFillLedgers(stored, incoming))
+}
+
+/**
+ * Plant round-trip that replaced a manual leg. Callers assign the stored
+ * row id so the annotation stays and a second trade is not inserted.
+ */
+export function resolvePersistedProtocolTradeId(
+  incoming: RithmicProtocolFillPairIdentity & {
+    side?: string | null
+    quantity?: number | null
+    entryPrice?: string | number | null
+    closePrice?: string | number | null
+  },
+  existingRows: Array<
+    { id: string } & RithmicProtocolFillPairIdentity & {
+      side?: string | null
+      quantity?: number | null
+      entryPrice?: string | number | null
+      closePrice?: string | number | null
+    }
+  >,
+): string | undefined {
+  const direct = resolveRithmicProtocolPersistedId(incoming, existingRows)
+  if (direct) return direct
+  for (const row of existingRows) {
+    if (manualTradeReplacedByPlantTrade(row, incoming)) return row.id
+  }
+  return undefined
 }

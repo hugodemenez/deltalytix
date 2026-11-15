@@ -225,6 +225,8 @@ export async function deleteUnannotatedPhantomProtocolTrades(params: {
     closeId?: string | null
   }>
   ledgerFillIds: Set<string>
+  /** Accounts whose symbol was skipped as a manual near-miss. Do not reap those trades. */
+  retainAccountNumbers?: string[]
   db?: ProtocolStore
 }): Promise<number> {
   if (params.accountNumbers.length === 0) return 0
@@ -253,8 +255,9 @@ export async function deleteUnannotatedPhantomProtocolTrades(params: {
     },
   })) as AnnotatedProtocolTrade[]
 
+  const retainedAccounts = new Set(params.retainAccountNumbers ?? [])
   const ids = phantomProtocolTradeIds({
-    existing,
+    existing: existing.filter((row) => !retainedAccounts.has(row.accountNumber ?? '')),
     derived: params.derivedTrades,
     ledgerFillIds: params.ledgerFillIds,
   })

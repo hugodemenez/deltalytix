@@ -6,13 +6,17 @@ import type { RithmicProtocolFill } from './types'
 import {
   buildLedgerSeenIndex,
   canonicalLedgerFillIds,
+  classifyStoredProtocolTrade,
   deriveTradesFromFillLedger,
   dropSeenLedgerFills,
   hasTradeJournalAnnotations,
+  manualTradeReplacedByPlantTrade,
   mergeFillLedgers,
+  omitAmbiguousManualBooks,
   partitionIncomingFills,
   phantomProtocolTradeIds,
   prepareRithmicProtocolFills,
+  resolvePersistedProtocolTradeId,
   reattachProtocolTradeAnnotations,
   shouldReplaceStoredFill,
   summarizeFillLedgerNets,
@@ -928,7 +932,7 @@ describe('manual fills', () => {
     expect(prepared.fills.map((row) => row.fillId)).toEqual(['88421'])
   })
 
-  it('retires a manual fill when the plant clock is one session day off and has no ssboe', () => {
+  it('does not retire a manual fill against the same clock one day later', () => {
     const shifted = markFillSource(
       [
         fill({
@@ -943,7 +947,8 @@ describe('manual fills', () => {
       'history',
     )[0]
     const prepared = prepareRithmicProtocolFills([manual, shifted])
-    expect(prepared.fills.map((row) => row.fillId)).toEqual(['88421'])
+    expect(prepared.fills.map((row) => row.fillId).sort()).toEqual(['88421', 'manual-gap'])
+    expect(prepared.nearMisses).toEqual([])
   })
 
   it('keeps a manual fill on a quantity near-miss and logs a warning', () => {
@@ -968,9 +973,62 @@ describe('manual fills', () => {
       const prepared = prepareRithmicProtocolFills([manual, otherPrice])
       expect(prepared.fills.map((row) => row.fillId).sort()).toEqual(['88421', 'manual-gap'])
       expect(warn).toHaveBeenCalledWith(expect.stringContaining('reason=price'))
+      expect(prepared.nearMisses.map((miss) => miss.reason)).toEqual(['price'])
+      expect(omitAmbiguousManualBooks(prepared.fills, prepared.nearMisses)).toEqual([])
     } finally {
       warn.mockRestore()
     }
+  })
+
+  it('does not derive a symbol when the operator timestamp is only minute-rounded', () => {
+    const later = { ...upstream, ssboe: (manual.ssboe ?? 0) + 45 }
+    const prepared = prepareRithmicProtocolFills([manual, later])
+    expect(prepared.nearMisses.map((miss) => miss.reason)).toEqual(['clock'])
+    expect(omitAmbiguousManualBooks(prepared.fills, prepared.nearMisses)).toEqual([])
+  })
+
+  it('does not derive a symbol when replay pieces are more than 2s apart', () => {
+    const pieceA = markFillSource(
+      [
+        fill({
+          fillId: '9200',
+          fillSize: 1,
+          fillPrice: 5810.25,
+          fillDate: '20260925',
+          ssboe: atMs / 1000,
+          source: 'replay',
+        }),
+      ],
+      'replay',
+    )[0]
+    const pieceB = {
+      ...pieceA,
+      fillId: '9201',
+      ssboe: atMs / 1000 + 3,
+    }
+    const prepared = prepareRithmicProtocolFills([manual, pieceA, pieceB])
+    expect(prepared.fills.filter((row) => row.source === 'manual')).toHaveLength(1)
+    expect(prepared.nearMisses.some((miss) => miss.reason.includes('qty'))).toBe(true)
+    expect(omitAmbiguousManualBooks(prepared.fills, prepared.nearMisses)).toEqual([])
+  })
+
+  it('does not derive a symbol when the plant row has neither ssboe nor fillTime', () => {
+    const midnight = markFillSource(
+      [
+        fill({
+          fillId: '9300',
+          fillSize: 2,
+          fillPrice: 5810.25,
+          fillDate: '20260925',
+          ssboe: 0,
+        }),
+      ],
+      'history',
+    )[0]
+    const { fillTime: _fillTime, ...noClock } = { ...midnight, fillTime: undefined }
+    const prepared = prepareRithmicProtocolFills([manual, noClock])
+    expect(prepared.nearMisses.map((miss) => miss.reason)).toEqual(['no-clock'])
+    expect(omitAmbiguousManualBooks(prepared.fills, prepared.nearMisses)).toEqual([])
   })
 
   it('matches a 10s clock gap and warns when the gap is past 30s but still close', () => {
@@ -1008,7 +1066,7 @@ describe('manual fills', () => {
 })
 
 describe('ordinary sync after a manual fill is superseded', () => {
-  it('replaces the manual-id trade without a second round-trip and reaps the old row', () => {
+  it('rematches an annotated manual-id trade onto one row and keeps the note', () => {
     const atMs = Date.parse('2026-09-25T15:07:00Z')
     const manual = markFillSource(
       [
@@ -1057,7 +1115,7 @@ describe('ordinary sync after a manual fill is superseded', () => {
         ...before[0],
         id: 'stored-manual-trade',
         tags: [RITHMIC_PROTOCOL_TRADE_TAG],
-        comment: null,
+        comment: 'kept note',
       },
     ]
     const prepared = deriveTradesFromFillLedger([manual, close], [upstream, close])
@@ -1066,25 +1124,28 @@ describe('ordinary sync after a manual fill is superseded', () => {
     expect(after).toHaveLength(1)
     expect(after[0]?.entryId).toBe('88421')
     expect(after[0]?.pnl).toBe(existing[0]?.pnl)
+    expect(manualTradeReplacedByPlantTrade(existing[0], after[0])).toBe(true)
+    expect(
+      classifyStoredProtocolTrade(existing[0], {
+        derived: after,
+        // Manual id is absent, so keeping the row depends on the replaced branch.
+        ledgerFillIds: canonicalLedgerFillIds([close, upstream]),
+      }),
+    ).toBe('rematch')
+    expect(resolvePersistedProtocolTradeId(after[0], existing)).toBe('stored-manual-trade')
 
-    const { kept, skipped } = filterRithmicProtocolTradesCoveredByStoredRows(after, existing)
+    const takenOver = [{ ...after[0], id: 'stored-manual-trade', comment: existing[0].comment }]
+    const { kept, skipped } = filterRithmicProtocolTradesCoveredByStoredRows(takenOver, existing)
     expect(skipped).toEqual([])
     expect(kept).toHaveLength(1)
-
     const phantoms = phantomProtocolTradeIds({
       existing,
       derived: after,
-      ledgerFillIds: canonicalLedgerFillIds([manual, close, upstream]),
+      ledgerFillIds: canonicalLedgerFillIds([close, upstream]),
     })
-    expect(phantoms).toEqual(['stored-manual-trade'])
-
-    const removed = new Set(phantoms)
-    const surviving = [
-      ...existing.filter((row) => !removed.has(row.id)),
-      ...kept.filter((row) => !existing.some((stored) => stored.id === row.id)),
-    ]
-    expect(surviving).toHaveLength(1)
-    expect(surviving[0]?.entryId).not.toMatch(/^manual-/)
-    expect(surviving.reduce((sum, row) => sum + Number(row.pnl), 0)).toBe(existing[0]?.pnl)
+    expect(phantoms).toEqual([])
+    expect(kept).toHaveLength(1)
+    expect(kept[0]?.comment).toBe('kept note')
+    expect(kept[0]?.pnl).toBe(existing[0]?.pnl)
   })
 })

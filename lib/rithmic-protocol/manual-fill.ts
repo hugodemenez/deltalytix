@@ -264,17 +264,28 @@ export function buildManualFill(value: ValidatedManualFill): RithmicProtocolFill
   }
 }
 
-function upstreamSupersedeWarning(
+function previewWarnings(
   stored: RithmicProtocolFill[],
   fill: RithmicProtocolFill,
-): string | null {
+): string[] {
   const withoutThis = stored.filter((row) => row.fillId !== fill.fillId)
   const book = prepareRithmicProtocolFills([...withoutThis, fill])
+  const warnings: string[] = []
   const survived = book.fills.some(
     (row) => row.source === 'manual' && row.fillId === fill.fillId,
   )
-  if (survived) return null
-  return 'An upstream fill matches this manual fill. FIFO will use the upstream fill, so this patch will not add lots.'
+  if (!survived) {
+    warnings.push(
+      'An upstream fill matches this manual fill. FIFO will use the upstream fill, so this patch will not add lots.',
+    )
+  }
+  for (const miss of book.nearMisses) {
+    if (miss.manual.fillId !== fill.fillId) continue
+    warnings.push(
+      `Near-miss with upstream fill ${miss.upstream.fillId ?? '(no id)'} (${miss.reason}). This symbol will not be derived until the patch matches exactly.`,
+    )
+  }
+  return warnings
 }
 
 function logManualFill(
@@ -336,8 +347,7 @@ export async function insertManualRithmicProtocolFill(
     userId: value.userId,
     accountNumbers: [value.accountNumber],
   })
-  const supersede = upstreamSupersedeWarning(stored, fill)
-  const warnings = supersede ? [supersede] : []
+  const warnings = previewWarnings(stored, fill)
   for (const warning of warnings) {
     console.warn(`[RITHMIC-MANUAL-FILL] ${warning}`)
   }

@@ -950,6 +950,7 @@ export async function resyncRithmicProtocolAccount(params: {
             ? windowIncoming
             : mergeFillLedgers(manualWindowFills, windowIncoming),
         )
+        const manualNearMisses = prepared.nearMisses
         const merged = mergeFillLedgers(storedFills, windowIncoming)
         const fillPartition = partitionIncomingFills(windowIncoming, storedFills)
         const missingStoredFills = storedFillsMissingUpstream(
@@ -1236,7 +1237,12 @@ export async function resyncRithmicProtocolAccount(params: {
           })),
         }
 
-        if (notFlat.length > 0) {
+        if (manualNearMisses.length > 0) {
+          warnings.push(
+            'A manual fill is close to an upstream fill but does not match it. Live apply refuses with MANUAL_FILL_AMBIGUOUS. Ordinary sync will not derive that symbol.',
+          )
+        }
+        if (notFlat.length > 0 && manualNearMisses.length === 0) {
           return finish({
             ...base,
             wouldDelete,
@@ -1247,6 +1253,9 @@ export async function resyncRithmicProtocolAccount(params: {
           })
         }
         const wouldRefuseReasons: string[] = []
+        if (manualNearMisses.length > 0) {
+          wouldRefuseReasons.push('MANUAL_FILL_AMBIGUOUS')
+        }
         if (fifoOpenLotsMismatch) wouldRefuseReasons.push('FIFO_OPEN_LOTS')
         if (fifoSkipped) wouldRefuseReasons.push('FIFO_SKIPPED_FILLS')
         if (ordinaryDiverges) wouldRefuseReasons.push('ORDINARY_SYNC_DIVERGENCE')

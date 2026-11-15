@@ -166,6 +166,32 @@ describe('insertManualRithmicProtocolFill', () => {
     expect(upsertFills).not.toHaveBeenCalled()
   })
 
+  it('warns on preview when a stored fill is a near miss', async () => {
+    const preview = await insertManualRithmicProtocolFill(base, {
+      findAccount,
+      loadFills,
+      upsertFills,
+    })
+    if (!preview.ok) throw new Error('preview failed')
+    loadFills.mockResolvedValue([
+      {
+        ...preview.fill,
+        source: 'history',
+        fillId: '88421',
+        ssboe: (preview.fill.ssboe ?? 0) + 45,
+      },
+    ])
+    const warned = await insertManualRithmicProtocolFill(base, {
+      findAccount,
+      loadFills,
+      upsertFills,
+    })
+    expect(warned.ok).toBe(true)
+    if (!warned.ok) return
+    expect(warned.warnings.some((warning) => warning.includes('Near-miss'))).toBe(true)
+    expect(upsertFills).not.toHaveBeenCalled()
+  })
+
   it('dry-run builds one manual- fill and does not write', async () => {
     const result = await insertManualRithmicProtocolFill(base, {
       findAccount,

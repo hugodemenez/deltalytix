@@ -9,8 +9,8 @@ import {
 } from "@/lib/trade-id-utils"
 import {
   filterRithmicProtocolTradesCoveredByStoredRows,
-  resolveRithmicProtocolPersistedId,
 } from "@/lib/rithmic-protocol/dedupe-fills"
+import { resolvePersistedProtocolTradeId } from "@/lib/rithmic-protocol/fill-ledger"
 import {
   isTradovatePersistedTrade,
   resolveTradovatePersistedId,
@@ -174,9 +174,12 @@ async function assignExistingRithmicProtocolIds(
   })
   if (existing.length === 0) return trades
 
+  const claimed = new Set<string>()
   const assigned = trades.map((trade) => {
     if (!isRithmicProtocolPersistedTrade(trade)) return trade
-    const existingId = resolveRithmicProtocolPersistedId(trade, existing)
+    const pool = existing.filter((row) => !claimed.has(row.id))
+    const existingId = resolvePersistedProtocolTradeId(trade, pool)
+    if (existingId) claimed.add(existingId)
     return existingId ? { ...trade, id: existingId } : trade
   })
 
