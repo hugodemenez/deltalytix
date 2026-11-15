@@ -268,6 +268,18 @@ function manualNearMissReason(
   return reasons.join('+') || 'clock'
 }
 
+/** Relation of one plant fill to a manual, ignoring a confirm-distinct marker. */
+export function manualFillRelation(
+  manual: RithmicProtocolFill,
+  upstream: RithmicProtocolFill,
+): { kind: 'exact' } | { kind: 'near-miss'; reason: string } | { kind: 'unrelated' } {
+  const unmarked = { ...manual, confirmedDistinctFillId: undefined }
+  if (manualFillMatchesUpstream(unmarked, upstream)) return { kind: 'exact' }
+  const reason = manualNearMissReason(unmarked, upstream)
+  if (reason) return { kind: 'near-miss', reason }
+  return { kind: 'unrelated' }
+}
+
 export type ManualFillNearMiss = {
   manual: RithmicProtocolFill
   upstream: RithmicProtocolFill
@@ -740,10 +752,14 @@ export function classifyStoredProtocolTrade(
   params: {
     derived: Array<{ id: string } & RithmicProtocolFillPairIdentity>
     ledgerFillIds: Set<string>
+    distinctPlantIdByManualFillId?: ReadonlyMap<string, string>
   },
 ): 'rematch' | 'reap' | 'keep' {
   const replaced = params.derived.some((incoming) =>
-    manualTradeReplacedByPlantTrade(row, incoming),
+    manualTradeReplacedByPlantTrade(row, incoming, {
+      derivedBatch: params.derived,
+      distinctPlantIdByManualFillId: params.distinctPlantIdByManualFillId,
+    }),
   )
   if (replaced) return 'rematch'
   if (hasTradeJournalAnnotations(row)) return 'keep'
@@ -771,6 +787,61 @@ function tradeClockMs(value: string | null | undefined): number | null {
   return Number.isNaN(ms) ? null : ms
 }
 
+export type ManualReplacementContext = {
+  /** Derived trades in this sync. A manual leg still present is not a replacement. */
+  derivedBatch?: ReadonlyArray<{ entryId?: string | null; closeId?: string | null }>
+  /** Manual fill id → plant fill id an admin confirmed is a different execution. */
+  distinctPlantIdByManualFillId?: ReadonlyMap<string, string>
+}
+
+function manualLegIds(trade: {
+  entryId?: string | null
+  closeId?: string | null
+}): string[] {
+  const ids: string[] = []
+  const entry = canonicalRithmicFillId(trade.entryId)
+  const close = canonicalRithmicFillId(trade.closeId)
+  if (isManualProtocolFillId(entry)) ids.push(entry!)
+  if (isManualProtocolFillId(close) && close !== entry) ids.push(close!)
+  return ids
+}
+
+function batchStillCarriesManualLeg(
+  stored: { entryId?: string | null; closeId?: string | null },
+  context: ManualReplacementContext | undefined,
+): boolean {
+  const legs = manualLegIds(stored)
+  if (legs.length === 0 || !context?.derivedBatch) return false
+  return context.derivedBatch.some((trade) => {
+    const entry = canonicalRithmicFillId(trade.entryId)
+    const close = canonicalRithmicFillId(trade.closeId)
+    return legs.some((leg) => leg === entry || leg === close)
+  })
+}
+
+function markedDistinctFromPlant(
+  stored: { entryId?: string | null; closeId?: string | null },
+  derived: { entryId?: string | null; closeId?: string | null },
+  context: ManualReplacementContext | undefined,
+): boolean {
+  const map = context?.distinctPlantIdByManualFillId
+  if (!map || map.size === 0) return false
+  const storedEntry = canonicalRithmicFillId(stored.entryId)
+  const storedClose = canonicalRithmicFillId(stored.closeId)
+  const derivedEntry = canonicalRithmicFillId(derived.entryId)
+  const derivedClose = canonicalRithmicFillId(derived.closeId)
+  const plantIds = [derivedEntry, derivedClose].filter(
+    (id): id is string => Boolean(id) && !isManualProtocolFillId(id),
+  )
+  return manualLegIds(stored).some((leg) => {
+    const marked = map.get(leg)
+    if (!marked) return false
+    if (leg === storedEntry && derivedEntry && marked === derivedEntry) return true
+    if (leg === storedClose && derivedClose && marked === derivedClose) return true
+    return plantIds.includes(marked)
+  })
+}
+
 /** Stored round-trip used a manual leg; the derived trade is the plant fill that replaced it. */
 export function manualTradeReplacedByPlantTrade(
   stored: RithmicProtocolFillPairIdentity & {
@@ -785,6 +856,7 @@ export function manualTradeReplacedByPlantTrade(
     entryPrice?: string | number | null
     closePrice?: string | number | null
   },
+  context?: ManualReplacementContext,
 ): boolean {
   const storedEntry = canonicalRithmicFillId(stored.entryId)
   const storedClose = canonicalRithmicFillId(stored.closeId)
@@ -839,7 +911,15 @@ export function manualTradeReplacedByPlantTrade(
   if (entryManual && storedEntry === derivedEntry && closeManual && storedClose === derivedClose) {
     return false
   }
-  return entryManual || closeManual
+  if (!(entryManual || closeManual)) return false
+  if (
+    context &&
+    (batchStillCarriesManualLeg(stored, context) ||
+      markedDistinctFromPlant(stored, derived, context))
+  ) {
+    return false
+  }
+  return true
 }
 
 function clockDelta(

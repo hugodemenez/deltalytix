@@ -210,6 +210,7 @@ describe('POST /api/admin/rithmic-protocol/manual-fill', () => {
     const payload = await response.json()
     expect(payload.error.code).toBe('conflict')
     expect(payload.error.hint).toMatch(/delete the stored row, then run a sync or rebuild/)
+    expect(payload.error.hint).toMatch(/re-send the retire/)
     expect(payload.error.details[0].message).toMatch(/stored-manual-trade/)
     expect(insertManualRithmicProtocolFill).not.toHaveBeenCalled()
   })

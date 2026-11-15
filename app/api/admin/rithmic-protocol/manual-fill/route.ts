@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
         return jsonError({
           code: 'conflict',
           message: 'Apply refused while an annotated trade still uses this manual fill.',
-          hint: 'Move the annotation if you want to keep it, delete the stored row, then run a sync or rebuild. Annotated rows are never deleted automatically.',
+          hint: 'Move the annotation if you want to keep it, delete the stored row, then run a sync or rebuild. Then re-send the retire. Annotated rows are never deleted automatically.',
           details: (retired.trades ?? []).map((trade) => ({
             field: 'trades',
             message: `${trade.id} ${trade.instrument ?? ''} entry=${trade.entryId ?? ''} close=${trade.closeId ?? ''} annotated=${trade.annotated}`,
@@ -114,6 +114,14 @@ export async function POST(request: NextRequest) {
         dryRun: payload.dryRun === false ? false : true,
         confirmedDistinctBy: actor,
       })
+      if (!marked.ok && marked.status === 'acknowledgement_required') {
+        return jsonError({
+          code: 'conflict',
+          message: 'Confirm-distinct refused because that plant fill matches the manual exactly.',
+          hint: 'Re-send dryRun: false with acknowledgeExactMatch: true only if both executions should count.',
+          details: marked.errors,
+        })
+      }
       if (marked.ok) {
         console.info(
           `[RITHMIC-MANUAL-FILL] route confirm-distinct actor=${actor} dryRun=${marked.dryRun} fillId=${marked.fillId} upstreamFillId=${marked.upstreamFillId}`,

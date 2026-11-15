@@ -4,6 +4,7 @@ const createMany = vi.fn()
 const findFirst = vi.fn()
 const findMany = vi.fn()
 const updateMany = vi.fn()
+const fillFindMany = vi.fn()
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
@@ -12,6 +13,9 @@ vi.mock("@/lib/prisma", () => ({
       findFirst: (...args: unknown[]) => findFirst(...args),
       findMany: (...args: unknown[]) => findMany(...args),
       updateMany: (...args: unknown[]) => updateMany(...args),
+    },
+    rithmicProtocolFill: {
+      findMany: (...args: unknown[]) => fillFindMany(...args),
     },
   },
 }))
@@ -80,6 +84,7 @@ describe("saveTradesCore Rithmic coverage guard", () => {
     createMany.mockReset().mockResolvedValue({ count: 0 })
     findFirst.mockReset().mockResolvedValue({ id: "x" })
     updateMany.mockReset().mockResolvedValue({ count: 0 })
+    fillFindMany.mockReset().mockResolvedValue([])
     findMany
       .mockReset()
       .mockImplementation(async (args: { where?: { tags?: unknown } }) =>
@@ -144,6 +149,60 @@ describe("saveTradesCore Rithmic coverage guard", () => {
     expect(inserted[0]?.comment).not.toBe("kept note")
     expect(updateMany).not.toHaveBeenCalled()
     expect(result.numberOfTradesAdded).toBe(0)
+  })
+
+  it("keeps a distinct plant trade when the manual trade is still in the batch", async () => {
+    const storedManual = {
+      id: "stored-manual-trade",
+      accountNumber: ACCOUNT,
+      instrument: "MES",
+      side: "Long",
+      quantity: 2,
+      entryPrice: "7800",
+      closePrice: "7801",
+      entryDate: "2026-09-25T15:07:45.000+00:00",
+      closeDate: "2026-09-25T15:09:00.000+00:00",
+      entryId: "manual-gap",
+      closeId: "1002",
+    }
+    findMany.mockImplementation(async (args: { where?: { tags?: unknown } }) =>
+      args?.where?.tags ? [storedManual] : [],
+    )
+    fillFindMany.mockResolvedValue([
+      { fillId: "manual-gap", confirmedDistinctFillId: "88421" },
+    ])
+    createMany.mockResolvedValue({ count: 2 })
+    const plant = {
+      ...syncTrade,
+      quantity: 2,
+      entryId: "88421",
+      closeId: "1002",
+      entryPrice: "7800",
+      closePrice: "7801",
+      entryDate: "2026-09-25T15:07:00.000+00:00",
+      closeDate: "2026-09-25T15:09:00.000+00:00",
+      side: "Long",
+      pnl: 10,
+      commission: 0,
+    } as Trade
+    const manual = {
+      ...plant,
+      entryId: "manual-gap",
+      entryDate: "2026-09-25T15:07:45.000+00:00",
+    } as Trade
+    const result = await saveTradesCore([plant, manual], { userId: "u1" })
+    const inserted = createMany.mock.calls[0][0].data as Array<{
+      id: string
+      entryId: string
+    }>
+    expect(inserted).toHaveLength(2)
+    const ids = inserted.map((row) => row.id)
+    expect(new Set(ids).size).toBe(2)
+    expect(ids).toContain("stored-manual-trade")
+    const byEntry = new Map(inserted.map((row) => [row.entryId, row.id]))
+    expect(byEntry.get("manual-gap")).toBe("stored-manual-trade")
+    expect(byEntry.get("88421")).not.toBe("stored-manual-trade")
+    expect(result.numberOfTradesAdded).toBe(2)
   })
 
   it("a new trade on the same account is still inserted", async () => {
