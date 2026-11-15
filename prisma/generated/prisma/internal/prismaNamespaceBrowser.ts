@@ -628,6 +628,9 @@ export const RithmicProtocolFillScalarFieldEnum = {
   ssboe: 'ssboe',
   usecs: 'usecs',
   source: 'source',
+  retiredAt: 'retiredAt',
+  retiredBy: 'retiredBy',
+  retireReason: 'retireReason',
   connectionId: 'connectionId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'

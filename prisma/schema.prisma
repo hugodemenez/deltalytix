@@ -675,10 +675,13 @@ model RithmicProtocolFill {
   sequenceNumber  String?
   ssboe           Int?
   usecs           Int?
-  /// `history` (ShowFillHistory / order-history fallback), `replay`, or
-  /// `manual` (operator patch for a fill the plant omitted). Plain string,
-  /// not a Postgres enum — `manual` needs no migration.
+  /// `history`, `replay`, `manual`, or `manual-retired`. Plain string,
+  /// not a Postgres enum.
   source          String   @default("history")
+  /// Set together when an admin soft-retires a manual fill.
+  retiredAt       DateTime?
+  retiredBy       String?
+  retireReason    String?
   connectionId    String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

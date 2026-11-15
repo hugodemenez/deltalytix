@@ -35,7 +35,7 @@ type FillRow = {
 export function normalizePersistedFillSource(
   value: string | null | undefined,
 ): NonNullable<RithmicProtocolFill['source']> {
-  if (value === 'replay' || value === 'manual') return value
+  if (value === 'replay' || value === 'manual' || value === 'manual-retired') return value
   return 'history'
 }
 

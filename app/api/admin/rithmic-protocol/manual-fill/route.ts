@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { jsonError } from '@/lib/api/json-error'
 import { authorizeAdminRequest } from '@/lib/admin/auth'
-import { insertManualRithmicProtocolFill } from '@/lib/rithmic-protocol/manual-fill'
+import {
+  insertManualRithmicProtocolFill,
+  retireManualRithmicProtocolFill,
+} from '@/lib/rithmic-protocol/manual-fill'
 
 /**
  * Admin-only insert of one manual Rithmic Protocol fill.
@@ -64,16 +67,55 @@ export async function POST(request: NextRequest) {
     })
   }
 
+  const actor = auth.via === 'session' ? (auth.actorUserId ?? 'admin') : 'cron'
   try {
+    if (payload.action === 'retire') {
+      const retired = await retireManualRithmicProtocolFill({
+        ...payload,
+        dryRun: payload.dryRun === false ? false : true,
+        retiredBy: actor,
+      })
+      if (retired.ok) {
+        console.info(
+          `[RITHMIC-MANUAL-FILL] route retire actor=${actor} dryRun=${retired.dryRun} fillId=${retired.fillId}`,
+        )
+        return NextResponse.json(retired)
+      }
+      if (retired.status === 'not_found') {
+        return jsonError({
+          code: 'not_found',
+          message: 'No manual fill with that id belongs to this account.',
+          hint: 'Pass the manual- fill id from the insert preview, plus userId and accountNumber.',
+          details: retired.errors,
+        })
+      }
+      return jsonError({
+        code: 'bad_request',
+        message: 'Manual fill retire input is invalid.',
+        hint: 'Send { action: "retire", userId, accountNumber, fillId, reason, dryRun?: boolean }.',
+        details: retired.errors,
+      })
+    }
     const result = await insertManualRithmicProtocolFill({
       ...payload,
       dryRun: payload.dryRun === false ? false : true,
     })
     if (result.ok) {
       console.info(
-        `[RITHMIC-MANUAL-FILL] route actor=${auth.via === 'session' ? auth.actorUserId : 'cron'} dryRun=${result.dryRun} idempotent=${result.idempotent} fillId=${result.fillId}`,
+        `[RITHMIC-MANUAL-FILL] route actor=${actor} dryRun=${result.dryRun} idempotent=${result.idempotent} fillId=${result.fillId}`,
       )
       return NextResponse.json(result)
+    }
+    if (result.status === 'acknowledgement_required') {
+      return jsonError({
+        code: 'conflict',
+        message: 'Apply refused until the preview warning is acknowledged.',
+        hint: 'Re-send dryRun: false with acknowledgeWarnings: true only when the plant fill should win, or retire the manual fill with action "retire".',
+        details: (result.warnings ?? []).map((warning) => ({
+          field: 'warnings',
+          message: warning,
+        })),
+      })
     }
     if (result.status === 'account_not_found') {
       return jsonError({

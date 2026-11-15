@@ -115,9 +115,12 @@ describe('stored fill and trade coverage identity', () => {
       source: 'manual',
     })
     const stored = fill({ fillId: '9999' })
+    const retired = { ...manual, source: 'manual-retired' as const }
     expect(storedFillsMissingUpstream([manual], [])).toEqual([])
     expect(storedFillsMissingUpstream([manual], [stored])).toEqual([])
     expect(storedFillsMissingUpstream([manual, stored], [])).toEqual([stored])
+    expect(storedFillsMissingUpstream([retired], [])).toEqual([])
+    expect(storedFillsMissingUpstream([retired, stored], [])).toEqual([stored])
   })
 
   it('covers a legacy split-piece id from a history rollup (M6)', () => {

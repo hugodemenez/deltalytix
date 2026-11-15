@@ -27,7 +27,7 @@ import {
   buildLedgerSeenIndex,
   canonicalLedgerFillIds,
   deriveTradesFromFillLedger,
-  omitAmbiguousManualBooks,
+  planManualFillSyncEffects,
 } from '@/lib/rithmic-protocol/fill-ledger'
 import {
   deleteUnannotatedPhantomProtocolTrades,
@@ -850,8 +850,8 @@ export async function getRithmicProtocolTrades(
       connectionId,
     })
     const prepared = deriveTradesFromFillLedger(storedFills, rawFills)
-    const fifoFills = omitAmbiguousManualBooks(prepared.fills, prepared.nearMisses)
-    const ambiguousSkipped = prepared.fills.length - fifoFills.length
+    const manualEffects = planManualFillSyncEffects(prepared)
+    const fifoFills = manualEffects.fifoFills
 
     syncStats.rawFills = fillStats.received
     syncStats.fillsAfterDedup = prepared.stats.afterDedup
@@ -860,7 +860,7 @@ export async function getRithmicProtocolTrades(
       already_in_ledger: fillStats.skippedAlreadySeen + ledgerWrite.skipped,
       ledger_inserted: ledgerWrite.inserted,
       ledger_updated: ledgerWrite.updated,
-      ...(ambiguousSkipped > 0 ? { manual_fill_ambiguous: ambiguousSkipped } : {}),
+      ...manualEffects.droppedByReason,
     }
 
     const tickDetails = await getTickDetails()
@@ -950,9 +950,7 @@ export async function getRithmicProtocolTrades(
       accountNumbers: resolvedAccountIds,
       derivedTrades: trades,
       ledgerFillIds: canonicalLedgerFillIds([...storedFills, ...rawFills]),
-      retainAccountNumbers: [
-        ...new Set(prepared.nearMisses.map((miss) => miss.manual.accountId)),
-      ],
+      retainAccountNumbers: manualEffects.retainAccountNumbers,
     })
     if (phantomsRemoved > 0) {
       syncStats.droppedByReason.phantoms_removed = phantomsRemoved

@@ -64,6 +64,9 @@ export type RithmicProtocolFillMinAggregateOutputType = {
   ssboe: number | null
   usecs: number | null
   source: string | null
+  retiredAt: Date | null
+  retiredBy: string | null
+  retireReason: string | null
   connectionId: string | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -89,6 +92,9 @@ export type RithmicProtocolFillMaxAggregateOutputType = {
   ssboe: number | null
   usecs: number | null
   source: string | null
+  retiredAt: Date | null
+  retiredBy: string | null
+  retireReason: string | null
   connectionId: string | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -114,6 +120,9 @@ export type RithmicProtocolFillCountAggregateOutputType = {
   ssboe: number
   usecs: number
   source: number
+  retiredAt: number
+  retiredBy: number
+  retireReason: number
   connectionId: number
   createdAt: number
   updatedAt: number
@@ -155,6 +164,9 @@ export type RithmicProtocolFillMinAggregateInputType = {
   ssboe?: true
   usecs?: true
   source?: true
+  retiredAt?: true
+  retiredBy?: true
+  retireReason?: true
   connectionId?: true
   createdAt?: true
   updatedAt?: true
@@ -180,6 +192,9 @@ export type RithmicProtocolFillMaxAggregateInputType = {
   ssboe?: true
   usecs?: true
   source?: true
+  retiredAt?: true
+  retiredBy?: true
+  retireReason?: true
   connectionId?: true
   createdAt?: true
   updatedAt?: true
@@ -205,6 +220,9 @@ export type RithmicProtocolFillCountAggregateInputType = {
   ssboe?: true
   usecs?: true
   source?: true
+  retiredAt?: true
+  retiredBy?: true
+  retireReason?: true
   connectionId?: true
   createdAt?: true
   updatedAt?: true
@@ -317,6 +335,9 @@ export type RithmicProtocolFillGroupByOutputType = {
   ssboe: number | null
   usecs: number | null
   source: string
+  retiredAt: Date | null
+  retiredBy: string | null
+  retireReason: string | null
   connectionId: string | null
   createdAt: Date
   updatedAt: Date
@@ -365,6 +386,9 @@ export type RithmicProtocolFillWhereInput = {
   ssboe?: Prisma.IntNullableFilter<"RithmicProtocolFill"> | number | null
   usecs?: Prisma.IntNullableFilter<"RithmicProtocolFill"> | number | null
   source?: Prisma.StringFilter<"RithmicProtocolFill"> | string
+  retiredAt?: Prisma.DateTimeNullableFilter<"RithmicProtocolFill"> | Date | string | null
+  retiredBy?: Prisma.StringNullableFilter<"RithmicProtocolFill"> | string | null
+  retireReason?: Prisma.StringNullableFilter<"RithmicProtocolFill"> | string | null
   connectionId?: Prisma.StringNullableFilter<"RithmicProtocolFill"> | string | null
   createdAt?: Prisma.DateTimeFilter<"RithmicProtocolFill"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"RithmicProtocolFill"> | Date | string
@@ -392,6 +416,9 @@ export type RithmicProtocolFillOrderByWithRelationInput = {
   ssboe?: Prisma.SortOrderInput | Prisma.SortOrder
   usecs?: Prisma.SortOrderInput | Prisma.SortOrder
   source?: Prisma.SortOrder
+  retiredAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  retiredBy?: Prisma.SortOrderInput | Prisma.SortOrder
+  retireReason?: Prisma.SortOrderInput | Prisma.SortOrder
   connectionId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -423,6 +450,9 @@ export type RithmicProtocolFillWhereUniqueInput = Prisma.AtLeast<{
   ssboe?: Prisma.IntNullableFilter<"RithmicProtocolFill"> | number | null
   usecs?: Prisma.IntNullableFilter<"RithmicProtocolFill"> | number | null
   source?: Prisma.StringFilter<"RithmicProtocolFill"> | string
+  retiredAt?: Prisma.DateTimeNullableFilter<"RithmicProtocolFill"> | Date | string | null
+  retiredBy?: Prisma.StringNullableFilter<"RithmicProtocolFill"> | string | null
+  retireReason?: Prisma.StringNullableFilter<"RithmicProtocolFill"> | string | null
   connectionId?: Prisma.StringNullableFilter<"RithmicProtocolFill"> | string | null
   createdAt?: Prisma.DateTimeFilter<"RithmicProtocolFill"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"RithmicProtocolFill"> | Date | string
@@ -450,6 +480,9 @@ export type RithmicProtocolFillOrderByWithAggregationInput = {
   ssboe?: Prisma.SortOrderInput | Prisma.SortOrder
   usecs?: Prisma.SortOrderInput | Prisma.SortOrder
   source?: Prisma.SortOrder
+  retiredAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  retiredBy?: Prisma.SortOrderInput | Prisma.SortOrder
+  retireReason?: Prisma.SortOrderInput | Prisma.SortOrder
   connectionId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -483,6 +516,9 @@ export type RithmicProtocolFillScalarWhereWithAggregatesInput = {
   ssboe?: Prisma.IntNullableWithAggregatesFilter<"RithmicProtocolFill"> | number | null
   usecs?: Prisma.IntNullableWithAggregatesFilter<"RithmicProtocolFill"> | number | null
   source?: Prisma.StringWithAggregatesFilter<"RithmicProtocolFill"> | string
+  retiredAt?: Prisma.DateTimeNullableWithAggregatesFilter<"RithmicProtocolFill"> | Date | string | null
+  retiredBy?: Prisma.StringNullableWithAggregatesFilter<"RithmicProtocolFill"> | string | null
+  retireReason?: Prisma.StringNullableWithAggregatesFilter<"RithmicProtocolFill"> | string | null
   connectionId?: Prisma.StringNullableWithAggregatesFilter<"RithmicProtocolFill"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"RithmicProtocolFill"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"RithmicProtocolFill"> | Date | string
@@ -507,6 +543,9 @@ export type RithmicProtocolFillCreateInput = {
   ssboe?: number | null
   usecs?: number | null
   source?: string
+  retiredAt?: Date | string | null
+  retiredBy?: string | null
+  retireReason?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   account?: Prisma.AccountCreateNestedOneWithoutRithmicProtocolFillsInput
@@ -533,6 +572,9 @@ export type RithmicProtocolFillUncheckedCreateInput = {
   ssboe?: number | null
   usecs?: number | null
   source?: string
+  retiredAt?: Date | string | null
+  retiredBy?: string | null
+  retireReason?: string | null
   connectionId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -557,6 +599,9 @@ export type RithmicProtocolFillUpdateInput = {
   ssboe?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   usecs?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   source?: Prisma.StringFieldUpdateOperationsInput | string
+  retiredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  retiredBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retireReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   account?: Prisma.AccountUpdateOneWithoutRithmicProtocolFillsNestedInput
@@ -583,6 +628,9 @@ export type RithmicProtocolFillUncheckedUpdateInput = {
   ssboe?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   usecs?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   source?: Prisma.StringFieldUpdateOperationsInput | string
+  retiredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  retiredBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retireReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   connectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -608,6 +656,9 @@ export type RithmicProtocolFillCreateManyInput = {
   ssboe?: number | null
   usecs?: number | null
   source?: string
+  retiredAt?: Date | string | null
+  retiredBy?: string | null
+  retireReason?: string | null
   connectionId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -632,6 +683,9 @@ export type RithmicProtocolFillUpdateManyMutationInput = {
   ssboe?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   usecs?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   source?: Prisma.StringFieldUpdateOperationsInput | string
+  retiredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  retiredBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retireReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -656,6 +710,9 @@ export type RithmicProtocolFillUncheckedUpdateManyInput = {
   ssboe?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   usecs?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   source?: Prisma.StringFieldUpdateOperationsInput | string
+  retiredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  retiredBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retireReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   connectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -696,6 +753,9 @@ export type RithmicProtocolFillCountOrderByAggregateInput = {
   ssboe?: Prisma.SortOrder
   usecs?: Prisma.SortOrder
   source?: Prisma.SortOrder
+  retiredAt?: Prisma.SortOrder
+  retiredBy?: Prisma.SortOrder
+  retireReason?: Prisma.SortOrder
   connectionId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -728,6 +788,9 @@ export type RithmicProtocolFillMaxOrderByAggregateInput = {
   ssboe?: Prisma.SortOrder
   usecs?: Prisma.SortOrder
   source?: Prisma.SortOrder
+  retiredAt?: Prisma.SortOrder
+  retiredBy?: Prisma.SortOrder
+  retireReason?: Prisma.SortOrder
   connectionId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -753,6 +816,9 @@ export type RithmicProtocolFillMinOrderByAggregateInput = {
   ssboe?: Prisma.SortOrder
   usecs?: Prisma.SortOrder
   source?: Prisma.SortOrder
+  retiredAt?: Prisma.SortOrder
+  retiredBy?: Prisma.SortOrder
+  retireReason?: Prisma.SortOrder
   connectionId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -868,6 +934,9 @@ export type RithmicProtocolFillCreateWithoutConnectionInput = {
   ssboe?: number | null
   usecs?: number | null
   source?: string
+  retiredAt?: Date | string | null
+  retiredBy?: string | null
+  retireReason?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   account?: Prisma.AccountCreateNestedOneWithoutRithmicProtocolFillsInput
@@ -893,6 +962,9 @@ export type RithmicProtocolFillUncheckedCreateWithoutConnectionInput = {
   ssboe?: number | null
   usecs?: number | null
   source?: string
+  retiredAt?: Date | string | null
+  retiredBy?: string | null
+  retireReason?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -946,6 +1018,9 @@ export type RithmicProtocolFillScalarWhereInput = {
   ssboe?: Prisma.IntNullableFilter<"RithmicProtocolFill"> | number | null
   usecs?: Prisma.IntNullableFilter<"RithmicProtocolFill"> | number | null
   source?: Prisma.StringFilter<"RithmicProtocolFill"> | string
+  retiredAt?: Prisma.DateTimeNullableFilter<"RithmicProtocolFill"> | Date | string | null
+  retiredBy?: Prisma.StringNullableFilter<"RithmicProtocolFill"> | string | null
+  retireReason?: Prisma.StringNullableFilter<"RithmicProtocolFill"> | string | null
   connectionId?: Prisma.StringNullableFilter<"RithmicProtocolFill"> | string | null
   createdAt?: Prisma.DateTimeFilter<"RithmicProtocolFill"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"RithmicProtocolFill"> | Date | string
@@ -970,6 +1045,9 @@ export type RithmicProtocolFillCreateWithoutAccountInput = {
   ssboe?: number | null
   usecs?: number | null
   source?: string
+  retiredAt?: Date | string | null
+  retiredBy?: string | null
+  retireReason?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   connection?: Prisma.ConnectionCreateNestedOneWithoutRithmicProtocolFillsInput
@@ -994,6 +1072,9 @@ export type RithmicProtocolFillUncheckedCreateWithoutAccountInput = {
   ssboe?: number | null
   usecs?: number | null
   source?: string
+  retiredAt?: Date | string | null
+  retiredBy?: string | null
+  retireReason?: string | null
   connectionId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1045,6 +1126,9 @@ export type RithmicProtocolFillCreateManyConnectionInput = {
   ssboe?: number | null
   usecs?: number | null
   source?: string
+  retiredAt?: Date | string | null
+  retiredBy?: string | null
+  retireReason?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1068,6 +1152,9 @@ export type RithmicProtocolFillUpdateWithoutConnectionInput = {
   ssboe?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   usecs?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   source?: Prisma.StringFieldUpdateOperationsInput | string
+  retiredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  retiredBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retireReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   account?: Prisma.AccountUpdateOneWithoutRithmicProtocolFillsNestedInput
@@ -1093,6 +1180,9 @@ export type RithmicProtocolFillUncheckedUpdateWithoutConnectionInput = {
   ssboe?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   usecs?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   source?: Prisma.StringFieldUpdateOperationsInput | string
+  retiredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  retiredBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retireReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1117,6 +1207,9 @@ export type RithmicProtocolFillUncheckedUpdateManyWithoutConnectionInput = {
   ssboe?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   usecs?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   source?: Prisma.StringFieldUpdateOperationsInput | string
+  retiredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  retiredBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retireReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1140,6 +1233,9 @@ export type RithmicProtocolFillCreateManyAccountInput = {
   ssboe?: number | null
   usecs?: number | null
   source?: string
+  retiredAt?: Date | string | null
+  retiredBy?: string | null
+  retireReason?: string | null
   connectionId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1164,6 +1260,9 @@ export type RithmicProtocolFillUpdateWithoutAccountInput = {
   ssboe?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   usecs?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   source?: Prisma.StringFieldUpdateOperationsInput | string
+  retiredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  retiredBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retireReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   connection?: Prisma.ConnectionUpdateOneWithoutRithmicProtocolFillsNestedInput
@@ -1188,6 +1287,9 @@ export type RithmicProtocolFillUncheckedUpdateWithoutAccountInput = {
   ssboe?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   usecs?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   source?: Prisma.StringFieldUpdateOperationsInput | string
+  retiredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  retiredBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retireReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   connectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1212,6 +1314,9 @@ export type RithmicProtocolFillUncheckedUpdateManyWithoutAccountInput = {
   ssboe?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   usecs?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   source?: Prisma.StringFieldUpdateOperationsInput | string
+  retiredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  retiredBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retireReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   connectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1239,6 +1344,9 @@ export type RithmicProtocolFillSelect<ExtArgs extends runtime.Types.Extensions.I
   ssboe?: boolean
   usecs?: boolean
   source?: boolean
+  retiredAt?: boolean
+  retiredBy?: boolean
+  retireReason?: boolean
   connectionId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -1266,6 +1374,9 @@ export type RithmicProtocolFillSelectCreateManyAndReturn<ExtArgs extends runtime
   ssboe?: boolean
   usecs?: boolean
   source?: boolean
+  retiredAt?: boolean
+  retiredBy?: boolean
+  retireReason?: boolean
   connectionId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -1293,6 +1404,9 @@ export type RithmicProtocolFillSelectUpdateManyAndReturn<ExtArgs extends runtime
   ssboe?: boolean
   usecs?: boolean
   source?: boolean
+  retiredAt?: boolean
+  retiredBy?: boolean
+  retireReason?: boolean
   connectionId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -1320,12 +1434,15 @@ export type RithmicProtocolFillSelectScalar = {
   ssboe?: boolean
   usecs?: boolean
   source?: boolean
+  retiredAt?: boolean
+  retiredBy?: boolean
+  retireReason?: boolean
   connectionId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type RithmicProtocolFillOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "accountNumber" | "accountId" | "identityKey" | "fillId" | "rawFillId" | "symbol" | "exchange" | "transactionType" | "fillPrice" | "fillSize" | "fillDate" | "fillTime" | "basketId" | "sequenceNumber" | "ssboe" | "usecs" | "source" | "connectionId" | "createdAt" | "updatedAt", ExtArgs["result"]["rithmicProtocolFill"]>
+export type RithmicProtocolFillOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "accountNumber" | "accountId" | "identityKey" | "fillId" | "rawFillId" | "symbol" | "exchange" | "transactionType" | "fillPrice" | "fillSize" | "fillDate" | "fillTime" | "basketId" | "sequenceNumber" | "ssboe" | "usecs" | "source" | "retiredAt" | "retiredBy" | "retireReason" | "connectionId" | "createdAt" | "updatedAt", ExtArgs["result"]["rithmicProtocolFill"]>
 export type RithmicProtocolFillInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   account?: boolean | Prisma.RithmicProtocolFill$accountArgs<ExtArgs>
   connection?: boolean | Prisma.RithmicProtocolFill$connectionArgs<ExtArgs>
@@ -1377,9 +1494,16 @@ export type $RithmicProtocolFillPayload<ExtArgs extends runtime.Types.Extensions
     ssboe: number | null
     usecs: number | null
     /**
-     * `history` (ShowFillHistory / order-history fallback) or `replay`.
+     * `history`, `replay`, `manual`, or `manual-retired`. Plain string,
+     * not a Postgres enum.
      */
     source: string
+    /**
+     * Set together when an admin soft-retires a manual fill.
+     */
+    retiredAt: Date | null
+    retiredBy: string | null
+    retireReason: string | null
     connectionId: string | null
     createdAt: Date
     updatedAt: Date
@@ -1827,6 +1951,9 @@ export interface RithmicProtocolFillFieldRefs {
   readonly ssboe: Prisma.FieldRef<"RithmicProtocolFill", 'Int'>
   readonly usecs: Prisma.FieldRef<"RithmicProtocolFill", 'Int'>
   readonly source: Prisma.FieldRef<"RithmicProtocolFill", 'String'>
+  readonly retiredAt: Prisma.FieldRef<"RithmicProtocolFill", 'DateTime'>
+  readonly retiredBy: Prisma.FieldRef<"RithmicProtocolFill", 'String'>
+  readonly retireReason: Prisma.FieldRef<"RithmicProtocolFill", 'String'>
   readonly connectionId: Prisma.FieldRef<"RithmicProtocolFill", 'String'>
   readonly createdAt: Prisma.FieldRef<"RithmicProtocolFill", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"RithmicProtocolFill", 'DateTime'>

@@ -13,6 +13,7 @@ import {
   manualTradeReplacedByPlantTrade,
   mergeFillLedgers,
   omitAmbiguousManualBooks,
+  planManualFillSyncEffects,
   partitionIncomingFills,
   phantomProtocolTradeIds,
   prepareRithmicProtocolFills,
@@ -852,6 +853,9 @@ describe('manual fills', () => {
       expect(prepared.fills).toHaveLength(1)
       expect(prepared.fills[0]?.fillId).toBe('88421')
       expect(prepared.fills[0]?.fillSize).toBe(2)
+      expect(prepared.retirements).toHaveLength(1)
+      expect(prepared.retirements[0]?.manual.fillId).toBe('manual-gap')
+      expect(planManualFillSyncEffects(prepared).droppedByReason.manual_fill_superseded).toBe(1)
       expect(info).toHaveBeenCalledWith(
         expect.stringContaining(
           'preferring upstream fillId=88421 over manual fillId=manual-gap',
@@ -947,8 +951,10 @@ describe('manual fills', () => {
       'history',
     )[0]
     const prepared = prepareRithmicProtocolFills([manual, shifted])
-    expect(prepared.fills.map((row) => row.fillId).sort()).toEqual(['88421', 'manual-gap'])
-    expect(prepared.nearMisses).toEqual([])
+    expect(prepared.retirements).toEqual([])
+    expect(prepared.fills.some((row) => row.fillId === 'manual-gap')).toBe(true)
+    expect(prepared.nearMisses.map((miss) => miss.reason)).toEqual(['day-offset'])
+    expect(omitAmbiguousManualBooks(prepared.fills, prepared.nearMisses)).toEqual([])
   })
 
   it('keeps a manual fill on a quantity near-miss and logs a warning', () => {
@@ -1029,6 +1035,85 @@ describe('manual fills', () => {
     const prepared = prepareRithmicProtocolFills([manual, noClock])
     expect(prepared.nearMisses.map((miss) => miss.reason)).toEqual(['no-clock'])
     expect(omitAmbiguousManualBooks(prepared.fills, prepared.nearMisses)).toEqual([])
+  })
+
+  it('ignores a retired manual fill in reconcile and FIFO', () => {
+    const retired = { ...manual, source: 'manual-retired' as const }
+    const prepared = prepareRithmicProtocolFills([retired, upstream])
+    expect(prepared.fills.map((row) => row.fillId)).toEqual(['88421'])
+    expect(prepared.retirements).toEqual([])
+    expect(prepared.nearMisses).toEqual([])
+  })
+
+  it('does not treat a clockless plant fill more than a day away as a near-miss', () => {
+    const distant = markFillSource(
+      [
+        fill({
+          fillId: '9400',
+          fillSize: 2,
+          fillPrice: 5810.25,
+          fillDate: '20260920',
+          ssboe: 0,
+        }),
+      ],
+      'history',
+    )[0]
+    const prepared = prepareRithmicProtocolFills([
+      manual,
+      { ...distant, fillTime: undefined },
+    ])
+    expect(prepared.nearMisses).toEqual([])
+    expect(prepared.fills.map((row) => row.fillId).sort()).toEqual(['9400', 'manual-gap'])
+  })
+
+  it('keeps a clockless plant fill on the next trade date and ignores one two days away', () => {
+    const nextDay = markFillSource(
+      [
+        fill({
+          fillId: '9401',
+          fillSize: 2,
+          fillPrice: 5810.25,
+          fillDate: '20260926',
+          ssboe: 0,
+        }),
+      ],
+      'history',
+    )[0]
+    const adjacent = prepareRithmicProtocolFills([
+      manual,
+      { ...nextDay, fillTime: undefined },
+    ])
+    expect(adjacent.nearMisses.map((miss) => miss.reason)).toEqual(['no-clock'])
+    expect(adjacent.retirements).toEqual([])
+    const twoDays = { ...nextDay, fillId: '9402', fillDate: '20260927' }
+    const distant = prepareRithmicProtocolFills([
+      manual,
+      { ...twoDays, fillTime: undefined },
+    ])
+    expect(distant.nearMisses).toEqual([])
+    expect(distant.fills.map((row) => row.fillId).sort()).toEqual(['9402', 'manual-gap'])
+  })
+
+  it('skips only the near-miss book and records the sync wiring', () => {
+    const other = markFillSource(
+      [
+        fill({
+          fillId: '7001',
+          symbol: 'MESH7',
+          fillSize: 1,
+          fillPrice: 7000,
+          fillDate: '20260925',
+          ssboe: atMs / 1000,
+        }),
+      ],
+      'history',
+    )[0]
+    const later = { ...upstream, ssboe: (manual.ssboe ?? 0) + 45 }
+    const prepared = prepareRithmicProtocolFills([manual, later, other])
+    const plan = planManualFillSyncEffects(prepared)
+    expect(plan.fifoFills.map((row) => row.fillId)).toEqual(['7001'])
+    expect(plan.droppedByReason.manual_fill_ambiguous).toBe(2)
+    expect(plan.retainAccountNumbers).toEqual([ACCOUNT])
   })
 
   it('matches a 10s clock gap and warns when the gap is past 30s but still close', () => {

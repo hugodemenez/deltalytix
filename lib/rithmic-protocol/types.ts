@@ -44,9 +44,10 @@ export interface RithmicProtocolFill {
    * latest fills history has not published yet. `manual` is an operator
    * patch for a fill the plant's order history omitted. Resync keeps the
    * row. While an upstream fill matches it exactly, FIFO counts the
-   * upstream fill only.
+   * upstream fill only. `manual-retired` is an audited soft-retire:
+   * reconcile, coverage, and sync ignore it.
    */
-  source?: 'history' | 'replay' | 'manual'
+  source?: 'history' | 'replay' | 'manual' | 'manual-retired'
 }
 
 export interface RithmicProtocolCredentials {

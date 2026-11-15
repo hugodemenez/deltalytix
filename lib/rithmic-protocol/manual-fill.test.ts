@@ -14,6 +14,7 @@ import {
   insertManualRithmicProtocolFill,
   manualFillId,
   parseManualFillCliArgs,
+  retireManualRithmicProtocolFill,
   validateManualFillInput,
   type ValidatedManualFill,
 } from './manual-fill'
@@ -88,6 +89,82 @@ describe('manual fill id', () => {
   })
 })
 
+describe('retireManualRithmicProtocolFill', () => {
+  const findManualFill = vi.fn()
+  const markRetired = vi.fn()
+
+  beforeEach(() => {
+    findManualFill.mockReset().mockResolvedValue({ fillId: 'manual-gap', source: 'manual' })
+    markRetired.mockReset().mockResolvedValue(undefined)
+  })
+
+  it('previews a retire without writing', async () => {
+    const result = await retireManualRithmicProtocolFill(
+      {
+        userId: 'user-1',
+        accountNumber: base.accountNumber,
+        fillId: 'manual-gap',
+        reason: 'plant fill arrived',
+      },
+      { findManualFill, markRetired },
+    )
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.dryRun).toBe(true)
+    expect(result.source).toBe('manual-retired')
+    expect(result.retireReason).toBe('plant fill arrived')
+    expect(markRetired).not.toHaveBeenCalled()
+  })
+
+  it('writes the retire audit on apply and is idempotent afterwards', async () => {
+    const applied = await retireManualRithmicProtocolFill(
+      {
+        userId: 'user-1',
+        accountNumber: base.accountNumber,
+        fillId: 'manual-gap',
+        reason: 'plant fill arrived',
+        retiredBy: 'admin-1',
+        dryRun: false,
+      },
+      { findManualFill, markRetired },
+    )
+    expect(applied.ok).toBe(true)
+    expect(markRetired).toHaveBeenCalledTimes(1)
+    const written = markRetired.mock.calls[0][0] as {
+      retireReason: string
+      retiredBy: string
+      source?: string
+    }
+    expect(written.retireReason).toBe('plant fill arrived')
+    expect(written.retiredBy).toBe('admin-1')
+    const retiredAt = new Date('2026-09-26T12:00:00.000Z')
+    findManualFill.mockResolvedValue({
+      fillId: 'manual-gap',
+      source: 'manual-retired',
+      retiredAt,
+      retiredBy: 'admin-1',
+      retireReason: 'plant fill arrived',
+    })
+    const again = await retireManualRithmicProtocolFill(
+      {
+        userId: 'user-1',
+        accountNumber: base.accountNumber,
+        fillId: 'manual-gap',
+        reason: 'a later reason must not replace the audit',
+        dryRun: false,
+      },
+      { findManualFill, markRetired },
+    )
+    expect(again.ok).toBe(true)
+    if (!again.ok) return
+    expect(again.idempotent).toBe(true)
+    expect(again.retiredAt).toBe(retiredAt.toISOString())
+    expect(again.retiredBy).toBe('admin-1')
+    expect(again.retireReason).toBe('plant fill arrived')
+    expect(markRetired).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('parseManualFillCliArgs', () => {
   const argv = [
     '--user-id',
@@ -123,6 +200,50 @@ describe('parseManualFillCliArgs', () => {
     expect(apply.ok).toBe(true)
     if (!apply.ok) return
     expect(apply.input.dryRun).toBe(false)
+  })
+
+  it('retire previews unless --apply, and acknowledge-warnings is explicit', () => {
+    const preview = parseManualFillCliArgs([
+      '--retire',
+      '--user-id',
+      base.userId,
+      '--account',
+      base.accountNumber,
+      '--fill-id',
+      'manual-gap',
+      '--reason',
+      'plant fill arrived',
+    ])
+    expect(preview.ok).toBe(true)
+    if (!preview.ok) return
+    expect(preview.command).toBe('retire')
+    expect(preview.input.dryRun).toBe(true)
+    expect(preview.input.fillId).toBe('manual-gap')
+    const apply = parseManualFillCliArgs([
+      '--retire',
+      '--user-id',
+      base.userId,
+      '--account',
+      base.accountNumber,
+      '--fill-id',
+      'manual-gap',
+      '--reason',
+      'plant fill arrived',
+      '--apply',
+    ])
+    expect(apply.ok).toBe(true)
+    if (!apply.ok) return
+    expect(apply.input.dryRun).toBe(false)
+    const acknowledged = parseManualFillCliArgs([
+      ...argv,
+      '--apply',
+      '--acknowledge-warnings',
+    ])
+    expect(acknowledged.ok).toBe(true)
+    if (!acknowledged.ok) return
+    expect(acknowledged.command).toBe('insert')
+    expect(acknowledged.input.dryRun).toBe(false)
+    expect(acknowledged.input.acknowledgeWarnings).toBe(true)
   })
 
   it('rejects --dry-run together with --apply and a non-integer qty', () => {
@@ -190,6 +311,44 @@ describe('insertManualRithmicProtocolFill', () => {
     if (!warned.ok) return
     expect(warned.warnings.some((warning) => warning.includes('Near-miss'))).toBe(true)
     expect(upsertFills).not.toHaveBeenCalled()
+  })
+
+  it('refuses apply when a warning is present unless it is acknowledged', async () => {
+    const preview = await insertManualRithmicProtocolFill(base, {
+      findAccount,
+      loadFills,
+      upsertFills,
+    })
+    if (!preview.ok) throw new Error('preview failed')
+    loadFills.mockResolvedValue([
+      { ...preview.fill, source: 'history', fillId: '88421', ssboe: (preview.fill.ssboe ?? 0) + 45 },
+    ])
+    const refused = await insertManualRithmicProtocolFill(
+      { ...base, dryRun: false },
+      { findAccount, loadFills, upsertFills },
+    )
+    expect(refused.ok).toBe(false)
+    if (refused.ok) return
+    expect(refused.status).toBe('acknowledgement_required')
+    expect(upsertFills).not.toHaveBeenCalled()
+    loadFills.mockResolvedValue([
+      { ...preview.fill, source: 'history', fillId: '88421' },
+    ])
+    const superseded = await insertManualRithmicProtocolFill(
+      { ...base, dryRun: false },
+      { findAccount, loadFills, upsertFills },
+    )
+    expect(superseded.ok).toBe(false)
+    if (superseded.ok) return
+    expect(superseded.status).toBe('acknowledgement_required')
+    expect(superseded.warnings?.[0]).toMatch(/upstream fill matches/)
+    expect(upsertFills).not.toHaveBeenCalled()
+    const applied = await insertManualRithmicProtocolFill(
+      { ...base, dryRun: false, acknowledgeWarnings: true },
+      { findAccount, loadFills, upsertFills },
+    )
+    expect(applied.ok).toBe(true)
+    expect(upsertFills).toHaveBeenCalledTimes(1)
   })
 
   it('dry-run builds one manual- fill and does not write', async () => {

@@ -6,6 +6,7 @@ import { NextRequest } from 'next/server'
 
 const authorizeAdminRequest = vi.fn()
 const insertManualRithmicProtocolFill = vi.fn()
+const retireManualRithmicProtocolFill = vi.fn()
 
 vi.mock('@/lib/admin/auth', () => ({
   authorizeAdminRequest: (...args: unknown[]) => authorizeAdminRequest(...args),
@@ -13,6 +14,8 @@ vi.mock('@/lib/admin/auth', () => ({
 vi.mock('@/lib/rithmic-protocol/manual-fill', () => ({
   insertManualRithmicProtocolFill: (...args: unknown[]) =>
     insertManualRithmicProtocolFill(...args),
+  retireManualRithmicProtocolFill: (...args: unknown[]) =>
+    retireManualRithmicProtocolFill(...args),
 }))
 
 import { POST } from './route'
@@ -43,6 +46,7 @@ describe('POST /api/admin/rithmic-protocol/manual-fill', () => {
   beforeEach(() => {
     authorizeAdminRequest.mockReset()
     insertManualRithmicProtocolFill.mockReset()
+    retireManualRithmicProtocolFill.mockReset()
   })
 
   it('rejects unauthenticated callers', async () => {
@@ -117,5 +121,60 @@ describe('POST /api/admin/rithmic-protocol/manual-fill', () => {
     expect(payload.error.details).toEqual([
       expect.objectContaining({ field: 'note' }),
     ])
+  })
+
+  it('refuses an unacknowledged apply with 409', async () => {
+    authorizeAdminRequest.mockResolvedValue({ ok: true, via: 'cron' })
+    insertManualRithmicProtocolFill.mockResolvedValue({
+      ok: false,
+      status: 'acknowledgement_required',
+      errors: [{ field: 'acknowledgeWarnings', message: 'Apply refused.' }],
+      warnings: ['Near-miss with upstream fill 88421 (clock).'],
+    })
+    const response = await post({ ...body, dryRun: false })
+    expect(response.status).toBe(409)
+    const payload = await response.json()
+    expect(payload.error.code).toBe('conflict')
+    expect(payload.error.hint).toMatch(/acknowledgeWarnings: true/)
+    expect(payload.error.hint).toMatch(/retire/)
+    expect(insertManualRithmicProtocolFill).toHaveBeenCalledWith(
+      expect.objectContaining({ dryRun: false }),
+    )
+    expect(retireManualRithmicProtocolFill).not.toHaveBeenCalled()
+  })
+
+  it('previews a retire and stamps the admin as retiredBy', async () => {
+    authorizeAdminRequest.mockResolvedValue({
+      ok: true,
+      via: 'session',
+      actorUserId: 'admin-1',
+    })
+    retireManualRithmicProtocolFill.mockResolvedValue({
+      ok: true,
+      dryRun: true,
+      idempotent: false,
+      fillId: 'manual-gap',
+      source: 'manual-retired',
+      retiredAt: '2026-09-26T12:00:00.000Z',
+      retiredBy: 'admin-1',
+      retireReason: 'plant fill arrived',
+    })
+    const response = await post({
+      action: 'retire',
+      userId: body.userId,
+      accountNumber: body.accountNumber,
+      fillId: 'manual-gap',
+      reason: 'plant fill arrived',
+    })
+    expect(response.status).toBe(200)
+    expect(retireManualRithmicProtocolFill).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dryRun: true,
+        retiredBy: 'admin-1',
+        fillId: 'manual-gap',
+        reason: 'plant fill arrived',
+      }),
+    )
+    expect(insertManualRithmicProtocolFill).not.toHaveBeenCalled()
   })
 })

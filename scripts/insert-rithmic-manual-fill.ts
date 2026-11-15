@@ -23,11 +23,23 @@
  *     --dry-run
  *
  * Write: the same arguments with `--apply` instead of `--dry-run`.
+ * If the preview warns about a near-miss or a superseding plant fill,
+ * `--apply` is refused until `--acknowledge-warnings` is also passed.
+ *
+ * Retire a blocking manual fill (preview, then write):
+ *   bun scripts/insert-rithmic-manual-fill.ts \
+ *     --retire \
+ *     --user-id USER_ID \
+ *     --account ACCOUNT_NUMBER \
+ *     --fill-id manual-FILL_ID \
+ *     --reason "plant fill arrived; this patch was the wrong clock" \
+ *     --apply
  */
 import { prisma } from '../lib/prisma'
 import {
   insertManualRithmicProtocolFill,
   parseManualFillCliArgs,
+  retireManualRithmicProtocolFill,
 } from '../lib/rithmic-protocol/manual-fill'
 
 async function main() {
@@ -37,8 +49,11 @@ async function main() {
     process.exitCode = 1
     return
   }
-  const result = await insertManualRithmicProtocolFill(parsed.input)
-  if (result.ok) {
+  const result =
+    parsed.command === 'retire'
+      ? await retireManualRithmicProtocolFill(parsed.input)
+      : await insertManualRithmicProtocolFill(parsed.input)
+  if (result.ok && 'warnings' in result) {
     for (const warning of result.warnings) {
       process.stderr.write(`[RITHMIC-MANUAL-FILL] warning: ${warning}\n`)
     }

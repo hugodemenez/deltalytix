@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 const createMany = vi.fn()
 const findFirst = vi.fn()
 const findMany = vi.fn()
+const updateMany = vi.fn()
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
@@ -10,7 +11,7 @@ vi.mock("@/lib/prisma", () => ({
       createMany: (...args: unknown[]) => createMany(...args),
       findFirst: (...args: unknown[]) => findFirst(...args),
       findMany: (...args: unknown[]) => findMany(...args),
-      updateMany: vi.fn(),
+      updateMany: (...args: unknown[]) => updateMany(...args),
     },
   },
 }))
@@ -78,6 +79,7 @@ describe("saveTradesCore Rithmic coverage guard", () => {
   beforeEach(() => {
     createMany.mockReset().mockResolvedValue({ count: 0 })
     findFirst.mockReset().mockResolvedValue({ id: "x" })
+    updateMany.mockReset().mockResolvedValue({ count: 0 })
     findMany
       .mockReset()
       .mockImplementation(async (args: { where?: { tags?: unknown } }) =>
@@ -98,6 +100,50 @@ describe("saveTradesCore Rithmic coverage guard", () => {
       ([args]) => (args as { select?: { commission?: boolean } })?.select?.commission,
     )
     expect(commissionLookups).toHaveLength(0)
+  })
+
+  it("a plant fill that supersedes an annotated manual trade reuses that row id", async () => {
+    const annotated = {
+      id: "stored-manual-trade",
+      accountNumber: ACCOUNT,
+      instrument: "MES",
+      side: "Long",
+      quantity: 1,
+      entryPrice: "7800",
+      closePrice: "7801",
+      entryDate: "2026-09-25T15:07:00.000+00:00",
+      closeDate: "2026-09-25T15:08:00.000+00:00",
+      entryId: "manual-gap",
+      closeId: "1002",
+      comment: "kept note",
+    }
+    findMany.mockImplementation(async () => [annotated])
+    createMany.mockResolvedValue({ count: 0 })
+    const plant = {
+      ...syncTrade,
+      quantity: 1,
+      entryId: "88421",
+      closeId: "1002",
+      entryPrice: "7800",
+      closePrice: "7801",
+      entryDate: "2026-09-25T15:07:04.000+00:00",
+      closeDate: "2026-09-25T15:08:00.000+00:00",
+      pnl: 5,
+      side: "Long",
+      timeInPosition: 56,
+      commission: 0,
+    } as Trade
+    const result = await saveTradesCore([plant], { userId: "u1" })
+    const inserted = createMany.mock.calls[0][0].data as Array<{
+      id: string
+      comment?: string | null
+    }>
+    expect(inserted).toHaveLength(1)
+    expect(inserted[0]?.id).toBe("stored-manual-trade")
+    expect(createMany.mock.calls[0][0].skipDuplicates).toBe(true)
+    expect(inserted[0]?.comment).not.toBe("kept note")
+    expect(updateMany).not.toHaveBeenCalled()
+    expect(result.numberOfTradesAdded).toBe(0)
   })
 
   it("a new trade on the same account is still inserted", async () => {

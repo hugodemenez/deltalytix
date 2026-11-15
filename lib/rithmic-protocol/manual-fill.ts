@@ -30,6 +30,7 @@ export type ValidatedManualFill = {
   timestampMs: number
   note: string
   dryRun: boolean
+  acknowledgeWarnings: boolean
 }
 
 export type ManualFillInsertResult =
@@ -45,8 +46,9 @@ export type ManualFillInsertResult =
     }
   | {
       ok: false
-      status: 'validation' | 'account_not_found' | 'conflict'
+      status: 'validation' | 'account_not_found' | 'conflict' | 'acknowledgement_required'
       errors: ManualFillFieldError[]
+      warnings?: string[]
     }
 
 type ManualFillDeps = {
@@ -189,6 +191,12 @@ export function validateManualFillInput(input: unknown):
   if ('dryRun' in payload && typeof payload.dryRun !== 'boolean') {
     errors.push({ field: 'dryRun', message: 'dryRun must be a boolean when provided.' })
   }
+  if ('acknowledgeWarnings' in payload && typeof payload.acknowledgeWarnings !== 'boolean') {
+    errors.push({
+      field: 'acknowledgeWarnings',
+      message: 'acknowledgeWarnings must be a boolean when provided.',
+    })
+  }
   if (
     errors.length > 0 ||
     !side ||
@@ -212,6 +220,7 @@ export function validateManualFillInput(input: unknown):
       timestampMs,
       note,
       dryRun: payload.dryRun === false ? false : true,
+      acknowledgeWarnings: payload.acknowledgeWarnings === true,
     },
   }
 }
@@ -351,6 +360,20 @@ export async function insertManualRithmicProtocolFill(
   for (const warning of warnings) {
     console.warn(`[RITHMIC-MANUAL-FILL] ${warning}`)
   }
+  if (!value.dryRun && warnings.length > 0 && !value.acknowledgeWarnings) {
+    return {
+      ok: false,
+      status: 'acknowledgement_required',
+      errors: [
+        {
+          field: 'acknowledgeWarnings',
+          message:
+            'Apply refused because the preview has a near-miss or supersession warning. Pass acknowledgeWarnings: true to write anyway, or retire the manual fill.',
+        },
+      ],
+      warnings,
+    }
+  }
   const existing = stored.find(
     (row) => fillIdentityKey(row) === identityKey || row.fillId === fill.fillId,
   )
@@ -413,6 +436,194 @@ export async function insertManualRithmicProtocolFill(
   }
 }
 
+export type ManualFillRetireResult =
+  | {
+      ok: true
+      dryRun: boolean
+      idempotent: boolean
+      fillId: string
+      source: 'manual-retired'
+      retiredAt: string
+      retiredBy: string
+      retireReason: string
+    }
+  | {
+      ok: false
+      status: 'validation' | 'not_found'
+      errors: ManualFillFieldError[]
+    }
+
+type RetiredManualRow = {
+  fillId: string
+  source: string
+  retiredAt?: Date | null
+  retiredBy?: string | null
+  retireReason?: string | null
+}
+
+type RetireDeps = {
+  findManualFill: (params: {
+    userId: string
+    accountNumber: string
+    fillId: string
+  }) => Promise<RetiredManualRow | null>
+  markRetired: (params: {
+    userId: string
+    accountNumber: string
+    fillId: string
+    retiredAt: Date
+    retiredBy: string
+    retireReason: string
+  }) => Promise<void>
+}
+
+async function defaultFindManualFill(params: {
+  userId: string
+  accountNumber: string
+  fillId: string
+}): Promise<RetiredManualRow | null> {
+  const row = await prisma.rithmicProtocolFill.findFirst({
+    where: {
+      userId: params.userId,
+      accountNumber: params.accountNumber,
+      fillId: params.fillId,
+    },
+    select: {
+      fillId: true,
+      source: true,
+      retiredAt: true,
+      retiredBy: true,
+      retireReason: true,
+    },
+  })
+  return row
+}
+
+async function defaultMarkRetired(params: {
+  userId: string
+  accountNumber: string
+  fillId: string
+  retiredAt: Date
+  retiredBy: string
+  retireReason: string
+}): Promise<void> {
+  await prisma.rithmicProtocolFill.updateMany({
+    where: {
+      userId: params.userId,
+      accountNumber: params.accountNumber,
+      fillId: params.fillId,
+      source: 'manual',
+    },
+    data: {
+      source: 'manual-retired',
+      retiredAt: params.retiredAt,
+      retiredBy: params.retiredBy,
+      retireReason: params.retireReason,
+    },
+  })
+}
+
+/**
+ * Soft-retire one manual fill. Preview is the default. Retired rows stay in
+ * the table and are ignored by reconcile, coverage, and sync.
+ */
+export async function retireManualRithmicProtocolFill(
+  input: unknown,
+  deps?: Partial<RetireDeps>,
+): Promise<ManualFillRetireResult> {
+  const payload = readObject(input)
+  const errors: ManualFillFieldError[] = []
+  if (!payload) {
+    return {
+      ok: false,
+      status: 'validation',
+      errors: [{ field: 'body', message: 'Retire input must be an object.' }],
+    }
+  }
+  const userId = readTrimmed(payload.userId)
+  const accountNumber = readTrimmed(payload.accountNumber)
+  const fillId = readTrimmed(payload.fillId)
+  const reason = readTrimmed(payload.reason)
+  const retiredBy = readTrimmed(payload.retiredBy) || 'admin'
+  if (!userId) errors.push({ field: 'userId', message: 'userId is required.' })
+  if (!accountNumber) {
+    errors.push({ field: 'accountNumber', message: 'accountNumber is required.' })
+  }
+  if (!fillId.startsWith('manual-')) {
+    errors.push({
+      field: 'fillId',
+      message: 'fillId must be the manual- id of the row to retire.',
+    })
+  }
+  if (!reason || reason.length > 500) {
+    errors.push({
+      field: 'reason',
+      message: 'reason is required, up to 500 characters.',
+    })
+  }
+  if ('dryRun' in payload && typeof payload.dryRun !== 'boolean') {
+    errors.push({ field: 'dryRun', message: 'dryRun must be a boolean when provided.' })
+  }
+  if (errors.length > 0) return { ok: false, status: 'validation', errors }
+  const dryRun = payload.dryRun === false ? false : true
+  const findManualFill = deps?.findManualFill ?? defaultFindManualFill
+  const markRetired = deps?.markRetired ?? defaultMarkRetired
+  const row = await findManualFill({ userId, accountNumber, fillId })
+  if (!row) {
+    return {
+      ok: false,
+      status: 'not_found',
+      errors: [{ field: 'fillId', message: 'No manual fill with that id belongs to this account.' }],
+    }
+  }
+  if (row.source === 'manual-retired') {
+    return {
+      ok: true,
+      dryRun,
+      idempotent: true,
+      fillId,
+      source: 'manual-retired',
+      retiredAt:
+        row.retiredAt instanceof Date
+          ? row.retiredAt.toISOString()
+          : new Date().toISOString(),
+      retiredBy: row.retiredBy || retiredBy,
+      retireReason: row.retireReason || reason,
+    }
+  }
+  if (row.source !== 'manual') {
+    return {
+      ok: false,
+      status: 'validation',
+      errors: [{ field: 'fillId', message: 'Only a manual fill can be retired.' }],
+    }
+  }
+  const retiredAt = new Date()
+  if (!dryRun) {
+    await markRetired({
+      userId,
+      accountNumber,
+      fillId,
+      retiredAt,
+      retiredBy,
+      retireReason: reason,
+    })
+    console.info(
+      `[RITHMIC-MANUAL-FILL] retire userId=${userId} account=${accountNumber} fillId=${fillId} retiredBy=${retiredBy} reason=${JSON.stringify(reason)}`,
+    )
+  }
+  return {
+    ok: true,
+    dryRun,
+    idempotent: false,
+    fillId,
+    source: 'manual-retired',
+    retiredAt: retiredAt.toISOString(),
+    retiredBy,
+    retireReason: reason,
+  }
+}
+
 function plainDecimal(value: string | undefined, pattern: RegExp): number | null {
   if (!value || !pattern.test(value)) return null
   const parsed = Number(value)
@@ -424,7 +635,7 @@ function plainDecimal(value: string | undefined, pattern: RegExp): number | null
  * Omitting both flags, or passing `--dry-run`, previews. `--apply` writes.
  */
 export function parseManualFillCliArgs(argv: string[]): 
-  | { ok: true; input: Record<string, unknown> }
+  | { ok: true; command: 'insert' | 'retire'; input: Record<string, unknown> }
   | { ok: false; errors: ManualFillFieldError[] } {
   let values: {
     'user-id'?: string
@@ -438,6 +649,10 @@ export function parseManualFillCliArgs(argv: string[]):
     note?: string
     'dry-run'?: boolean
     apply?: boolean
+    'acknowledge-warnings'?: boolean
+    retire?: boolean
+    'fill-id'?: string
+    reason?: string
   }
   try {
     values = parseArgs({
@@ -454,6 +669,10 @@ export function parseManualFillCliArgs(argv: string[]):
         note: { type: 'string' },
         'dry-run': { type: 'boolean' },
         apply: { type: 'boolean' },
+        'acknowledge-warnings': { type: 'boolean' },
+        retire: { type: 'boolean' },
+        'fill-id': { type: 'string' },
+        reason: { type: 'string' },
       },
       strict: true,
       allowPositionals: false,
@@ -473,6 +692,19 @@ export function parseManualFillCliArgs(argv: string[]):
       ],
     }
   }
+  if (values.retire) {
+    return {
+      ok: true,
+      command: 'retire',
+      input: {
+        userId: values['user-id'],
+        accountNumber: values.account,
+        fillId: values['fill-id'],
+        reason: values.reason,
+        dryRun: values.apply ? false : true,
+      },
+    }
+  }
   const qty = plainDecimal(values.qty, /^\d+$/)
   const price = plainDecimal(values.price, /^-?\d+(\.\d+)?$/)
   const errors: ManualFillFieldError[] = []
@@ -485,6 +717,7 @@ export function parseManualFillCliArgs(argv: string[]):
   if (errors.length > 0) return { ok: false, errors }
   return {
     ok: true,
+    command: 'insert',
     input: {
       userId: values['user-id'],
       accountNumber: values.account,
@@ -496,6 +729,7 @@ export function parseManualFillCliArgs(argv: string[]):
       timestamp: values.timestamp,
       note: values.note,
       dryRun: values.apply ? false : true,
+      acknowledgeWarnings: values['acknowledge-warnings'] === true,
     },
   }
 }

@@ -252,7 +252,7 @@ function errorMapping(error: string | undefined): {
       return {
         code: 'conflict',
         message: 'A manual fill is close to an upstream fill but does not match it.',
-        hint: 'Quantity, price, or clock is outside the 30 second exact match. Correct the manual fill, or remove it, before deriving that symbol. Ordinary sync skips the symbol and records manual_fill_ambiguous.',
+        hint: 'Retire the blocking manual fill (POST /api/admin/rithmic-protocol/manual-fill with action "retire", or the insert script --retire). Preview first, then apply. A corrected re-entry does not clear the old row. Ordinary sync skips that symbol until the manual fill is retired or matches exactly.',
       }
     case 'OPENING_NOT_FLAT':
       return {

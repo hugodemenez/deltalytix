@@ -4,6 +4,7 @@ import {
   canonicalRithmicFillId,
   consolidateOrderFills,
   dedupeFillsWithStats,
+  fillDayKey,
   fillIdentityKey,
   preferHistoryFills,
   resolveRithmicProtocolPersistedId,
@@ -91,10 +92,12 @@ export function prepareRithmicProtocolFills(
 ): {
   fills: RithmicProtocolFill[]
   nearMisses: ManualFillNearMiss[]
+  retirements: ManualFillRetirement[]
   stats: DedupeFillsStats
 } {
-  const manuals = fills.filter((fill) => fill.source === 'manual')
-  const upstream = fills.filter((fill) => fill.source !== 'manual')
+  const active = fills.filter((fill) => fill.source !== 'manual-retired')
+  const manuals = active.filter((fill) => fill.source === 'manual')
+  const upstream = active.filter((fill) => fill.source !== 'manual')
   // Collapse plant fills first. A replay twin that history throws away must
   // not retire a manual patch, and split pieces must be one order before the
   // quantity check.
@@ -105,6 +108,7 @@ export function prepareRithmicProtocolFills(
   return {
     fills: reconciled.fills,
     nearMisses: reconciled.nearMisses,
+    retirements: reconciled.retirements,
     stats: {
       received: fills.length,
       afterDedup: deduped.fills.length,
@@ -155,7 +159,14 @@ export function shouldReplaceStoredFill(
   stored: RithmicProtocolFill,
   incoming: RithmicProtocolFill,
 ): boolean {
-  if (stored.source === 'manual' || incoming.source === 'manual') return false
+  if (
+    stored.source === 'manual' ||
+    stored.source === 'manual-retired' ||
+    incoming.source === 'manual' ||
+    incoming.source === 'manual-retired'
+  ) {
+    return false
+  }
   if (stored.source === 'history' && incoming.source === 'replay') return false
   if (stored.source === 'replay' && incoming.source === 'history') return true
   const storedClock = stored.ssboe ?? 0
@@ -227,9 +238,12 @@ function manualNearMissReason(
 ): string | null {
   if (!sameManualBook(manual, upstream)) return null
   if (manualFillMatchesUpstream(manual, upstream)) return null
-  // No ssboe and no fill_time collapses to midnight, outside the 2 minute
-  // window, and would otherwise be counted again with no warning.
-  if (plantFillLacksClock(upstream)) return 'no-clock'
+  if (isNextTradeDateClock(manual, upstream)) return 'day-offset'
+  // A clockless plant row on this trade date or the next one would otherwise
+  // be counted again. Rows further away do not block the book.
+  if (plantFillLacksClock(upstream) && tradeDatesWithin(manual, upstream, 1)) {
+    return 'no-clock'
+  }
   const delta = fillClockDeltaMs(manual, upstream)
   if (delta == null || delta > MANUAL_FILL_NEAR_MISS_MS) return null
   const reasons: string[] = []
@@ -249,6 +263,58 @@ export type ManualFillNearMiss = {
   reason: string
 }
 
+export type ManualFillRetirement = {
+  manual: RithmicProtocolFill
+  upstream: RithmicProtocolFill
+}
+
+function yyyymmddUtc(day: string): number | null {
+  if (!/^\d{8}$/.test(day)) return null
+  return Date.UTC(
+    Number(day.slice(0, 4)),
+    Number(day.slice(4, 6)) - 1,
+    Number(day.slice(6, 8)),
+  )
+}
+
+function tradeDatesWithin(
+  manual: RithmicProtocolFill,
+  upstream: RithmicProtocolFill,
+  days: number,
+): boolean {
+  const left = yyyymmddUtc(fillDayKey(manual))
+  const right = yyyymmddUtc(fillDayKey(upstream))
+  if (left == null || right == null) return false
+  return Math.round(Math.abs(left - right) / 86_400_000) <= days
+}
+
+function clockOfDayDeltaMs(
+  manual: RithmicProtocolFill,
+  upstream: RithmicProtocolFill,
+): number | null {
+  const left = fillTimestampMs(manual)
+  const right = fillTimestampMs(upstream)
+  if (!(left > 0) || !(right > 0)) return null
+  const day = 86_400_000
+  const raw = Math.abs((left % day) - (right % day))
+  return Math.min(raw, day - raw)
+}
+
+/** No ssboe, fill date is the next trade date, and the clock-of-day is close. */
+function isNextTradeDateClock(
+  manual: RithmicProtocolFill,
+  upstream: RithmicProtocolFill,
+): boolean {
+  if (typeof upstream.ssboe === 'number' && upstream.ssboe > 0) return false
+  if (!String(upstream.fillTime ?? '').trim()) return false
+  const manualDay = yyyymmddUtc(fillDayKey(manual))
+  const upstreamDay = yyyymmddUtc(fillDayKey(upstream))
+  if (manualDay == null || upstreamDay == null) return false
+  if (upstreamDay - manualDay !== 86_400_000) return false
+  const clock = clockOfDayDeltaMs(manual, upstream)
+  return clock != null && clock <= MANUAL_FILL_NEAR_MISS_MS
+}
+
 /**
  * Retire each manual against the already-consolidated upstream book.
  * One upstream fill retires at most one manual. Near misses are returned
@@ -257,11 +323,18 @@ export type ManualFillNearMiss = {
 export function reconcileManualFills(
   manuals: RithmicProtocolFill[],
   consolidatedUpstream: RithmicProtocolFill[],
-): { fills: RithmicProtocolFill[]; nearMisses: ManualFillNearMiss[] } {
-  if (manuals.length === 0) return { fills: consolidatedUpstream, nearMisses: [] }
+): {
+  fills: RithmicProtocolFill[]
+  nearMisses: ManualFillNearMiss[]
+  retirements: ManualFillRetirement[]
+} {
+  if (manuals.length === 0) {
+    return { fills: consolidatedUpstream, nearMisses: [], retirements: [] }
+  }
   const used = new Set<RithmicProtocolFill>()
   const kept: RithmicProtocolFill[] = []
   const nearMisses: ManualFillNearMiss[] = []
+  const retirements: ManualFillRetirement[] = []
   const ordered = [...manuals].sort(
     (left, right) => fillTimestampMs(left) - fillTimestampMs(right),
   )
@@ -279,6 +352,7 @@ export function reconcileManualFills(
     }
     if (best) {
       used.add(best)
+      retirements.push({ manual, upstream: best })
       console.info(
         `[RITHMIC-MANUAL-FILL] preferring upstream fillId=${best.fillId ?? ''} over manual fillId=${manual.fillId ?? ''} account=${manual.accountId} symbol=${(manual.symbol || '').trim().toUpperCase()} dtMs=${bestDt}`,
       )
@@ -313,7 +387,32 @@ export function reconcileManualFills(
       )
     }
   }
-  return { fills: [...consolidatedUpstream, ...kept], nearMisses }
+  return { fills: [...consolidatedUpstream, ...kept], nearMisses, retirements }
+}
+
+export function planManualFillSyncEffects(prepared: {
+  fills: RithmicProtocolFill[]
+  nearMisses: ManualFillNearMiss[]
+  retirements: ManualFillRetirement[]
+}): {
+  fifoFills: RithmicProtocolFill[]
+  droppedByReason: Record<string, number>
+  retainAccountNumbers: string[]
+} {
+  const fifoFills = omitAmbiguousManualBooks(prepared.fills, prepared.nearMisses)
+  const ambiguousSkipped = prepared.fills.length - fifoFills.length
+  const droppedByReason: Record<string, number> = {}
+  if (ambiguousSkipped > 0) droppedByReason.manual_fill_ambiguous = ambiguousSkipped
+  if (prepared.retirements.length > 0) {
+    droppedByReason.manual_fill_superseded = prepared.retirements.length
+  }
+  return {
+    fifoFills,
+    droppedByReason,
+    retainAccountNumbers: [
+      ...new Set(prepared.nearMisses.map((miss) => miss.manual.accountId)),
+    ],
+  }
 }
 
 export function manualFillBookKey(fill: { accountId: string; symbol: string }): string {
@@ -704,6 +803,7 @@ export function deriveTradesFromFillLedger(
 ): {
   fills: RithmicProtocolFill[]
   nearMisses: ManualFillNearMiss[]
+  retirements: ManualFillRetirement[]
   stats: DedupeFillsStats
 } {
   return prepareRithmicProtocolFills(mergeFillLedgers(stored, incoming))

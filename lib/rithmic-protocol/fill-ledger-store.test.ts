@@ -49,6 +49,7 @@ function fill(
 describe('normalizePersistedFillSource', () => {
   it('keeps manual and replay and treats anything else as history', () => {
     expect(normalizePersistedFillSource('manual')).toBe('manual')
+    expect(normalizePersistedFillSource('manual-retired')).toBe('manual-retired')
     expect(normalizePersistedFillSource('replay')).toBe('replay')
     expect(normalizePersistedFillSource('history')).toBe('history')
     expect(normalizePersistedFillSource('nope')).toBe('history')
