@@ -219,7 +219,7 @@ function errorMapping(error: string | undefined): {
       return {
         code: 'conflict',
         message: 'Stored trades still reference a retired manual fill.',
-        hint: 'Inspect result.proposed.retiredManualTrades. Move the annotation and delete the row, or accept the trade and leave it. Annotated rows are never deleted. This is not a generic uncovered-leg refusal.',
+        hint: 'Inspect result.proposed.retiredManualTrades. The rebuild keeps refusing until that row is deleted or its annotation is moved. Annotated rows are never deleted.',
       }
     case 'UNCOVERED_TRADES':
       return {
