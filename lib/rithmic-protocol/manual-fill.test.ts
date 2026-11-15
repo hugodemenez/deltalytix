@@ -948,6 +948,146 @@ describe('confirmDistinctManualRithmicProtocolFill', () => {
     expect(markDistinct).not.toHaveBeenCalled()
   })
 
+  it('gates the old pair when an overwrite lets the freed plant fill match exactly', async () => {
+    const ssboe = manualRow.ssboe
+    findManualFill.mockResolvedValue({
+      ...manualRow,
+      confirmedDistinctFillId: '88421',
+      confirmedDistinctAt: new Date('2026-09-01T00:00:00Z'),
+    })
+    loadAccountFills.mockResolvedValue([
+      { ...manualRow, confirmedDistinctFillId: '88421' },
+      { ...manualRow, fillId: '88421', source: 'history', ssboe: ssboe + 10 },
+      {
+        ...manualRow,
+        fillId: '1002',
+        source: 'history',
+        transactionType: 'SELL',
+        ssboe: ssboe + 60,
+      },
+      {
+        ...manualRow,
+        fillId: '1003',
+        source: 'history',
+        transactionType: 'SELL',
+        ssboe: ssboe + 70,
+      },
+      {
+        ...manualRow,
+        fillId: '7700',
+        source: 'history',
+        fillPrice: 1,
+        fillDate: '20260901',
+        ssboe: ssboe + 86_400,
+      },
+    ])
+    const findDerivedTrades = vi.fn(async () => [
+      {
+        id: 'stored-new',
+        entryId: '88421',
+        closeId: '1002',
+        instrument: 'MES',
+        annotated: false,
+      },
+      {
+        id: 'stored-freed',
+        entryId: '88421',
+        closeId: '1003',
+        instrument: 'MES',
+        annotated: true,
+      },
+    ])
+    const refused = await confirmDistinctManualRithmicProtocolFill(
+      {
+        userId: 'user-1',
+        accountNumber: base.accountNumber,
+        fillId: 'manual-gap',
+        upstreamFillId: '7700',
+        reason: 'let the earlier plant fill take the close',
+        dryRun: false,
+        acknowledgeUnrelated: true,
+      },
+      { findManualFill, loadAccountFills, markDistinct, findDerivedTrades },
+    )
+    expect(refused.ok).toBe(false)
+    if (refused.ok) return
+    expect(refused.errors[0]?.field).toBe('acknowledgeAnnotatedTrades')
+    expect(refused.trades?.map((trade) => trade.id)).toEqual(['stored-freed'])
+    expect(refused.tradeEffects?.nextBookBlocked).toBe(false)
+    expect(markDistinct).not.toHaveBeenCalled()
+  })
+
+  it('refuses a near-miss on a later contract when an earlier month is clean', async () => {
+    const ssboe = manualRow.ssboe
+    findManualFill.mockResolvedValue({ ...manualRow, symbol: 'MESH7' })
+    loadAccountFills.mockResolvedValue([
+      {
+        ...manualRow,
+        fillId: 'manual-old',
+        ssboe: ssboe - 86_400,
+      },
+      {
+        ...manualRow,
+        fillId: '2002',
+        source: 'history',
+        transactionType: 'SELL',
+        ssboe: ssboe - 86_400 + 60,
+      },
+      { ...manualRow, fillId: 'manual-gap', symbol: 'MESH7' },
+      {
+        ...manualRow,
+        fillId: '88421',
+        symbol: 'MESH7',
+        source: 'history',
+        ssboe: ssboe - 45,
+      },
+      {
+        ...manualRow,
+        fillId: '1002',
+        symbol: 'MESH7',
+        source: 'history',
+        transactionType: 'SELL',
+        fillPrice: 5810.5,
+        ssboe: ssboe + 75,
+      },
+      {
+        ...manualRow,
+        fillId: '1003',
+        symbol: 'MESH7',
+        source: 'history',
+        transactionType: 'SELL',
+        fillPrice: 5811,
+        ssboe: ssboe + 180,
+      },
+    ])
+    const findDerivedTrades = vi.fn(async () => [
+      {
+        id: 'stored-manual-trade',
+        entryId: 'manual-gap',
+        closeId: '1002',
+        instrument: 'MES',
+        annotated: true,
+      },
+    ])
+    const refused = await confirmDistinctManualRithmicProtocolFill(
+      {
+        userId: 'user-1',
+        accountNumber: base.accountNumber,
+        fillId: 'manual-gap',
+        upstreamFillId: '88421',
+        reason: 'later month near-miss',
+        dryRun: false,
+      },
+      { findManualFill, loadAccountFills, markDistinct, findDerivedTrades },
+    )
+    expect(refused.ok).toBe(false)
+    if (refused.ok) return
+    expect(refused.relation?.kind).toBe('near-miss')
+    expect(refused.errors[0]?.field).toBe('acknowledgeAnnotatedTrades')
+    expect(refused.trades?.map((trade) => trade.id)).toEqual(['stored-manual-trade'])
+    expect(markDistinct).not.toHaveBeenCalled()
+  })
+
   it('gates an annotated trade shifted by a cascading re-pair', async () => {
     const ssboe = manualRow.ssboe
     const one = { ...manualRow, fillSize: 1 }
@@ -1482,6 +1622,16 @@ describe('confirm-distinct where clause', () => {
     expect(findManyFills).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { userId: 'user-b', accountNumber: 'ACCT-B' },
+      }),
+    )
+    expect(prisma.trade.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          userId: 'user-b',
+          accountNumber: 'ACCT-B',
+          instrument: 'MES',
+          tags: { has: RITHMIC_PROTOCOL_TRADE_TAG },
+        },
       }),
     )
     expect(updateMany).toHaveBeenCalledWith({

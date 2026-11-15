@@ -5,7 +5,6 @@ import { RITHMIC_PROTOCOL_TRADE_TAG } from '@/lib/trade-id-utils'
 import { canonicalRithmicFillId, fillIdentityKey } from './dedupe-fills'
 import {
   hasTradeJournalAnnotations,
-  manualFillBookKey,
   manualFillBookRelation,
   planManualFillSyncEffects,
   prepareRithmicProtocolFills,
@@ -971,12 +970,12 @@ function withProposedDistinctMarker(
   )
 }
 
-function symbolBookBlocked(fills: RithmicProtocolFill[]): boolean {
-  const manual = fills.find((fill) => fill.source === 'manual')
-  if (!manual) return false
-  const key = manualFillBookKey({ accountId: manual.accountId, symbol: manual.symbol })
+/** Sync blocks one raw contract, not the whole root. Key on the target symbol. */
+function rawSymbolBlocked(fills: RithmicProtocolFill[], rawSymbol: string): boolean {
+  const symbol = rawSymbol.trim().toUpperCase()
+  if (!symbol) return false
   return prepareRithmicProtocolFills(fills).nearMisses.some(
-    (miss) => manualFillBookKey(miss.manual) === key,
+    (miss) => (miss.manual.symbol || '').trim().toUpperCase() === symbol,
   )
 }
 
@@ -992,9 +991,10 @@ function displacedStoredTrades(
   proposed: RithmicProtocolFill[],
   userId: string,
   instrument: string,
+  rawSymbol: string,
 ): { trades: ManualFillDerivedTrade[]; nextBookBlocked: boolean } {
-  const nowBlocked = symbolBookBlocked(current)
-  const nextBookBlocked = symbolBookBlocked(proposed)
+  const nowBlocked = rawSymbolBlocked(current, rawSymbol)
+  const nextBookBlocked = rawSymbolBlocked(proposed, rawSymbol)
   const now = syncProtocolPairKeys(current, userId)
   const next = syncProtocolPairKeys(proposed, userId)
   const trades = stored
@@ -1149,6 +1149,7 @@ export async function confirmDistinctManualRithmicProtocolFill(
     proposedBook,
     userId,
     instrument,
+    row.symbol,
   )
   const trades = displaced.trades
   const tradeEffects = tradeEffectCounts(trades, displaced.nextBookBlocked)

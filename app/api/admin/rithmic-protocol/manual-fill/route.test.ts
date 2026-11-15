@@ -328,6 +328,46 @@ describe('POST /api/admin/rithmic-protocol/manual-fill', () => {
     )
   })
 
+  it('says when another near-miss still blocks the symbol', async () => {
+    authorizeAdminRequest.mockResolvedValue({ ok: true, via: 'cron' })
+    confirmDistinctManualRithmicProtocolFill.mockResolvedValue({
+      ok: false,
+      status: 'acknowledgement_required',
+      relation: { kind: 'near-miss', reason: 'clock', orderFillId: '7700' },
+      previousConfirmedDistinctFillId: '88421',
+      trades: [
+        {
+          id: 'stored-freed',
+          entryId: '88421',
+          closeId: '1003',
+          instrument: 'MES',
+          annotated: true,
+        },
+      ],
+      errors: [{ field: 'acknowledgeAnnotatedTrades', message: 'annotated' }],
+      tradeEffects: { displaced: 1, annotated: 1, nextBookBlocked: true },
+    })
+    const response = await post({
+      action: 'confirm-distinct',
+      userId: body.userId,
+      accountNumber: body.accountNumber,
+      fillId: 'manual-gap',
+      upstreamFillId: '7700',
+      reason: 'another near-miss remains',
+      dryRun: false,
+    })
+    expect(response.status).toBe(409)
+    const payload = await response.json()
+    expect(payload.error.details).toEqual(
+      expect.arrayContaining([
+        {
+          field: 'nextBookBlocked',
+          message: expect.stringMatching(/still blocks this symbol/),
+        },
+      ]),
+    )
+  })
+
   it('refuses an unacknowledged unrelated confirm-distinct with 409', async () => {
     authorizeAdminRequest.mockResolvedValue({ ok: true, via: 'cron' })
     confirmDistinctManualRithmicProtocolFill.mockResolvedValue({
