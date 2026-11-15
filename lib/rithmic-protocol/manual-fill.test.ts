@@ -31,6 +31,7 @@ import {
   insertManualRithmicProtocolFill,
   manualFillId,
   parseManualFillCliArgs,
+  confirmDistinctManualRithmicProtocolFill,
   retireManualRithmicProtocolFill,
   validateManualFillInput,
   type ValidatedManualFill,
@@ -236,6 +237,186 @@ describe('retireManualRithmicProtocolFill', () => {
     if (!applied.ok) return
     expect(applied.trades).toEqual(trades)
     expect(markRetired).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('confirmDistinctManualRithmicProtocolFill', () => {
+  const findManualFill = vi.fn()
+  const markDistinct = vi.fn()
+
+  beforeEach(() => {
+    findManualFill.mockReset().mockResolvedValue({
+      fillId: 'manual-gap',
+      source: 'manual',
+      confirmedDistinctFillId: null,
+      confirmedDistinctAt: null,
+      confirmedDistinctBy: null,
+      confirmDistinctReason: null,
+    })
+    markDistinct.mockReset().mockResolvedValue(undefined)
+  })
+
+  it('previews without writing and records the plant fill on apply', async () => {
+    const preview = await confirmDistinctManualRithmicProtocolFill(
+      {
+        userId: 'user-1',
+        accountNumber: base.accountNumber,
+        fillId: 'manual-gap',
+        upstreamFillId: '88422',
+        reason: 'next session, not this patch',
+      },
+      { findManualFill, markDistinct },
+    )
+    expect(preview.ok).toBe(true)
+    if (!preview.ok) return
+    expect(preview.dryRun).toBe(true)
+    expect(preview.upstreamFillId).toBe('88422')
+    expect(markDistinct).not.toHaveBeenCalled()
+
+    const applied = await confirmDistinctManualRithmicProtocolFill(
+      {
+        userId: 'user-1',
+        accountNumber: base.accountNumber,
+        fillId: 'manual-gap',
+        upstreamFillId: '88422',
+        reason: 'next session, not this patch',
+        confirmedDistinctBy: 'admin-1',
+        dryRun: false,
+      },
+      { findManualFill, markDistinct },
+    )
+    expect(applied.ok).toBe(true)
+    expect(markDistinct).toHaveBeenCalledTimes(1)
+    expect(markDistinct.mock.calls[0][0]).toMatchObject({
+      userId: 'user-1',
+      accountNumber: base.accountNumber,
+      fillId: 'manual-gap',
+      upstreamFillId: '88422',
+      confirmedDistinctBy: 'admin-1',
+      confirmDistinctReason: 'next session, not this patch',
+    })
+  })
+
+  it('parses --confirm-distinct as a preview unless --apply is set', () => {
+    const preview = parseManualFillCliArgs([
+      '--confirm-distinct',
+      '--user-id',
+      base.userId,
+      '--account',
+      base.accountNumber,
+      '--fill-id',
+      'manual-gap',
+      '--upstream-fill-id',
+      '88422',
+      '--reason',
+      'next session',
+    ])
+    expect(preview.ok).toBe(true)
+    if (!preview.ok) return
+    expect(preview.command).toBe('confirm-distinct')
+    expect(preview.input.dryRun).toBe(true)
+    const apply = parseManualFillCliArgs([
+      '--confirm-distinct',
+      '--apply',
+      '--user-id',
+      base.userId,
+      '--account',
+      base.accountNumber,
+      '--fill-id',
+      'manual-gap',
+      '--upstream-fill-id',
+      '88422',
+      '--reason',
+      'next session',
+    ])
+    expect(apply.ok).toBe(true)
+    if (!apply.ok) return
+    expect(apply.input.dryRun).toBe(false)
+    expect(apply.input.upstreamFillId).toBe('88422')
+  })
+})
+
+describe('confirm-distinct where clause', () => {
+  const findFirst = prisma.rithmicProtocolFill.findFirst as ReturnType<typeof vi.fn>
+  const updateMany = prisma.rithmicProtocolFill.updateMany as ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    findFirst.mockReset()
+    updateMany.mockReset().mockResolvedValue({ count: 1 })
+  })
+
+  it('scopes the lookup and the write to this user and account, and will not mark another source', async () => {
+    findFirst.mockResolvedValue(null)
+    const otherUser = await confirmDistinctManualRithmicProtocolFill({
+      userId: 'user-a',
+      accountNumber: 'ACCT-A',
+      fillId: 'manual-belongs-to-user-b',
+      upstreamFillId: '88422',
+      reason: 'not this user',
+      dryRun: false,
+    })
+    expect(otherUser.ok).toBe(false)
+    expect(findFirst).toHaveBeenCalledWith({
+      where: {
+        userId: 'user-a',
+        accountNumber: 'ACCT-A',
+        fillId: 'manual-belongs-to-user-b',
+      },
+      select: {
+        fillId: true,
+        source: true,
+        confirmedDistinctFillId: true,
+        confirmedDistinctAt: true,
+        confirmedDistinctBy: true,
+        confirmDistinctReason: true,
+      },
+    })
+    expect(updateMany).not.toHaveBeenCalled()
+
+    findFirst.mockResolvedValue({ fillId: 'manual-plant', source: 'history' })
+    const plant = await confirmDistinctManualRithmicProtocolFill({
+      userId: 'user-a',
+      accountNumber: 'ACCT-A',
+      fillId: 'manual-plant',
+      upstreamFillId: '88422',
+      reason: 'plant row',
+      dryRun: false,
+    })
+    expect(plant.ok).toBe(false)
+    if (plant.ok) return
+    expect(plant.status).toBe('validation')
+    expect(updateMany).not.toHaveBeenCalled()
+
+    findFirst.mockResolvedValue({
+      fillId: 'manual-gap',
+      source: 'manual',
+      confirmedDistinctFillId: null,
+      confirmedDistinctAt: null,
+      confirmedDistinctBy: null,
+      confirmDistinctReason: null,
+    })
+    const applied = await confirmDistinctManualRithmicProtocolFill({
+      userId: 'user-b',
+      accountNumber: 'ACCT-B',
+      fillId: 'manual-gap',
+      upstreamFillId: '88422',
+      reason: 'this account only',
+      dryRun: false,
+    })
+    expect(applied.ok).toBe(true)
+    expect(updateMany).toHaveBeenCalledWith({
+      where: {
+        userId: 'user-b',
+        accountNumber: 'ACCT-B',
+        fillId: 'manual-gap',
+        source: 'manual',
+      },
+      data: expect.objectContaining({
+        confirmedDistinctFillId: '88422',
+        confirmedDistinctBy: 'admin',
+        confirmDistinctReason: 'this account only',
+      }),
+    })
   })
 })
 

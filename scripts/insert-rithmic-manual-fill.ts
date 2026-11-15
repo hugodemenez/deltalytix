@@ -35,12 +35,23 @@
  *     --reason "plant fill arrived; this patch was the wrong clock" \
  *     --apply
  *
- * If the preview lists an annotated trade, `--apply` is refused until
- * `--acknowledge-annotated-trades` is also passed. The trade itself is
- * never deleted.
+ * If the preview lists an annotated trade, move the annotation if you
+ * want to keep it, delete the stored row, then run a sync or rebuild.
+ * The trade itself is never deleted by this script.
+ *
+ * Confirm a plant fill is a different execution (preview, then write):
+ *   bun scripts/insert-rithmic-manual-fill.ts \
+ *     --confirm-distinct \
+ *     --user-id USER_ID \
+ *     --account ACCOUNT_NUMBER \
+ *     --fill-id manual-FILL_ID \
+ *     --upstream-fill-id PLANT_FILL_ID \
+ *     --reason "next-session fill, not this patch" \
+ *     --apply
  */
 import { prisma } from '../lib/prisma'
 import {
+  confirmDistinctManualRithmicProtocolFill,
   insertManualRithmicProtocolFill,
   parseManualFillCliArgs,
   retireManualRithmicProtocolFill,
@@ -56,7 +67,9 @@ async function main() {
   const result =
     parsed.command === 'retire'
       ? await retireManualRithmicProtocolFill(parsed.input)
-      : await insertManualRithmicProtocolFill(parsed.input)
+      : parsed.command === 'confirm-distinct'
+        ? await confirmDistinctManualRithmicProtocolFill(parsed.input)
+        : await insertManualRithmicProtocolFill(parsed.input)
   if (result.ok && 'warnings' in result) {
     for (const warning of result.warnings) {
       process.stderr.write(`[RITHMIC-MANUAL-FILL] warning: ${warning}\n`)

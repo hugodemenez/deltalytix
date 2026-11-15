@@ -219,7 +219,7 @@ function errorMapping(error: string | undefined): {
       return {
         code: 'conflict',
         message: 'Stored trades still reference a retired manual fill.',
-        hint: 'Inspect result.proposed.retiredManualTrades. The rebuild keeps refusing until that row is deleted or its annotation is moved. Annotated rows are never deleted.',
+        hint: 'Inspect result.proposed.retiredManualTrades. Move the annotation if you want to keep it, delete the stored row, then run a sync or rebuild. The rebuild keeps refusing while that row exists.',
       }
     case 'UNCOVERED_TRADES':
       return {

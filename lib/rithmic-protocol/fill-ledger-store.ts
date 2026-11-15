@@ -30,6 +30,7 @@ type FillRow = {
   ssboe: number | null
   usecs: number | null
   source: string
+  confirmedDistinctFillId?: string | null
 }
 
 /** Persist and reload `manual` as itself. Anything else unknown stays history. */
@@ -62,6 +63,7 @@ export function rowToFill(row: FillRow): RithmicProtocolFill {
     ssboe: row.ssboe ?? undefined,
     usecs: row.usecs ?? undefined,
     source: sourceOf(row.source),
+    confirmedDistinctFillId: row.confirmedDistinctFillId || undefined,
   }
 }
 

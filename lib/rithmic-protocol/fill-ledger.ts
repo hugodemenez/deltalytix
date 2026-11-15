@@ -215,11 +215,21 @@ function plantFillLacksClock(fill: RithmicProtocolFill): boolean {
   return noSsboe && noTime
 }
 
+function confirmedDistinctFrom(
+  manual: RithmicProtocolFill,
+  upstream: RithmicProtocolFill,
+): boolean {
+  const marked = canonicalRithmicFillId(manual.confirmedDistinctFillId)
+  const upstreamId = canonicalRithmicFillId(upstream.fillId)
+  return Boolean(marked && upstreamId && marked === upstreamId)
+}
+
 export function manualFillMatchesUpstream(
   manual: RithmicProtocolFill,
   upstream: RithmicProtocolFill,
   toleranceMs = MANUAL_FILL_UPSTREAM_MATCH_MS,
 ): boolean {
+  if (confirmedDistinctFrom(manual, upstream)) return false
   if (!sameManualBook(manual, upstream)) return false
   const manualQty = Math.abs(Number(manual.fillSize) || 0)
   const upstreamQty = Math.abs(Number(upstream.fillSize) || 0)
@@ -236,6 +246,7 @@ function manualNearMissReason(
   manual: RithmicProtocolFill,
   upstream: RithmicProtocolFill,
 ): string | null {
+  if (confirmedDistinctFrom(manual, upstream)) return null
   if (!sameManualBook(manual, upstream)) return null
   if (manualFillMatchesUpstream(manual, upstream)) return null
   if (isNextTradeDateClock(manual, upstream)) return 'day-offset'

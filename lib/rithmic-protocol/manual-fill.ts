@@ -658,7 +658,7 @@ export async function retireManualRithmicProtocolFill(
         {
           field: 'acknowledgeAnnotatedTrades',
           message:
-            'Apply refused because a stored trade that uses this manual fill is annotated. Move the annotation and delete that row, or pass acknowledgeAnnotatedTrades: true to leave the row in place.',
+            'Apply refused because a stored trade that uses this manual fill is annotated. Move the annotation if you want to keep it, delete the stored row, then run a sync or rebuild.',
         },
       ],
       trades,
@@ -707,6 +707,189 @@ export async function retireManualRithmicProtocolFill(
   }
 }
 
+export type ManualFillDistinctResult =
+  | {
+      ok: true
+      dryRun: boolean
+      idempotent: boolean
+      fillId: string
+      upstreamFillId: string
+      confirmedDistinctAt: string
+      confirmedDistinctBy: string
+      confirmDistinctReason: string
+    }
+  | {
+      ok: false
+      status: 'validation' | 'not_found'
+      errors: ManualFillFieldError[]
+    }
+
+type DistinctRow = {
+  fillId: string
+  source: string
+  confirmedDistinctFillId: string | null
+  confirmedDistinctAt: Date | null
+  confirmedDistinctBy: string | null
+  confirmDistinctReason: string | null
+}
+
+async function defaultFindDistinctFill(params: {
+  userId: string
+  accountNumber: string
+  fillId: string
+}): Promise<DistinctRow | null> {
+  return prisma.rithmicProtocolFill.findFirst({
+    where: {
+      userId: params.userId,
+      accountNumber: params.accountNumber,
+      fillId: params.fillId,
+    },
+    select: {
+      fillId: true,
+      source: true,
+      confirmedDistinctFillId: true,
+      confirmedDistinctAt: true,
+      confirmedDistinctBy: true,
+      confirmDistinctReason: true,
+    },
+  })
+}
+
+async function defaultMarkDistinct(params: {
+  userId: string
+  accountNumber: string
+  fillId: string
+  upstreamFillId: string
+  confirmedDistinctAt: Date
+  confirmedDistinctBy: string
+  confirmDistinctReason: string
+}): Promise<void> {
+  await prisma.rithmicProtocolFill.updateMany({
+    where: {
+      userId: params.userId,
+      accountNumber: params.accountNumber,
+      fillId: params.fillId,
+      source: 'manual',
+    },
+    data: {
+      confirmedDistinctFillId: params.upstreamFillId,
+      confirmedDistinctAt: params.confirmedDistinctAt,
+      confirmedDistinctBy: params.confirmedDistinctBy,
+      confirmDistinctReason: params.confirmDistinctReason,
+    },
+  })
+}
+
+/**
+ * Mark one manual fill as a different execution from one plant fill.
+ * Preview is the default. Reconcile then neither matches nor near-misses
+ * that plant fill id, so both fills stay in the book.
+ */
+export async function confirmDistinctManualRithmicProtocolFill(
+  input: unknown,
+  deps?: {
+    findManualFill?: typeof defaultFindDistinctFill
+    markDistinct?: typeof defaultMarkDistinct
+  },
+): Promise<ManualFillDistinctResult> {
+  const payload = readObject(input)
+  if (!payload) {
+    return {
+      ok: false,
+      status: 'validation',
+      errors: [{ field: 'body', message: 'Confirm-distinct input must be an object.' }],
+    }
+  }
+  const errors: ManualFillFieldError[] = []
+  const userId = readTrimmed(payload.userId)
+  const accountNumber = readTrimmed(payload.accountNumber)
+  const fillId = readTrimmed(payload.fillId)
+  const upstreamFillId = readTrimmed(payload.upstreamFillId)
+  const reason = readTrimmed(payload.reason)
+  const confirmedDistinctBy = readTrimmed(payload.confirmedDistinctBy) || 'admin'
+  if (!userId) errors.push({ field: 'userId', message: 'userId is required.' })
+  if (!accountNumber) {
+    errors.push({ field: 'accountNumber', message: 'accountNumber is required.' })
+  }
+  if (!fillId.startsWith('manual-')) {
+    errors.push({
+      field: 'fillId',
+      message: 'fillId must be the manual- id of the row to mark.',
+    })
+  }
+  if (!upstreamFillId || upstreamFillId.startsWith('manual-')) {
+    errors.push({
+      field: 'upstreamFillId',
+      message: 'upstreamFillId must be the plant fill id this manual is distinct from.',
+    })
+  }
+  if (!reason || reason.length > 500) {
+    errors.push({
+      field: 'reason',
+      message: 'reason is required, up to 500 characters.',
+    })
+  }
+  if ('dryRun' in payload && typeof payload.dryRun !== 'boolean') {
+    errors.push({ field: 'dryRun', message: 'dryRun must be a boolean when provided.' })
+  }
+  if (errors.length > 0) return { ok: false, status: 'validation', errors }
+  const dryRun = payload.dryRun === false ? false : true
+  const findManualFill = deps?.findManualFill ?? defaultFindDistinctFill
+  const markDistinct = deps?.markDistinct ?? defaultMarkDistinct
+  const row = await findManualFill({ userId, accountNumber, fillId })
+  if (!row) {
+    return {
+      ok: false,
+      status: 'not_found',
+      errors: [{ field: 'fillId', message: 'No manual fill with that id belongs to this account.' }],
+    }
+  }
+  if (row.source !== 'manual') {
+    return {
+      ok: false,
+      status: 'validation',
+      errors: [{ field: 'fillId', message: 'Only a manual fill can be marked distinct.' }],
+    }
+  }
+  if (row.confirmedDistinctFillId === upstreamFillId && row.confirmedDistinctAt) {
+    return {
+      ok: true,
+      dryRun,
+      idempotent: true,
+      fillId,
+      upstreamFillId,
+      confirmedDistinctAt: row.confirmedDistinctAt.toISOString(),
+      confirmedDistinctBy: row.confirmedDistinctBy || confirmedDistinctBy,
+      confirmDistinctReason: row.confirmDistinctReason || reason,
+    }
+  }
+  const confirmedDistinctAt = new Date()
+  if (!dryRun) {
+    await markDistinct({
+      userId,
+      accountNumber,
+      fillId,
+      upstreamFillId,
+      confirmedDistinctAt,
+      confirmedDistinctBy,
+      confirmDistinctReason: reason,
+    })
+    console.info(
+      `[RITHMIC-MANUAL-FILL] confirm-distinct userId=${userId} account=${accountNumber} fillId=${fillId} upstreamFillId=${upstreamFillId} by=${confirmedDistinctBy} reason=${JSON.stringify(reason)}`,
+    )
+  }
+  return {
+    ok: true,
+    dryRun,
+    idempotent: false,
+    fillId,
+    upstreamFillId,
+    confirmedDistinctAt: confirmedDistinctAt.toISOString(),
+    confirmedDistinctBy,
+    confirmDistinctReason: reason,
+  }
+}
+
 function plainDecimal(value: string | undefined, pattern: RegExp): number | null {
   if (!value || !pattern.test(value)) return null
   const parsed = Number(value)
@@ -718,7 +901,7 @@ function plainDecimal(value: string | undefined, pattern: RegExp): number | null
  * Omitting both flags, or passing `--dry-run`, previews. `--apply` writes.
  */
 export function parseManualFillCliArgs(argv: string[]): 
-  | { ok: true; command: 'insert' | 'retire'; input: Record<string, unknown> }
+  | { ok: true; command: 'insert' | 'retire' | 'confirm-distinct'; input: Record<string, unknown> }
   | { ok: false; errors: ManualFillFieldError[] } {
   let values: {
     'user-id'?: string
@@ -735,7 +918,9 @@ export function parseManualFillCliArgs(argv: string[]):
     'acknowledge-warnings'?: boolean
     'acknowledge-annotated-trades'?: boolean
     retire?: boolean
+    'confirm-distinct'?: boolean
     'fill-id'?: string
+    'upstream-fill-id'?: string
     reason?: string
   }
   try {
@@ -756,7 +941,9 @@ export function parseManualFillCliArgs(argv: string[]):
         'acknowledge-warnings': { type: 'boolean' },
         'acknowledge-annotated-trades': { type: 'boolean' },
         retire: { type: 'boolean' },
+        'confirm-distinct': { type: 'boolean' },
         'fill-id': { type: 'string' },
+        'upstream-fill-id': { type: 'string' },
         reason: { type: 'string' },
       },
       strict: true,
@@ -775,6 +962,31 @@ export function parseManualFillCliArgs(argv: string[]):
           message: 'Pass either --dry-run or --apply, not both.',
         },
       ],
+    }
+  }
+  if (values.retire && values['confirm-distinct']) {
+    return {
+      ok: false,
+      errors: [
+        {
+          field: 'command',
+          message: 'Pass either --retire or --confirm-distinct, not both.',
+        },
+      ],
+    }
+  }
+  if (values['confirm-distinct']) {
+    return {
+      ok: true,
+      command: 'confirm-distinct',
+      input: {
+        userId: values['user-id'],
+        accountNumber: values.account,
+        fillId: values['fill-id'],
+        upstreamFillId: values['upstream-fill-id'],
+        reason: values.reason,
+        dryRun: values.apply ? false : true,
+      },
     }
   }
   if (values.retire) {

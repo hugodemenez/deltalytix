@@ -682,6 +682,11 @@ model RithmicProtocolFill {
   retiredAt       DateTime?
   retiredBy       String?
   retireReason    String?
+  /// Plant fill this manual was confirmed distinct from. Reconcile will not match or near-miss that fill id.
+  confirmedDistinctFillId String?
+  confirmedDistinctAt     DateTime?
+  confirmedDistinctBy     String?
+  confirmDistinctReason   String?
   connectionId    String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

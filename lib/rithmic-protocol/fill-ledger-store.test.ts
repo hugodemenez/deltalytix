@@ -256,5 +256,9 @@ describe('deleteUnannotatedPhantomProtocolTrades', () => {
     const qtyNoted = await reap(noted, qtyTwin)
     expect(qtyNoted.result).toEqual({ removed: 0, retiredManualTradesKept: 1 })
     expect(qtyNoted.tradeDeleteMany).not.toHaveBeenCalled()
+
+    const exact = await reap(stored, plant)
+    expect(exact.result).toEqual({ removed: 0, retiredManualTradesKept: 0 })
+    expect(exact.tradeDeleteMany).not.toHaveBeenCalled()
   })
 })

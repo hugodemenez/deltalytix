@@ -1037,6 +1037,61 @@ describe('manual fills', () => {
     expect(omitAmbiguousManualBooks(prepared.fills, prepared.nearMisses)).toEqual([])
   })
 
+  it('keeps a plant fill that was confirmed distinct from the manual', () => {
+    const marked = { ...manual, confirmedDistinctFillId: '88422' }
+    const qty = prepareRithmicProtocolFills([marked, nearbyOneLot])
+    expect(qty.nearMisses).toEqual([])
+    expect(qty.retirements).toEqual([])
+    expect(qty.fills.map((row) => row.fillId).sort()).toEqual(['88422', 'manual-gap'])
+
+    const otherPlant = prepareRithmicProtocolFills([
+      { ...manual, confirmedDistinctFillId: '9999' },
+      nearbyOneLot,
+    ])
+    expect(otherPlant.nearMisses.map((miss) => miss.reason)).toEqual(['qty'])
+
+    const nextDay = markFillSource(
+      [
+        fill({
+          fillId: '88430',
+          fillSize: 2,
+          fillPrice: 5810.25,
+          fillDate: '20260926',
+          fillTime: '15:07:00',
+          ssboe: 0,
+        }),
+      ],
+      'history',
+    )[0]
+    const day = prepareRithmicProtocolFills([
+      { ...manual, confirmedDistinctFillId: '88430' },
+      nextDay,
+    ])
+    expect(day.nearMisses).toEqual([])
+    expect(day.retirements).toEqual([])
+    expect(day.fills.map((row) => row.fillId).sort()).toEqual(['88430', 'manual-gap'])
+
+    const midnight = markFillSource(
+      [
+        fill({
+          fillId: '9300',
+          fillSize: 2,
+          fillPrice: 5810.25,
+          fillDate: '20260925',
+          ssboe: 0,
+        }),
+      ],
+      'history',
+    )[0]
+    const clockless = prepareRithmicProtocolFills([
+      { ...manual, confirmedDistinctFillId: '9300' },
+      { ...midnight, fillTime: undefined },
+    ])
+    expect(clockless.nearMisses).toEqual([])
+    expect(clockless.retirements).toEqual([])
+    expect(clockless.fills.map((row) => row.fillId).sort()).toEqual(['9300', 'manual-gap'])
+  })
+
   it('ignores a retired manual fill in reconcile and FIFO', () => {
     const retired = { ...manual, source: 'manual-retired' as const }
     const prepared = prepareRithmicProtocolFills([retired, upstream])

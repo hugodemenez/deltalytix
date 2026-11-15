@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { jsonError } from '@/lib/api/json-error'
 import { authorizeAdminRequest } from '@/lib/admin/auth'
 import {
+  confirmDistinctManualRithmicProtocolFill,
   insertManualRithmicProtocolFill,
   retireManualRithmicProtocolFill,
 } from '@/lib/rithmic-protocol/manual-fill'
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
         return jsonError({
           code: 'conflict',
           message: 'Apply refused while an annotated trade still uses this manual fill.',
-          hint: 'Move the annotation off the listed trade, then delete that row or accept it and re-send dryRun: false with acknowledgeAnnotatedTrades: true. Annotated rows are never deleted automatically.',
+          hint: 'Move the annotation if you want to keep it, delete the stored row, then run a sync or rebuild. Annotated rows are never deleted automatically.',
           details: (retired.trades ?? []).map((trade) => ({
             field: 'trades',
             message: `${trade.id} ${trade.instrument ?? ''} entry=${trade.entryId ?? ''} close=${trade.closeId ?? ''} annotated=${trade.annotated}`,
@@ -105,6 +106,33 @@ export async function POST(request: NextRequest) {
         message: 'Manual fill retire input is invalid.',
         hint: 'Send { action: "retire", userId, accountNumber, fillId, reason, dryRun?: boolean }.',
         details: retired.errors,
+      })
+    }
+    if (payload.action === 'confirm-distinct') {
+      const marked = await confirmDistinctManualRithmicProtocolFill({
+        ...payload,
+        dryRun: payload.dryRun === false ? false : true,
+        confirmedDistinctBy: actor,
+      })
+      if (marked.ok) {
+        console.info(
+          `[RITHMIC-MANUAL-FILL] route confirm-distinct actor=${actor} dryRun=${marked.dryRun} fillId=${marked.fillId} upstreamFillId=${marked.upstreamFillId}`,
+        )
+        return NextResponse.json(marked)
+      }
+      if (marked.status === 'not_found') {
+        return jsonError({
+          code: 'not_found',
+          message: 'No manual fill with that id belongs to this account.',
+          hint: 'Pass the manual- fill id, the plant fill id, userId, and accountNumber.',
+          details: marked.errors,
+        })
+      }
+      return jsonError({
+        code: 'bad_request',
+        message: 'Confirm-distinct input is invalid.',
+        hint: 'Send { action: "confirm-distinct", userId, accountNumber, fillId, upstreamFillId, reason, dryRun?: boolean }.',
+        details: marked.errors,
       })
     }
     const result = await insertManualRithmicProtocolFill({

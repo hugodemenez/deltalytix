@@ -48,6 +48,8 @@ export interface RithmicProtocolFill {
    * reconcile, coverage, and sync ignore it.
    */
   source?: 'history' | 'replay' | 'manual' | 'manual-retired'
+  /** Plant fill id an admin confirmed is a different execution. Reconcile skips that id. */
+  confirmedDistinctFillId?: string
 }
 
 export interface RithmicProtocolCredentials {

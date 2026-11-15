@@ -7,6 +7,7 @@ import { NextRequest } from 'next/server'
 const authorizeAdminRequest = vi.fn()
 const insertManualRithmicProtocolFill = vi.fn()
 const retireManualRithmicProtocolFill = vi.fn()
+const confirmDistinctManualRithmicProtocolFill = vi.fn()
 
 vi.mock('@/lib/admin/auth', () => ({
   authorizeAdminRequest: (...args: unknown[]) => authorizeAdminRequest(...args),
@@ -16,6 +17,8 @@ vi.mock('@/lib/rithmic-protocol/manual-fill', () => ({
     insertManualRithmicProtocolFill(...args),
   retireManualRithmicProtocolFill: (...args: unknown[]) =>
     retireManualRithmicProtocolFill(...args),
+  confirmDistinctManualRithmicProtocolFill: (...args: unknown[]) =>
+    confirmDistinctManualRithmicProtocolFill(...args),
 }))
 
 import { POST } from './route'
@@ -47,6 +50,7 @@ describe('POST /api/admin/rithmic-protocol/manual-fill', () => {
     authorizeAdminRequest.mockReset()
     insertManualRithmicProtocolFill.mockReset()
     retireManualRithmicProtocolFill.mockReset()
+    confirmDistinctManualRithmicProtocolFill.mockReset()
   })
 
   it('rejects unauthenticated callers', async () => {
@@ -205,9 +209,45 @@ describe('POST /api/admin/rithmic-protocol/manual-fill', () => {
     expect(response.status).toBe(409)
     const payload = await response.json()
     expect(payload.error.code).toBe('conflict')
-    expect(payload.error.hint).toMatch(/acknowledgeAnnotatedTrades: true/)
-    expect(payload.error.hint).toMatch(/delete/)
+    expect(payload.error.hint).toMatch(/delete the stored row, then run a sync or rebuild/)
     expect(payload.error.details[0].message).toMatch(/stored-manual-trade/)
     expect(insertManualRithmicProtocolFill).not.toHaveBeenCalled()
+  })
+
+  it('previews confirm-distinct and stamps the admin as confirmedDistinctBy', async () => {
+    authorizeAdminRequest.mockResolvedValue({
+      ok: true,
+      via: 'session',
+      actorUserId: 'admin-1',
+    })
+    confirmDistinctManualRithmicProtocolFill.mockResolvedValue({
+      ok: true,
+      dryRun: true,
+      idempotent: false,
+      fillId: 'manual-gap',
+      upstreamFillId: '88422',
+      confirmedDistinctAt: '2026-09-26T12:00:00.000Z',
+      confirmedDistinctBy: 'admin-1',
+      confirmDistinctReason: 'next session',
+    })
+    const response = await post({
+      action: 'confirm-distinct',
+      userId: body.userId,
+      accountNumber: body.accountNumber,
+      fillId: 'manual-gap',
+      upstreamFillId: '88422',
+      reason: 'next session',
+    })
+    expect(response.status).toBe(200)
+    expect(confirmDistinctManualRithmicProtocolFill).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dryRun: true,
+        confirmedDistinctBy: 'admin-1',
+        fillId: 'manual-gap',
+        upstreamFillId: '88422',
+      }),
+    )
+    expect(insertManualRithmicProtocolFill).not.toHaveBeenCalled()
+    expect(retireManualRithmicProtocolFill).not.toHaveBeenCalled()
   })
 })

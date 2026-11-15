@@ -1132,7 +1132,7 @@ export async function resyncRithmicProtocolAccount(params: {
         })
         if (retiredManualTrades.length > 0) {
           warnings.push(
-            `${retiredManualTrades.length} stored protocol trade(s) reference a retired manual fill. Live apply refuses with RETIRED_MANUAL_TRADES until the row is deleted or its annotation is moved. Annotated rows are never deleted.`,
+            `${retiredManualTrades.length} stored protocol trade(s) reference a retired manual fill. Live apply refuses with RETIRED_MANUAL_TRADES. Move the annotation if you want to keep it, delete the stored row, then run a sync or rebuild.`,
           )
         }
         if (notFlat.length > 0) {
