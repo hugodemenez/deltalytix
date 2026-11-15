@@ -5,6 +5,7 @@ import { RITHMIC_PROTOCOL_TRADE_TAG } from '@/lib/trade-id-utils'
 import { canonicalRithmicFillId, fillIdentityKey } from './dedupe-fills'
 import {
   hasTradeJournalAnnotations,
+  manualFillBookKey,
   manualFillBookRelation,
   planManualFillSyncEffects,
   prepareRithmicProtocolFills,
@@ -456,6 +457,8 @@ export type ManualFillDerivedTrade = {
 export type ManualFillTradeEffects = {
   displaced: number
   annotated: number
+  /** The proposed marker still leaves a near-miss on this symbol, so sync will not derive a book. */
+  nextBookBlocked: boolean
 }
 
 export type ManualFillRetireResult =
@@ -504,6 +507,7 @@ type RetireDeps = {
     accountNumber: string
     fillId?: string
     fillIds?: string[]
+    instrument?: string
   }) => Promise<ManualFillDerivedTrade[]>
 }
 
@@ -543,6 +547,7 @@ async function defaultFindDerivedTrades(params: {
   accountNumber: string
   fillId?: string
   fillIds?: string[]
+  instrument?: string
 }): Promise<ManualFillDerivedTrade[]> {
   const ids = derivedTradeFillIds(params)
   if (ids.length === 0) {
@@ -550,6 +555,7 @@ async function defaultFindDerivedTrades(params: {
       where: {
         userId: params.userId,
         accountNumber: params.accountNumber,
+        ...(params.instrument ? { instrument: params.instrument } : {}),
         tags: { has: RITHMIC_PROTOCOL_TRADE_TAG },
       },
       select: {
@@ -965,30 +971,52 @@ function withProposedDistinctMarker(
   )
 }
 
+function symbolBookBlocked(fills: RithmicProtocolFill[]): boolean {
+  const manual = fills.find((fill) => fill.source === 'manual')
+  if (!manual) return false
+  const key = manualFillBookKey({ accountId: manual.accountId, symbol: manual.symbol })
+  return prepareRithmicProtocolFills(fills).nearMisses.some(
+    (miss) => manualFillBookKey(miss.manual) === key,
+  )
+}
+
 /**
- * Stored trades whose pair sync derives now and would not derive once this
- * marker is written. An overwrite clears the previous marker on the same row.
+ * Stored trades on this instrument whose pair sync will not derive after the
+ * marker is written. A near-miss blocks the whole symbol, so the current
+ * derivation is empty and the stored rows are the baseline. When the book is
+ * not blocked, a pair is listed only if sync derives it now.
  */
 function displacedStoredTrades(
   stored: ManualFillDerivedTrade[],
   current: RithmicProtocolFill[],
   proposed: RithmicProtocolFill[],
   userId: string,
-): ManualFillDerivedTrade[] {
+  instrument: string,
+): { trades: ManualFillDerivedTrade[]; nextBookBlocked: boolean } {
+  const nowBlocked = symbolBookBlocked(current)
+  const nextBookBlocked = symbolBookBlocked(proposed)
   const now = syncProtocolPairKeys(current, userId)
   const next = syncProtocolPairKeys(proposed, userId)
-  return stored
+  const trades = stored
+    .filter((trade) => normalizeInstrument(trade.instrument ?? '') === instrument)
     .filter((trade) => {
       const key = protocolPairKey(trade.entryId, trade.closeId)
-      return key != null && now.has(key) && !next.has(key)
+      if (!key || next.has(key)) return false
+      if (!nowBlocked && !now.has(key)) return false
+      return true
     })
     .sort((left, right) => left.id.localeCompare(right.id))
+  return { trades, nextBookBlocked }
 }
 
-function tradeEffectCounts(trades: ManualFillDerivedTrade[]): ManualFillTradeEffects {
+function tradeEffectCounts(
+  trades: ManualFillDerivedTrade[],
+  nextBookBlocked: boolean,
+): ManualFillTradeEffects {
   return {
     displaced: trades.length,
     annotated: trades.filter((trade) => trade.annotated).length,
+    nextBookBlocked,
   }
 }
 
@@ -1111,11 +1139,19 @@ export async function confirmDistinctManualRithmicProtocolFill(
   const relation = manualFillBookRelation(book, fillId, upstreamFill)
   const orderFillId = relation.orderFillId
   const previousConfirmedDistinctFillId = row.confirmedDistinctFillId
+  const instrument = normalizeInstrument(row.symbol)
   const symbolBook = fillsOnInstrument(book, row.symbol)
   const proposedBook = withProposedDistinctMarker(symbolBook, fillId, orderFillId)
-  const storedTrades = await findDerivedTrades({ userId, accountNumber })
-  const trades = displacedStoredTrades(storedTrades, symbolBook, proposedBook, userId)
-  const tradeEffects = tradeEffectCounts(trades)
+  const storedTrades = await findDerivedTrades({ userId, accountNumber, instrument })
+  const displaced = displacedStoredTrades(
+    storedTrades,
+    symbolBook,
+    proposedBook,
+    userId,
+    instrument,
+  )
+  const trades = displaced.trades
+  const tradeEffects = tradeEffectCounts(trades, displaced.nextBookBlocked)
   const annotated = trades.some((trade) => trade.annotated)
   if (relation.kind === 'exact' && !dryRun && !acknowledgeExactMatch) {
     return {

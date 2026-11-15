@@ -52,8 +52,10 @@
  * `--apply` is refused when the plant fill is an exact match or unrelated.
  * Re-send with `--acknowledge-exact-match` or `--acknowledge-unrelated`.
  * A split piece is stored as the consolidated order id.
- * Preview lists stored trades whose fill pair would disappear. If one is
- * annotated, `--apply` also needs `--acknowledge-annotated-trades`.
+ * Preview lists stored trades on that symbol whose fill pair would disappear.
+ * A near-miss uses those stored rows, because sync is not deriving the book.
+ * If one is annotated, `--apply` also needs `--acknowledge-annotated-trades`.
+ * A book that stays blocked says so in the result.
  */
 import { prisma } from '../lib/prisma'
 import {

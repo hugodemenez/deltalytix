@@ -146,6 +146,15 @@ export async function POST(request: NextRequest) {
             ? [
                 { field: 'displacedTrades', message: String(marked.tradeEffects.displaced) },
                 { field: 'annotatedTrades', message: String(marked.tradeEffects.annotated) },
+                ...(marked.tradeEffects.nextBookBlocked
+                  ? [
+                      {
+                        field: 'nextBookBlocked',
+                        message:
+                          'Another near-miss still blocks this symbol. Sync will not derive a book until that near-miss is resolved.',
+                      },
+                    ]
+                  : []),
               ]
             : []),
         ]
