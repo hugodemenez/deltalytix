@@ -478,6 +478,8 @@ export default {
   "dashboard.settings.deleteAccount.cancel": "Cancel",
   "dashboard.settings.deleteAccount.error":
     "Unable to delete account. Try again.",
+  "dashboard.settings.deleteAccount.stripePrecheckError":
+    "We could not verify billing cleanup before deleting your account. Nothing was deleted. Try again, or contact contact@deltalytix.app.",
   "dashboard.settings.weeklyRecap.error": "Unable to update weekly recap.",
   "dashboard.settings.tradingPreferences": "Trading preferences",
   "dashboard.settings.tradingPreferences.description": "Configure how your trading statistics are calculated",

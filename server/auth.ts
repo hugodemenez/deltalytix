@@ -2,6 +2,8 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { isRedirectError } from 'next/dist/client/components/redirect-error'
+import { rethrowIfRedirectError } from '@/lib/rethrow-redirect'
 import { prisma } from '@/lib/prisma'
 import { headers } from "next/headers"
 import {
@@ -21,6 +23,12 @@ import {
 import { readAttributionFromCookies } from '@/lib/attribution-server'
 import { getRequestOrigin } from '@/lib/site-url'
 import { resolveAuthEmailLocale } from '@/lib/auth-email-locale'
+import {
+  accountDeletedStatusForPendingCleanupRefusal,
+  findUnresolvedPendingCleanupForAuthId,
+} from '@/server/account-deletion/pending-cleanup-guard'
+import { accountDeletedHomeHref } from '@/lib/account-deleted-notice'
+import { shouldRefuseOrphanUserRecreation } from '@/server/account-deletion/supabase-auth'
 
 export async function getWebsiteURL() {
   // Reuse the shared trusted-host allowlist (*.deltalytix.app, *.vercel.app,
@@ -36,6 +44,7 @@ export async function getWebsiteURL() {
  * a more meaningful error message.
  */
 function handleAuthError(error: any): never {
+  rethrowIfRedirectError(error)
   // Check if this is a JSON parsing error (indicates HTML response)
   if (
     error?.message?.includes('Unexpected token') ||
@@ -282,6 +291,7 @@ export async function signInWithPasswordAction(
             const ensureResult = await ensureUserRecord(signUpData.user, locale)
             isNewUser = ensureResult.isNewUser
           } catch (e) {
+            rethrowIfRedirectError(e)
             // Non-fatal; still proceed
             console.error('[signInWithPasswordAction] ensureUserInDatabase failed:', e)
           }
@@ -309,6 +319,7 @@ export async function signInWithPasswordAction(
             isNewUser = ensureResult.isNewUser
           }
         } catch (e) {
+          rethrowIfRedirectError(e)
           // Non-fatal; still proceed
           console.error('[signInWithPasswordAction] ensureUserInDatabase failed:', e)
         }
@@ -329,6 +340,7 @@ export async function signInWithPasswordAction(
         isNewUser = ensureResult.isNewUser
       }
     } catch (e) {
+      rethrowIfRedirectError(e)
       // Non-fatal; still proceed
       console.error('[signInWithPasswordAction] ensureUserInDatabase failed:', e)
     }
@@ -373,6 +385,7 @@ export async function signUpWithPasswordAction(
         const ensureResult = await ensureUserRecord(data.user, locale)
         isNewUser = ensureResult.isNewUser
       } catch (e) {
+        rethrowIfRedirectError(e)
         // Non-fatal; still proceed
         console.error('[signUpWithPasswordAction] ensureUserInDatabase failed:', e)
       }
@@ -521,6 +534,40 @@ async function ensureUserRecord(user: AuthenticatedIdentity, locale?: string) {
       }
     }
 
+    // Refuse to recreate a User while unresolved cleanup still targets this auth id.
+    const pendingCleanup = await findUnresolvedPendingCleanupForAuthId(user.id);
+    if (pendingCleanup) {
+      console.log(
+        '[ensureUserInDatabase] ERROR: unresolved PendingAccountCleanup for auth id',
+        { authUserId: user.id, pendingId: pendingCleanup.id },
+      );
+      const noticeStatus =
+        await accountDeletedStatusForPendingCleanupRefusal(user.id);
+      // Sign out without the redirecting helper first, then land on the notice.
+      const pendingClient = await createClient();
+      const { error: pendingSignOutError } = await pendingClient.auth.signOut();
+      if (pendingSignOutError) {
+        await pendingClient.auth.signOut({ scope: 'local' });
+      }
+      redirect(
+        accountDeletedHomeHref(resolveAuthEmailLocale(locale), noticeStatus),
+      );
+    }
+
+    // Stale session after a complete auth deletion must not recreate an orphan User.
+    if (await shouldRefuseOrphanUserRecreation(user.id)) {
+      console.log(
+        '[ensureUserInDatabase] ERROR: auth user missing; refusing orphan User create',
+        { authUserId: user.id },
+      );
+      const staleClient = await createClient();
+      const { error: staleSignOutError } = await staleClient.auth.signOut();
+      if (staleSignOutError) {
+        await staleClient.auth.signOut({ scope: 'local' });
+      }
+      throw new Error('Authentication session is no longer valid');
+    }
+
     // Create new user if no existing user found
     console.log('[ensureUserInDatabase] Creating new user');
     try {
@@ -581,11 +628,8 @@ async function ensureUserRecord(user: AuthenticatedIdentity, locale?: string) {
       throw new Error('Failed to create user account');
     }
   } catch (error) {
-    // Re-throw NEXT_REDIRECT errors immediately (these are normal Next.js redirects)
-    if (error instanceof Error && (
-      error.message === 'NEXT_REDIRECT' || 
-      ('digest' in error && typeof error.digest === 'string' && error.digest.startsWith('NEXT_REDIRECT'))
-    )) {
+    // Re-throw Next.js redirects (pending-cleanup refusal uses redirect()).
+    if (isRedirectError(error)) {
       throw error;
     }
 

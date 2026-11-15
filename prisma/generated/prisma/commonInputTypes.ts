@@ -175,6 +175,23 @@ export type BoolWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedBoolFilter<$PrismaModel>
 }
 
+export type EnumPendingAccountCleanupFailureFilter<$PrismaModel = never> = {
+  equals?: $Enums.PendingAccountCleanupFailure | Prisma.EnumPendingAccountCleanupFailureFieldRefInput<$PrismaModel>
+  in?: $Enums.PendingAccountCleanupFailure[] | Prisma.ListEnumPendingAccountCleanupFailureFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PendingAccountCleanupFailure[] | Prisma.ListEnumPendingAccountCleanupFailureFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPendingAccountCleanupFailureFilter<$PrismaModel> | $Enums.PendingAccountCleanupFailure
+}
+
+export type EnumPendingAccountCleanupFailureWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PendingAccountCleanupFailure | Prisma.EnumPendingAccountCleanupFailureFieldRefInput<$PrismaModel>
+  in?: $Enums.PendingAccountCleanupFailure[] | Prisma.ListEnumPendingAccountCleanupFailureFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PendingAccountCleanupFailure[] | Prisma.ListEnumPendingAccountCleanupFailureFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPendingAccountCleanupFailureWithAggregatesFilter<$PrismaModel> | $Enums.PendingAccountCleanupFailure
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPendingAccountCleanupFailureFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPendingAccountCleanupFailureFilter<$PrismaModel>
+}
+
 export type IntNullableFilter<$PrismaModel = never> = {
   equals?: number | Prisma.IntFieldRefInput<$PrismaModel> | null
   in?: number[] | Prisma.ListIntFieldRefInput<$PrismaModel> | null
@@ -628,6 +645,23 @@ export type NestedBoolWithAggregatesFilter<$PrismaModel = never> = {
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedBoolFilter<$PrismaModel>
   _max?: Prisma.NestedBoolFilter<$PrismaModel>
+}
+
+export type NestedEnumPendingAccountCleanupFailureFilter<$PrismaModel = never> = {
+  equals?: $Enums.PendingAccountCleanupFailure | Prisma.EnumPendingAccountCleanupFailureFieldRefInput<$PrismaModel>
+  in?: $Enums.PendingAccountCleanupFailure[] | Prisma.ListEnumPendingAccountCleanupFailureFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PendingAccountCleanupFailure[] | Prisma.ListEnumPendingAccountCleanupFailureFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPendingAccountCleanupFailureFilter<$PrismaModel> | $Enums.PendingAccountCleanupFailure
+}
+
+export type NestedEnumPendingAccountCleanupFailureWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PendingAccountCleanupFailure | Prisma.EnumPendingAccountCleanupFailureFieldRefInput<$PrismaModel>
+  in?: $Enums.PendingAccountCleanupFailure[] | Prisma.ListEnumPendingAccountCleanupFailureFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PendingAccountCleanupFailure[] | Prisma.ListEnumPendingAccountCleanupFailureFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPendingAccountCleanupFailureWithAggregatesFilter<$PrismaModel> | $Enums.PendingAccountCleanupFailure
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPendingAccountCleanupFailureFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPendingAccountCleanupFailureFilter<$PrismaModel>
 }
 
 export type NestedIntNullableWithAggregatesFilter<$PrismaModel = never> = {

@@ -6,6 +6,13 @@ export default {
     cta: "Get Started",
     demoVideo: "Product demo video",
     updates: "Latest Product Updates →",
+    accountDeleted: {
+      complete: "Your account has been deleted.",
+      partial:
+        "Your account has been deleted. Some file or billing cleanup is still pending and will be completed. If you were billed, contact contact@deltalytix.app.",
+      partialUnrecorded:
+        "Your trading data was deleted, but we could not fully close your account. Contact contact@deltalytix.app so we can finish closing it. Do not assume billing or file cleanup will complete automatically.",
+    },
     partners: {
       title: "Built with trusted infrastructure from industry leaders",
       description:

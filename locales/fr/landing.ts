@@ -4,6 +4,13 @@ export default {
     description:
       "Deltalytix est un journal de trading web pour traders futures permettant de stocker, explorer et comprendre leur historique de trading.",
     cta: "Commencer maintenant",
+    accountDeleted: {
+      complete: "Votre compte a été supprimé.",
+      partial:
+        "Votre compte a été supprimé. Un nettoyage de fichiers ou de facturation est encore en attente et sera terminé. Si vous avez été facturé, contactez contact@deltalytix.app.",
+      partialUnrecorded:
+        "Vos données de trading ont été supprimées, mais nous n'avons pas pu clôturer entièrement votre compte. Contactez contact@deltalytix.app pour que nous puissions terminer la clôture. Ne supposez pas que le nettoyage de facturation ou de fichiers se terminera automatiquement.",
+    },
     demoVideo: "Vidéo de démonstration du produit",
     updates: "Dernières mises à jour du produit →",
     partners: {

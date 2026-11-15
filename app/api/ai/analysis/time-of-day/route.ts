@@ -82,13 +82,7 @@ export async function POST(req: NextRequest) {
       return Response.json(availabilityError, { status: 503 });
     }
     const { username, locale, timezone } = await req.json();
-    
-    // Add debugging to see what locale is being received
-    console.log('Time of Day Analysis API received:', { username, locale, timezone });
-    
-    // Validate the request
     const validatedData = analysisSchema.parse({ username, locale, timezone });
-    console.log('Validated data:', validatedData);
 
     const result = streamText({
       ...resolveAiTask("analysis-time-of-day"),
