@@ -5,6 +5,7 @@ import type { RithmicProtocolFill } from './types'
 import { canonicalRithmicFillId, fillIdentityKey } from './dedupe-fills'
 import {
   type AnnotatedProtocolTrade,
+  countDistinctManualTradesKept,
   countRetiredManualTradesKept,
   partitionIncomingFills,
   phantomProtocolTradeIds,
@@ -235,9 +236,13 @@ export async function deleteUnannotatedPhantomProtocolTrades(params: {
   /** Accounts whose symbol was skipped as a manual near-miss. Do not reap those trades. */
   retainAccountNumbers?: string[]
   db?: ProtocolStore
-}): Promise<{ removed: number; retiredManualTradesKept: number }> {
+}): Promise<{
+  removed: number
+  retiredManualTradesKept: number
+  distinctManualTradesKept: number
+}> {
   if (params.accountNumbers.length === 0) {
-    return { removed: 0, retiredManualTradesKept: 0 }
+    return { removed: 0, retiredManualTradesKept: 0, distinctManualTradesKept: 0 }
   }
   const db = params.db ?? prismaBase
   const existing = (await db.trade.findMany({
@@ -278,12 +283,18 @@ export async function deleteUnannotatedPhantomProtocolTrades(params: {
     ...classification,
     retiredFillIds: params.retiredFillIds ?? new Set(),
   })
+  const distinctManualTradesKept = countDistinctManualTradesKept({
+    existing,
+    ...classification,
+  })
   const retainedAccounts = new Set(params.retainAccountNumbers ?? [])
   const ids = phantomProtocolTradeIds({
     existing: existing.filter((row) => !retainedAccounts.has(row.accountNumber ?? '')),
     ...classification,
   })
-  if (ids.length === 0) return { removed: 0, retiredManualTradesKept }
+  if (ids.length === 0) {
+    return { removed: 0, retiredManualTradesKept, distinctManualTradesKept }
+  }
 
   const result = await db.trade.deleteMany({
       where: {
@@ -292,5 +303,5 @@ export async function deleteUnannotatedPhantomProtocolTrades(params: {
         tags: { has: RITHMIC_PROTOCOL_TRADE_TAG },
       },
     })
-  return { removed: result.count, retiredManualTradesKept }
+  return { removed: result.count, retiredManualTradesKept, distinctManualTradesKept }
 }

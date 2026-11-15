@@ -263,7 +263,11 @@ describe("saveTradesCore Rithmic coverage guard", () => {
         },
       } as never,
     })
-    expect(reaped).toEqual({ removed: 1, retiredManualTradesKept: 0 })
+    expect(reaped).toEqual({
+      removed: 1,
+      retiredManualTradesKept: 0,
+      distinctManualTradesKept: 0,
+    })
     expect(tradeDeleteMany).toHaveBeenCalledTimes(1)
   })
 

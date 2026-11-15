@@ -7,6 +7,7 @@ import {
   deriveTradesFromFillLedger,
   phantomProtocolTradeIds,
   planManualFillSyncEffects,
+  prepareRithmicProtocolFills,
   retiredManualFillIds,
 } from './fill-ledger'
 import { buildTradesFromRithmicFills } from './fills-to-trades'
@@ -288,7 +289,7 @@ describe('confirmDistinctManualRithmicProtocolFill', () => {
     if (!preview.ok) return
     expect(preview.dryRun).toBe(true)
     expect(preview.upstreamFillId).toBe('88422')
-    expect(preview.relation).toEqual({ kind: 'near-miss', reason: 'qty' })
+    expect(preview.relation).toEqual({ kind: 'near-miss', reason: 'qty', orderFillId: '88422' })
     expect(markDistinct).not.toHaveBeenCalled()
 
     const applied = await confirmDistinctManualRithmicProtocolFill(
@@ -410,7 +411,7 @@ describe('confirmDistinctManualRithmicProtocolFill', () => {
     expect(exact.ok).toBe(false)
     if (exact.ok) return
     expect(exact.status).toBe('acknowledgement_required')
-    expect(exact.relation).toEqual({ kind: 'exact' })
+    expect(exact.relation).toEqual({ kind: 'exact', orderFillId: '88421' })
     expect(markDistinct).not.toHaveBeenCalled()
 
     const acknowledged = await confirmDistinctManualRithmicProtocolFill(
@@ -427,7 +428,7 @@ describe('confirmDistinctManualRithmicProtocolFill', () => {
     )
     expect(acknowledged.ok).toBe(true)
     if (!acknowledged.ok) return
-    expect(acknowledged.relation).toEqual({ kind: 'exact' })
+    expect(acknowledged.relation).toEqual({ kind: 'exact', orderFillId: '88421' })
     expect(markDistinct).toHaveBeenCalledTimes(1)
   })
 
@@ -453,7 +454,7 @@ describe('confirmDistinctManualRithmicProtocolFill', () => {
     )
     expect(preview.ok).toBe(true)
     if (!preview.ok) return
-    expect(preview.relation).toEqual({ kind: 'unrelated' })
+    expect(preview.relation).toEqual({ kind: 'unrelated', orderFillId: '7700' })
     expect(preview.previousConfirmedDistinctFillId).toBeNull()
     expect(markDistinct).not.toHaveBeenCalled()
     const refused = await confirmDistinctManualRithmicProtocolFill(
@@ -509,7 +510,173 @@ describe('confirmDistinctManualRithmicProtocolFill', () => {
     )
     expect(preview.ok).toBe(true)
     if (!preview.ok) return
-    expect(preview.relation).toEqual({ kind: 'exact' })
+    expect(preview.relation).toEqual({ kind: 'exact', orderFillId: '9101' })
+  })
+
+  it('still requires an exact acknowledgement when another manual is already marked distinct', async () => {
+    const plant = { ...manualRow, fillId: '88421', source: 'history' }
+    const earlier = {
+      ...manualRow,
+      fillId: 'manual-other',
+      ssboe: manualRow.ssboe - 20,
+      confirmedDistinctFillId: '88421',
+    }
+    loadAccountFills.mockResolvedValue([earlier, manualRow, plant])
+    const preview = await confirmDistinctManualRithmicProtocolFill(
+      {
+        userId: 'user-1',
+        accountNumber: base.accountNumber,
+        fillId: 'manual-gap',
+        upstreamFillId: '88421',
+        reason: 'the later twin',
+      },
+      { findManualFill, loadAccountFills, markDistinct },
+    )
+    expect(preview.ok).toBe(true)
+    if (!preview.ok) return
+    expect(preview.relation).toEqual({ kind: 'exact', orderFillId: '88421' })
+    const refused = await confirmDistinctManualRithmicProtocolFill(
+      {
+        userId: 'user-1',
+        accountNumber: base.accountNumber,
+        fillId: 'manual-gap',
+        upstreamFillId: '88421',
+        reason: 'the later twin',
+        dryRun: false,
+      },
+      { findManualFill, loadAccountFills, markDistinct },
+    )
+    expect(refused.ok).toBe(false)
+    if (refused.ok) return
+    expect(refused.status).toBe('acknowledgement_required')
+    expect(markDistinct).not.toHaveBeenCalled()
+  })
+
+  it('judges the day-matched plant row when the same fill id is also on another symbol', async () => {
+    const otherSymbol = {
+      ...manualRow,
+      fillId: '88421',
+      source: 'history',
+      symbol: 'MNQZ6',
+      fillSize: 1,
+    }
+    const sameBook = { ...manualRow, fillId: '88421', source: 'history', fillSize: 1 }
+    loadAccountFills.mockResolvedValue([manualRow, otherSymbol, sameBook])
+    const preview = await confirmDistinctManualRithmicProtocolFill(
+      {
+        userId: 'user-1',
+        accountNumber: base.accountNumber,
+        fillId: 'manual-gap',
+        upstreamFillId: '88421',
+        reason: 'same id, this symbol',
+      },
+      { findManualFill, loadAccountFills, markDistinct },
+    )
+    expect(preview.ok).toBe(true)
+    if (!preview.ok) return
+    expect(preview.relation).toEqual({ kind: 'near-miss', reason: 'qty', orderFillId: '88421' })
+  })
+
+  it('stores a split piece as the consolidated order id', async () => {
+    const pieceA = {
+      ...manualRow,
+      fillId: '9100',
+      source: 'history',
+      fillSize: 1,
+      ssboe: manualRow.ssboe,
+    }
+    const pieceB = { ...pieceA, fillId: '9101', ssboe: manualRow.ssboe + 1 }
+    findManualFill.mockResolvedValue({ ...manualRow, fillSize: 3 })
+    loadAccountFills.mockResolvedValue([
+      { ...manualRow, fillSize: 3 },
+      pieceA,
+      pieceB,
+    ])
+    const applied = await confirmDistinctManualRithmicProtocolFill(
+      {
+        userId: 'user-1',
+        accountNumber: base.accountNumber,
+        fillId: 'manual-gap',
+        upstreamFillId: '9100',
+        reason: 'named a split piece',
+        dryRun: false,
+      },
+      { findManualFill, loadAccountFills, markDistinct },
+    )
+    expect(applied.ok).toBe(true)
+    if (!applied.ok) return
+    expect(applied.relation).toEqual({
+      kind: 'near-miss',
+      reason: 'qty',
+      orderFillId: '9101',
+    })
+    expect(applied.upstreamFillId).toBe('9101')
+    expect(markDistinct.mock.calls[0][0].upstreamFillId).toBe('9101')
+    const prepared = prepareRithmicProtocolFills([
+      {
+        accountId: base.accountNumber,
+        symbol: 'MESZ6',
+        transactionType: 'BUY',
+        fillPrice: 5810.25,
+        fillSize: 3,
+        fillId: 'manual-gap',
+        fillDate: '20260925',
+        fillTime: '15:07:00',
+        ssboe: manualRow.ssboe,
+        source: 'manual',
+        confirmedDistinctFillId: '9101',
+      },
+      {
+        accountId: base.accountNumber,
+        symbol: 'MESZ6',
+        transactionType: 'BUY',
+        fillPrice: 5810.25,
+        fillSize: 1,
+        fillId: '9100',
+        fillDate: '20260925',
+        ssboe: manualRow.ssboe,
+        source: 'history',
+      },
+      {
+        accountId: base.accountNumber,
+        symbol: 'MESZ6',
+        transactionType: 'BUY',
+        fillPrice: 5810.25,
+        fillSize: 1,
+        fillId: '9101',
+        fillDate: '20260925',
+        ssboe: manualRow.ssboe + 1,
+        source: 'history',
+      },
+    ])
+    expect(prepared.nearMisses).toEqual([])
+    expect(prepared.retirements).toEqual([])
+    expect(prepared.fills.some((fill) => fill.fillId === 'manual-gap')).toBe(true)
+  })
+
+  it('returns the marker a later confirm-distinct overwrites', async () => {
+    findManualFill.mockResolvedValue({
+      ...manualRow,
+      confirmedDistinctFillId: '7700',
+      confirmedDistinctAt: new Date('2026-09-01T00:00:00Z'),
+    })
+    const applied = await confirmDistinctManualRithmicProtocolFill(
+      {
+        userId: 'user-1',
+        accountNumber: base.accountNumber,
+        fillId: 'manual-gap',
+        upstreamFillId: '88422',
+        reason: 'replace the old marker',
+        dryRun: false,
+      },
+      { findManualFill, loadAccountFills, markDistinct },
+    )
+    expect(applied.ok).toBe(true)
+    if (!applied.ok) return
+    expect(applied.previousConfirmedDistinctFillId).toBe('7700')
+    expect(applied.idempotent).toBe(false)
+    expect(applied.upstreamFillId).toBe('88422')
+    expect(markDistinct).toHaveBeenCalledTimes(1)
   })
 
   it('ignores a same fill id on another symbol', async () => {
@@ -627,7 +794,7 @@ describe('confirm-distinct where clause', () => {
     })
     expect(applied.ok).toBe(true)
     if (!applied.ok) return
-    expect(applied.relation).toEqual({ kind: 'near-miss', reason: 'qty' })
+    expect(applied.relation).toEqual({ kind: 'near-miss', reason: 'qty', orderFillId: '88422' })
     expect(findManyFills).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { userId: 'user-b', accountNumber: 'ACCT-B' },

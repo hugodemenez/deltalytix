@@ -967,6 +967,13 @@ export async function getRithmicProtocolTrades(
       syncStats.droppedByReason.retired_manual_trade_kept =
         phantoms.retiredManualTradesKept
     }
+    if (phantoms.distinctManualTradesKept > 0) {
+      syncStats.droppedByReason.distinct_manual_trade_kept =
+        phantoms.distinctManualTradesKept
+      logger.info(
+        `Kept ${phantoms.distinctManualTradesKept} annotated ${SERVICE} trade(s) beside a confirm-distinct plant fill`,
+      )
+    }
 
     logSyncSummary(savedCount)
 

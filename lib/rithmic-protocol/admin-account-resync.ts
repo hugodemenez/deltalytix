@@ -78,6 +78,7 @@ import {
   type RebuildTradeRef,
   duplicateRebuildTradeIds,
   confirmedDistinctMarkers,
+  countDistinctManualTradesKept,
   deriveTradesFromFillLedger,
   mergeFillLedgers,
   partitionIncomingFills,
@@ -1135,6 +1136,17 @@ export async function resyncRithmicProtocolAccount(params: {
         if (retiredManualTrades.length > 0) {
           warnings.push(
             `${retiredManualTrades.length} stored protocol trade(s) reference a retired manual fill. Live apply refuses with RETIRED_MANUAL_TRADES. Move the annotation if you want to keep it, delete the stored row, then run a sync or rebuild.`,
+          )
+        }
+        const distinctManualTradesKept = countDistinctManualTradesKept({
+          existing,
+          derived: ordinaryWithIds,
+          ledgerFillIds,
+          distinctPlantIdByManualFillId: confirmedDistinctMarkers(storedFills),
+        })
+        if (distinctManualTradesKept > 0) {
+          warnings.push(
+            `${distinctManualTradesKept} annotated protocol trade(s) stay beside a confirm-distinct plant trade. Ordinary sync reports distinct_manual_trade_kept and does not delete them. Move the annotation if you want to keep it, delete the stored row, then run a sync or rebuild.`,
           )
         }
         if (notFlat.length > 0) {

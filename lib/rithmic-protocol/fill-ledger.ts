@@ -304,54 +304,59 @@ function samePreparedOrder(
   return Math.abs(namedMs - representativeMs) <= RITHMIC_PROTOCOL_ORDER_PIECE_WINDOW_MS
 }
 
+export type ManualFillBookRelation =
+  | { kind: 'exact'; orderFillId: string }
+  | { kind: 'near-miss'; reason: string; orderFillId: string }
+  | { kind: 'unrelated'; orderFillId: string }
+
 /**
- * How the named plant fill relates to the manual after plant fills are
- * consolidated. A split piece is judged by the order it belongs to.
+ * How the picked plant fill relates to the manual after plant fills are
+ * consolidated. A split piece is judged by the order it belongs to, and
+ * `orderFillId` is that order's id (the one a marker has to name).
  */
 export function manualFillBookRelation(
   fills: RithmicProtocolFill[],
   manualFillId: string,
-  upstreamFillId: string,
-): { kind: 'exact' } | { kind: 'near-miss'; reason: string } | { kind: 'unrelated' } {
+  upstream: RithmicProtocolFill,
+): ManualFillBookRelation {
   const manualId = canonicalRithmicFillId(manualFillId)
-  const namedId = canonicalRithmicFillId(upstreamFillId)
-  if (!manualId || !namedId) return { kind: 'unrelated' }
+  const namedId = canonicalRithmicFillId(upstream.fillId) ?? ''
+  if (
+    !manualId ||
+    !namedId ||
+    upstream.source === 'manual' ||
+    upstream.source === 'manual-retired'
+  ) {
+    return { kind: 'unrelated', orderFillId: namedId }
+  }
   const cleared = fills.map((fill) =>
     fill.source === 'manual' && canonicalRithmicFillId(fill.fillId) === manualId
       ? { ...fill, confirmedDistinctFillId: undefined }
       : fill,
   )
   const prepared = prepareRithmicProtocolFills(cleared)
-  const named = cleared.find(
-    (fill) =>
-      fill.source !== 'manual' &&
-      fill.source !== 'manual-retired' &&
-      canonicalRithmicFillId(fill.fillId) === namedId,
-  )
   const retirement = prepared.retirements.find(
     (item) => canonicalRithmicFillId(item.manual.fillId) === manualId,
   )
-  if (
-    retirement &&
-    named &&
-    samePreparedOrder(named, retirement.upstream)
-  ) {
-    return { kind: 'exact' }
-  }
-  if (
-    retirement &&
-    canonicalRithmicFillId(retirement.upstream.fillId) === namedId
-  ) {
-    return { kind: 'exact' }
+  if (retirement && samePreparedOrder(upstream, retirement.upstream)) {
+    return {
+      kind: 'exact',
+      orderFillId: canonicalRithmicFillId(retirement.upstream.fillId) ?? namedId,
+    }
   }
   const near = prepared.nearMisses.find(
     (item) =>
       canonicalRithmicFillId(item.manual.fillId) === manualId &&
-      named &&
-      samePreparedOrder(named, item.upstream),
+      samePreparedOrder(upstream, item.upstream),
   )
-  if (near) return { kind: 'near-miss', reason: near.reason }
-  return { kind: 'unrelated' }
+  if (near) {
+    return {
+      kind: 'near-miss',
+      reason: near.reason,
+      orderFillId: canonicalRithmicFillId(near.upstream.fillId) ?? namedId,
+    }
+  }
+  return { kind: 'unrelated', orderFillId: namedId }
 }
 
 export type ManualFillNearMiss = {
@@ -674,6 +679,30 @@ export function tradeReferencesFillId(
   const entry = canonicalRithmicFillId(trade.entryId)
   const close = canonicalRithmicFillId(trade.closeId)
   return entry === target || close === target
+}
+
+/**
+ * Annotated trades kept because a confirm-distinct marker blocked the
+ * rematch. Ordinary sync reports these. The row stays until its annotation
+ * is moved and the row is deleted.
+ */
+export function countDistinctManualTradesKept(params: {
+  existing: AnnotatedProtocolTrade[]
+  derived: Array<{ id: string } & RithmicProtocolFillPairIdentity>
+  ledgerFillIds: Set<string>
+  distinctPlantIdByManualFillId?: ReadonlyMap<string, string>
+}): number {
+  if (!params.distinctPlantIdByManualFillId || params.distinctPlantIdByManualFillId.size === 0) {
+    return 0
+  }
+  const withoutMarker = { ...params, distinctPlantIdByManualFillId: undefined }
+  let kept = 0
+  for (const row of params.existing) {
+    if (!hasTradeJournalAnnotations(row)) continue
+    if (classifyStoredProtocolTrade(row, params) !== 'keep') continue
+    if (classifyStoredProtocolTrade(row, withoutMarker) === 'rematch') kept += 1
+  }
+  return kept
 }
 
 /** Annotated trades still pointing at a retired manual fill. Ordinary sync reports these and does not delete them. */

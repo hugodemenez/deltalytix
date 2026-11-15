@@ -7,6 +7,7 @@ import {
   hasTradeJournalAnnotations,
   manualFillBookRelation,
   prepareRithmicProtocolFills,
+  type ManualFillBookRelation,
 } from './fill-ledger'
 import { fillSide } from './fills-to-trades'
 import {
@@ -709,10 +710,7 @@ export async function retireManualRithmicProtocolFill(
   }
 }
 
-export type ManualFillDistinctRelation =
-  | { kind: 'exact' }
-  | { kind: 'near-miss'; reason: string }
-  | { kind: 'unrelated' }
+export type ManualFillDistinctRelation = ManualFillBookRelation
 
 export type ManualFillDistinctResult =
   | {
@@ -786,6 +784,7 @@ function distinctRowToFill(row: DistinctRow): RithmicProtocolFill {
       row.source === 'manual-retired'
         ? row.source
         : 'history',
+    confirmedDistinctFillId: row.confirmedDistinctFillId ?? undefined,
   }
 }
 
@@ -968,8 +967,9 @@ export async function confirmDistinctManualRithmicProtocolFill(
   const relation = manualFillBookRelation(
     accountFills.map(distinctRowToFill),
     fillId,
-    upstreamFillId,
+    distinctRowToFill(upstream),
   )
+  const orderFillId = relation.orderFillId
   const previousConfirmedDistinctFillId = row.confirmedDistinctFillId
   if (relation.kind === 'exact' && !dryRun && !acknowledgeExactMatch) {
     return {
@@ -1001,13 +1001,13 @@ export async function confirmDistinctManualRithmicProtocolFill(
       ],
     }
   }
-  if (row.confirmedDistinctFillId === upstreamFillId && row.confirmedDistinctAt) {
+  if (row.confirmedDistinctFillId === orderFillId && row.confirmedDistinctAt) {
     return {
       ok: true,
       dryRun,
       idempotent: true,
       fillId,
-      upstreamFillId,
+      upstreamFillId: orderFillId,
       confirmedDistinctAt: row.confirmedDistinctAt.toISOString(),
       confirmedDistinctBy: row.confirmedDistinctBy || confirmedDistinctBy,
       confirmDistinctReason: row.confirmDistinctReason || reason,
@@ -1021,13 +1021,13 @@ export async function confirmDistinctManualRithmicProtocolFill(
       userId,
       accountNumber,
       fillId,
-      upstreamFillId,
+      upstreamFillId: orderFillId,
       confirmedDistinctAt,
       confirmedDistinctBy,
       confirmDistinctReason: reason,
     })
     console.info(
-      `[RITHMIC-MANUAL-FILL] confirm-distinct userId=${userId} account=${accountNumber} fillId=${fillId} upstreamFillId=${upstreamFillId} by=${confirmedDistinctBy} reason=${JSON.stringify(reason)}`,
+      `[RITHMIC-MANUAL-FILL] confirm-distinct userId=${userId} account=${accountNumber} fillId=${fillId} upstreamFillId=${orderFillId} named=${upstreamFillId} by=${confirmedDistinctBy} reason=${JSON.stringify(reason)}`,
     )
   }
   return {
@@ -1035,7 +1035,7 @@ export async function confirmDistinctManualRithmicProtocolFill(
     dryRun,
     idempotent: false,
     fillId,
-    upstreamFillId,
+    upstreamFillId: orderFillId,
     confirmedDistinctAt: confirmedDistinctAt.toISOString(),
     confirmedDistinctBy,
     confirmDistinctReason: reason,

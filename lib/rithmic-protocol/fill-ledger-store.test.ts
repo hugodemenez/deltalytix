@@ -202,6 +202,7 @@ describe('deleteUnannotatedPhantomProtocolTrades', () => {
     row: typeof stored,
     derived: typeof plant,
     markers?: Map<string, string>,
+    retired = true,
   ) {
     const tradeFindMany = vi.fn(
       async (args: { select?: Record<string, boolean> }) => {
@@ -219,7 +220,7 @@ describe('deleteUnannotatedPhantomProtocolTrades', () => {
       accountNumbers: [ACCOUNT],
       derivedTrades: [derived],
       ledgerFillIds: new Set(['manual-gap', '1002', '88421']),
-      retiredFillIds: new Set(['manual-gap']),
+      retiredFillIds: retired ? new Set(['manual-gap']) : new Set<string>(),
       distinctPlantIdByManualFillId: markers,
       db: {
         trade: { findMany: tradeFindMany, deleteMany: tradeDeleteMany },
@@ -240,7 +241,11 @@ describe('deleteUnannotatedPhantomProtocolTrades', () => {
       entryPrice: true,
       closePrice: true,
     })
-    expect(pricePlain.result).toEqual({ removed: 1, retiredManualTradesKept: 0 })
+    expect(pricePlain.result).toEqual({
+      removed: 1,
+      retiredManualTradesKept: 0,
+      distinctManualTradesKept: 0,
+    })
     expect(pricePlain.tradeDeleteMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({ id: { in: ['stored-manual-trade'] } }),
@@ -248,27 +253,51 @@ describe('deleteUnannotatedPhantomProtocolTrades', () => {
     )
 
     const qtyPlain = await reap(stored, qtyTwin)
-    expect(qtyPlain.result).toEqual({ removed: 1, retiredManualTradesKept: 0 })
+    expect(qtyPlain.result).toEqual({
+      removed: 1,
+      retiredManualTradesKept: 0,
+      distinctManualTradesKept: 0,
+    })
     expect(qtyPlain.tradeDeleteMany).toHaveBeenCalledTimes(1)
 
     const priceNoted = await reap(noted, priceTwin)
-    expect(priceNoted.result).toEqual({ removed: 0, retiredManualTradesKept: 1 })
+    expect(priceNoted.result).toEqual({
+      removed: 0,
+      retiredManualTradesKept: 1,
+      distinctManualTradesKept: 0,
+    })
     expect(priceNoted.tradeDeleteMany).not.toHaveBeenCalled()
 
     const qtyNoted = await reap(noted, qtyTwin)
-    expect(qtyNoted.result).toEqual({ removed: 0, retiredManualTradesKept: 1 })
+    expect(qtyNoted.result).toEqual({
+      removed: 0,
+      retiredManualTradesKept: 1,
+      distinctManualTradesKept: 0,
+    })
     expect(qtyNoted.tradeDeleteMany).not.toHaveBeenCalled()
 
     const exact = await reap(stored, plant)
-    expect(exact.result).toEqual({ removed: 0, retiredManualTradesKept: 0 })
+    expect(exact.result).toEqual({
+      removed: 0,
+      retiredManualTradesKept: 0,
+      distinctManualTradesKept: 0,
+    })
     expect(exact.tradeDeleteMany).not.toHaveBeenCalled()
 
     const markers = new Map([['manual-gap', '88421']])
-    const distinctPlain = await reap(stored, plant, markers)
-    expect(distinctPlain.result).toEqual({ removed: 1, retiredManualTradesKept: 0 })
+    const distinctPlain = await reap(stored, plant, markers, false)
+    expect(distinctPlain.result).toEqual({
+      removed: 1,
+      retiredManualTradesKept: 0,
+      distinctManualTradesKept: 0,
+    })
     expect(distinctPlain.tradeDeleteMany).toHaveBeenCalledTimes(1)
-    const distinctNoted = await reap(noted, plant, markers)
-    expect(distinctNoted.result).toEqual({ removed: 0, retiredManualTradesKept: 1 })
+    const distinctNoted = await reap(noted, plant, markers, false)
+    expect(distinctNoted.result).toEqual({
+      removed: 0,
+      retiredManualTradesKept: 0,
+      distinctManualTradesKept: 1,
+    })
     expect(distinctNoted.tradeDeleteMany).not.toHaveBeenCalled()
   })
 })
