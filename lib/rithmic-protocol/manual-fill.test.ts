@@ -1707,12 +1707,12 @@ describe('confirmDistinctManualRithmicProtocolFill', () => {
         upstreamFillId: '1402237',
         reason: 'manual BUY 2 @7777 is not fill 1402237 either',
         dryRun: false,
-        acknowledgeUnrelated: true,
       },
       { findManualFill, loadAccountFills, markDistinct },
     )
     expect(secondConfirm.ok).toBe(true)
     if (!secondConfirm.ok) return
+    expect(secondConfirm.relation.kind).toBe('near-miss')
     expect(secondConfirm.idempotent).toBe(false)
     expect(secondConfirm.previousConfirmedDistinctFillIds).toEqual(['1403850'])
     expect(secondConfirm.addedUpstreamFillIds).toEqual(['1402237'])
@@ -1758,7 +1758,6 @@ describe('confirmDistinctManualRithmicProtocolFill', () => {
         upstreamFillIds: ['1403850', '1402237'],
         reason: 'both plant fills are different executions',
         dryRun: false,
-        acknowledgeUnrelated: true,
       },
       { findManualFill, loadAccountFills, markDistinct },
     )

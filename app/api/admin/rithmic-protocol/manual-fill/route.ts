@@ -203,12 +203,19 @@ export async function POST(request: NextRequest) {
       }
       if (marked.status === 'not_found') {
         const missingPlant = marked.errors?.some((error) => error.field === 'upstreamFillId')
+        const missingRemoval = marked.errors?.some(
+          (error) => error.field === 'removeUpstreamFillId',
+        )
         return jsonError({
           code: 'not_found',
-          message: missingPlant
-            ? 'No plant fill with that id, symbol, and side belongs to this account.'
-            : 'No manual fill with that id belongs to this account.',
-          hint: 'Pass the manual- fill id, the plant fill id, userId, and accountNumber.',
+          message: missingRemoval
+            ? 'That plant fill id is not on this manual row.'
+            : missingPlant
+              ? 'No plant fill with that id, symbol, and side belongs to this account.'
+              : 'No manual fill with that id belongs to this account.',
+          hint: missingRemoval
+            ? 'Pass a plant fill id already listed on this manual row.'
+            : 'Pass the manual- fill id, the plant fill id, userId, and accountNumber.',
           details: marked.errors,
         })
       }

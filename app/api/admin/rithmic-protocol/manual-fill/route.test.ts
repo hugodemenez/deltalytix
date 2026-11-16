@@ -463,4 +463,30 @@ describe('POST /api/admin/rithmic-protocol/manual-fill', () => {
     const payload = await response.json()
     expect(payload.error.message).toMatch(/plant fill/)
   })
+
+  it('names a remove of an id that is not on the manual row', async () => {
+    authorizeAdminRequest.mockResolvedValue({ ok: true, via: 'cron' })
+    confirmDistinctManualRithmicProtocolFill.mockResolvedValue({
+      ok: false,
+      status: 'not_found',
+      errors: [
+        {
+          field: 'removeUpstreamFillId',
+          message: 'That plant fill id is not on this manual row.',
+        },
+      ],
+    })
+    const response = await post({
+      action: 'confirm-distinct',
+      userId: body.userId,
+      accountNumber: body.accountNumber,
+      fillId: 'manual-gap',
+      removeUpstreamFillId: '9999',
+      reason: 'not on the row',
+    })
+    expect(response.status).toBe(404)
+    const payload = await response.json()
+    expect(payload.error.message).toMatch(/not on this manual row/)
+    expect(payload.error.hint).toMatch(/already listed/)
+  })
 })

@@ -414,6 +414,27 @@ export function manualFillBookRelation(
       orderFillId: canonicalRithmicFillId(near.upstream.fillId) ?? namedId,
     }
   }
+  // Reconcile records only the closest near-miss. A second plant fill on the
+  // same manual can still be a near-miss, and confirm-distinct has to name it
+  // as one. Judge that order itself.
+  const manual = cleared.find(
+    (fill) => fill.source === 'manual' && canonicalRithmicFillId(fill.fillId) === manualId,
+  )
+  const orderId = consolidatedFillIdForPiece(cleared, upstream) ?? namedId
+  const representative = prepared.fills.find(
+    (fill) =>
+      fill.source !== 'manual' &&
+      fill.source !== 'manual-retired' &&
+      canonicalRithmicFillId(fill.fillId) === orderId,
+  )
+  if (manual && representative) {
+    const direct = manualFillRelation(manual, representative)
+    const orderFillId = canonicalRithmicFillId(representative.fillId) ?? namedId
+    if (direct.kind === 'exact') return { kind: 'exact', orderFillId }
+    if (direct.kind === 'near-miss') {
+      return { kind: 'near-miss', reason: direct.reason, orderFillId }
+    }
+  }
   return { kind: 'unrelated', orderFillId: namedId }
 }
 

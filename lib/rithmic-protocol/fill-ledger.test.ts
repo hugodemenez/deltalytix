@@ -10,6 +10,7 @@ import {
   deriveTradesFromFillLedger,
   dropSeenLedgerFills,
   hasTradeJournalAnnotations,
+  manualFillBookRelation,
   manualTradeReplacedByPlantTrade,
   mergeFillLedgers,
   omitAmbiguousManualBooks,
@@ -1089,6 +1090,25 @@ describe('manual fills', () => {
     } finally {
       warn.mockRestore()
     }
+  })
+
+  it('classifies a farther near-miss as a near-miss, not as unrelated', () => {
+    const first = { ...nearbyOneLot, fillId: '1403850' }
+    const second = {
+      ...nearbyOneLot,
+      fillId: '1402237',
+      fillPrice: 5810.5,
+      ssboe: atMs / 1000 + 40,
+    }
+    const book = [manual, first, second]
+    expect(manualFillBookRelation(book, 'manual-gap', first)).toMatchObject({
+      kind: 'near-miss',
+      orderFillId: '1403850',
+    })
+    expect(manualFillBookRelation(book, 'manual-gap', second)).toMatchObject({
+      kind: 'near-miss',
+      orderFillId: '1402237',
+    })
   })
 
   it('keeps a plant fill that was confirmed distinct from the manual', () => {
