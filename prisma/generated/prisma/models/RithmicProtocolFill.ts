@@ -1736,10 +1736,9 @@ export type $RithmicProtocolFillPayload<ExtArgs extends runtime.Types.Extensions
     retiredBy: string | null
     retireReason: string | null
     /**
-     * @deprecated Latest id in `confirmedDistinctFillIds`, or null when that
-     * list is empty. New writes keep it equal to the last list id. A scalar
-     * that is missing from a non-empty list blocks that symbol. An empty list
-     * with a scalar is the pre-migration row and still counts as that one id.
+     * @deprecated Must equal the last id in `confirmedDistinctFillIds`, or null
+     * when that list is empty. Any other scalar on a non-empty list blocks
+     * the symbol. An empty list with a scalar is the pre-migration row.
      */
     confirmedDistinctFillId: string | null
     /**

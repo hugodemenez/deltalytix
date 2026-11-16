@@ -244,15 +244,20 @@ export function listConfirmedDistinctFillIds(fill: DistinctMarkerRow): string[] 
 }
 
 /**
- * Scalar set, list non-empty, scalar not in the list. Prod (old app) and
- * beta (new app) would disagree about which plant fill is distinct. Callers
- * block that book instead of treating the scalar as another id.
+ * A non-empty list whose scalar is not the last id. Null scalar counts.
+ * Prod only reads the scalar, so an earlier id in the list would stay
+ * distinct on beta and invisible on prod. An empty list with a scalar is
+ * the pre-migration row and is not a conflict.
  */
-export function distinctMarkerConflict(fill: DistinctMarkerRow): string | null {
+export function distinctMarkerConflict(
+  fill: DistinctMarkerRow,
+): { scalar: string | null } | null {
   const list = storedDistinctFillIds(fill)
+  if (list.length === 0) return null
   const scalar = canonicalRithmicFillId(fill.confirmedDistinctFillId)
-  if (!scalar || list.length === 0 || list.includes(scalar)) return null
-  return scalar
+  const last = list[list.length - 1]
+  if (scalar === last) return null
+  return { scalar: scalar ?? null }
 }
 
 /** One plant id, or every plant id a manual fill was confirmed distinct from. */
@@ -543,13 +548,14 @@ export function reconcileManualFills(
     if (conflict) {
       kept.push(manual)
       const listed = listConfirmedDistinctFillIds(manual).join(',')
+      const scalarLabel = conflict.scalar ?? 'null'
       const upstream =
         consolidatedUpstream.find(
-          (fill) => canonicalRithmicFillId(fill.fillId) === conflict,
-        ) ?? { ...manual, fillId: conflict, source: 'history' as const }
+          (fill) => canonicalRithmicFillId(fill.fillId) === conflict.scalar,
+        ) ?? { ...manual, fillId: scalarLabel, source: 'history' as const }
       nearMisses.push({ manual, upstream, reason: 'marker-conflict' })
       console.warn(
-        `[RITHMIC-MANUAL-FILL] marker-conflict manual fillId=${manual.fillId ?? ''} account=${manual.accountId} symbol=${(manual.symbol || '').trim().toUpperCase()} scalar=${conflict} list=${listed}`,
+        `[RITHMIC-MANUAL-FILL] marker-conflict manual fillId=${manual.fillId ?? ''} account=${manual.accountId} symbol=${(manual.symbol || '').trim().toUpperCase()} scalar=${scalarLabel} list=${listed}`,
       )
       continue
     }

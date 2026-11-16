@@ -1056,7 +1056,11 @@ describe('manual fills', () => {
 
       warn.mockClear()
       const one = prepareRithmicProtocolFills([
-        { ...manual, confirmedDistinctFillIds: ['1403850'] },
+        {
+          ...manual,
+          confirmedDistinctFillIds: ['1403850'],
+          confirmedDistinctFillId: '1403850',
+        },
         first,
         second,
       ])
@@ -1066,7 +1070,11 @@ describe('manual fills', () => {
 
       warn.mockClear()
       const both = prepareRithmicProtocolFills([
-        { ...manual, confirmedDistinctFillIds: ['1403850', '1402237'] },
+        {
+          ...manual,
+          confirmedDistinctFillIds: ['1403850', '1402237'],
+          confirmedDistinctFillId: '1402237',
+        },
         first,
         second,
       ])
@@ -1115,6 +1123,29 @@ describe('manual fills', () => {
           confirmedDistinctFillIds: ['1403850', '1402237'],
         }),
       ).toBeNull()
+      const repointed = prepareRithmicProtocolFills([
+        {
+          ...manual,
+          confirmedDistinctFillId: '1403850',
+          confirmedDistinctFillIds: ['1403850', '1402237'],
+        },
+        first,
+        second,
+      ])
+      expect(repointed.nearMisses.map((miss) => miss.reason)).toContain('marker-conflict')
+      expect(omitAmbiguousManualBooks(repointed.fills, repointed.nearMisses)).toEqual([])
+      expect(
+        distinctMarkerConflict({
+          confirmedDistinctFillId: '1403850',
+          confirmedDistinctFillIds: ['1403850', '1402237'],
+        }),
+      ).toEqual({ scalar: '1403850' })
+      expect(
+        distinctMarkerConflict({
+          confirmedDistinctFillIds: ['1403850', '1402237'],
+          confirmedDistinctFillId: null,
+        }),
+      ).toEqual({ scalar: null })
     } finally {
       warn.mockRestore()
     }

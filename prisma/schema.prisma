@@ -682,10 +682,9 @@ model RithmicProtocolFill {
   retiredAt       DateTime?
   retiredBy       String?
   retireReason    String?
-  /// @deprecated Latest id in `confirmedDistinctFillIds`, or null when that
-  /// list is empty. New writes keep it equal to the last list id. A scalar
-  /// that is missing from a non-empty list blocks that symbol. An empty list
-  /// with a scalar is the pre-migration row and still counts as that one id.
+  /// @deprecated Must equal the last id in `confirmedDistinctFillIds`, or null
+  /// when that list is empty. Any other scalar on a non-empty list blocks
+  /// the symbol. An empty list with a scalar is the pre-migration row.
   confirmedDistinctFillId  String?
   /// Plant fills this manual was confirmed distinct from. Reconcile will
   /// not match or near-miss any of these ids. A second confirm appends.

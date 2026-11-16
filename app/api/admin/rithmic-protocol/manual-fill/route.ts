@@ -118,6 +118,9 @@ export async function POST(request: NextRequest) {
         const annotated = marked.errors?.some(
           (error) => error.field === 'acknowledgeAnnotatedTrades',
         )
+        const markerConflict = marked.errors?.some(
+          (error) => error.field === 'acknowledgeMarkerConflict',
+        )
         const reapDeferred = marked.errors?.some(
           (error) => error.field === 'acknowledgeReapDeferred',
         )
@@ -178,16 +181,20 @@ export async function POST(request: NextRequest) {
         ]
         return jsonError({
           code: 'conflict',
-          message: annotated
-            ? 'Confirm-distinct refused while an annotated trade would lose its fill pair.'
-            : reapDeferred
+          message: markerConflict
+            ? 'Confirm-distinct refused because confirmedDistinctFillId is not the last id on this row.'
+            : annotated
+              ? 'Confirm-distinct refused while an annotated trade would lose its fill pair.'
+              : reapDeferred
               ? 'Confirm-distinct refused because another near-miss on this account keeps the displaced rows.'
               : unrelated
                 ? 'Confirm-distinct refused because that plant fill is unrelated to the manual.'
                 : 'Confirm-distinct refused because that plant fill matches the manual exactly.',
-          hint: annotated
-            ? 'Move the annotation if you want to keep it, delete the stored row, then run a sync or rebuild. Then re-send dryRun: false with acknowledgeAnnotatedTrades: true.'
-            : reapDeferred
+          hint: markerConflict
+            ? 'Re-send dryRun: false with acknowledgeMarkerConflict: true, or remove the conflicting scalar id.'
+            : annotated
+              ? 'Move the annotation if you want to keep it, delete the stored row, then run a sync or rebuild. Then re-send dryRun: false with acknowledgeAnnotatedTrades: true.'
+              : reapDeferred
               ? 'Re-send dryRun: false with acknowledgeReapDeferred: true only if the next sync may leave the displaced rows until every near-miss on this account is resolved.'
               : unrelated
                 ? 'Re-send dryRun: false with acknowledgeUnrelated: true only if this plant fill should stay distinct from the manual.'
@@ -200,6 +207,14 @@ export async function POST(request: NextRequest) {
           `[RITHMIC-MANUAL-FILL] route confirm-distinct actor=${actor} dryRun=${marked.dryRun} fillId=${marked.fillId} upstreamFillId=${marked.upstreamFillId} confirmedDistinctFillIds=${(marked.confirmedDistinctFillIds ?? []).join(',')} removed=${marked.removedUpstreamFillId ?? ''}`,
         )
         return NextResponse.json(marked)
+      }
+      if (marked.status === 'bad_request') {
+        return jsonError({
+          code: 'bad_request',
+          message: marked.errors?.[0]?.message ?? 'Confirm-distinct was refused.',
+          hint: 'Prod can protect only one exact-match confirmation. Remove one before confirming another.',
+          details: marked.errors,
+        })
       }
       if (!marked.ok && marked.status === 'conflict') {
         return jsonError({

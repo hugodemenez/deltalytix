@@ -1,10 +1,12 @@
 import { createHash } from 'node:crypto'
 import { parseArgs } from 'node:util'
+import type { Prisma } from '@/prisma/generated/prisma/client'
 import { prisma } from '@/lib/prisma'
 import { RITHMIC_PROTOCOL_TRADE_TAG } from '@/lib/trade-id-utils'
 import { canonicalRithmicFillId, fillIdentityKey } from './dedupe-fills'
 import {
   hasTradeJournalAnnotations,
+  distinctMarkerConflict,
   listConfirmedDistinctFillIds,
   manualFillBookRelation,
   planManualFillSyncEffects,
@@ -799,7 +801,7 @@ export type ManualFillDistinctResult =
     }
   | {
       ok: false
-      status: 'validation' | 'not_found' | 'acknowledgement_required' | 'conflict'
+      status: 'validation' | 'not_found' | 'acknowledgement_required' | 'conflict' | 'bad_request'
       errors: ManualFillFieldError[]
       relation?: ManualFillDistinctRelation
       previousConfirmedDistinctFillId?: string | null
@@ -930,39 +932,109 @@ function pickUpstreamFill(
   )
 }
 
-type DistinctAuditEntry = {
-  op: 'add' | 'remove'
-  fillId: string
-  at: string
-  by: string
-  reason: string
+function auditSnapshot(value: unknown): unknown[] {
+  return Array.isArray(value) ? [...value] : []
 }
 
-function readDistinctAudit(value: unknown): DistinctAuditEntry[] {
-  if (!Array.isArray(value)) return []
-  const entries: DistinctAuditEntry[] = []
-  for (const item of value) {
+/** Exact-match acknowledgements still on the list. Unparsable entries are ignored here and kept in the stored array. */
+function exactAcknowledgedIds(
+  audit: unknown,
+  list: readonly string[],
+  reclassified: ReadonlyArray<{ id: string; exact: boolean }>,
+): string[] {
+  const exact = new Set<string>()
+  for (const item of auditSnapshot(audit)) {
     if (!item || typeof item !== 'object') continue
     const record = item as Record<string, unknown>
-    const op = record.op === 'remove' ? 'remove' : record.op === 'add' ? 'add' : null
-    const fillId = typeof record.fillId === 'string' ? record.fillId : ''
-    const at = typeof record.at === 'string' ? record.at : ''
-    const by = typeof record.by === 'string' ? record.by : ''
-    const reason = typeof record.reason === 'string' ? record.reason : ''
-    if (!op || !fillId || !at) continue
-    entries.push({ op, fillId, at, by, reason })
+    const fillId = canonicalRithmicFillId(typeof record.fillId === 'string' ? record.fillId : '')
+    if (!fillId) continue
+    if (record.op === 'add' && record.relation === 'exact') exact.add(fillId)
+    if (record.op === 'remove') exact.delete(fillId)
   }
-  return entries
+  for (const item of reclassified) {
+    if (item.exact) exact.add(item.id)
+    else exact.delete(item.id)
+  }
+  return list.filter((id) => exact.has(id))
+}
+
+function orderExactLast(
+  ids: readonly string[],
+  exactIds: readonly string[],
+): { ok: true; ids: string[] } | { ok: false; exactIds: string[] } {
+  const present = exactIds.filter((id) => ids.includes(id))
+  if (present.length > 1) return { ok: false, exactIds: present }
+  if (present.length === 0) return { ok: true, ids: [...ids] }
+  const only = present[0]
+  return { ok: true, ids: [...ids.filter((id) => id !== only), only] }
+}
+
+function twoExactRefusal(exactIds: readonly string[]): Extract<ManualFillDistinctResult, { ok: false }> {
+  return {
+    ok: false,
+    status: 'bad_request',
+    errors: [
+      {
+        field: 'confirmedDistinctFillIds',
+        message: `Prod can protect only one exact-match confirmation. This row would keep ${exactIds.join(' and ')}. Remove one before confirming another.`,
+      },
+    ],
+  }
+}
+
+function markerConflictRefusal(
+  row: DistinctRow,
+): Extract<ManualFillDistinctResult, { ok: false }> {
+  const conflict = distinctMarkerConflict(row)
+  const scalar = conflict?.scalar ?? 'null'
+  return {
+    ok: false,
+    status: 'acknowledgement_required',
+    previousConfirmedDistinctFillId: row.confirmedDistinctFillId,
+    previousConfirmedDistinctFillIds: listConfirmedDistinctFillIds(row),
+    errors: [
+      {
+        field: 'acknowledgeMarkerConflict',
+        message: `confirmedDistinctFillId (${scalar}) is not the last id in confirmedDistinctFillIds. Pass acknowledgeMarkerConflict: true to rewrite it, or remove that scalar id.`,
+      },
+    ],
+  }
 }
 
 function markerSnapshot(row: {
   confirmedDistinctFillId?: string | null
   confirmedDistinctFillIds?: readonly string[] | null
-}): { ids: string[]; scalar: string | null } {
+  confirmedDistinctAudit?: unknown
+}): { ids: string[]; scalar: string | null; audit: unknown[] } {
   return {
     ids: [...(row.confirmedDistinctFillIds ?? [])],
     scalar: row.confirmedDistinctFillId ?? null,
+    audit: auditSnapshot(row.confirmedDistinctAudit),
   }
+}
+
+function composeAudit(
+  row: DistinctRow,
+  at: string,
+  by: string,
+  entries: Array<Record<string, unknown>>,
+): unknown[] {
+  const existing = auditSnapshot(row.confirmedDistinctAudit)
+  const seeded =
+    existing.length === 0 &&
+    (row.confirmedDistinctFillId || (row.confirmedDistinctFillIds?.length ?? 0) > 0)
+      ? [
+          {
+            op: 'legacy',
+            fillId: row.confirmedDistinctFillId ?? row.confirmedDistinctFillIds?.at(-1) ?? '',
+            at,
+            by,
+            reason: 'pre-existing marker',
+            scalar: row.confirmedDistinctFillId ?? null,
+          },
+        ]
+      : []
+  return [...seeded, ...existing, ...entries]
 }
 
 async function defaultMarkDistinct(params: {
@@ -975,7 +1047,8 @@ async function defaultMarkDistinct(params: {
   /** List and scalar read before the gates. The write matches both or writes nothing. */
   expectedConfirmedDistinctFillIds: string[]
   expectedConfirmedDistinctFillId: string | null
-  confirmedDistinctAudit: DistinctAuditEntry[]
+  expectedConfirmedDistinctAudit: unknown[]
+  confirmedDistinctAudit: unknown[]
   confirmedDistinctAt: Date
   confirmedDistinctBy: string
   confirmDistinctReason: string
@@ -989,12 +1062,15 @@ async function defaultMarkDistinct(params: {
       source: 'manual',
       confirmedDistinctFillIds: { equals: params.expectedConfirmedDistinctFillIds },
       confirmedDistinctFillId: params.expectedConfirmedDistinctFillId,
+      confirmedDistinctAudit: {
+        equals: params.expectedConfirmedDistinctAudit as Prisma.InputJsonValue,
+      },
     },
     data: {
       confirmedDistinctFillIds,
       // Latest id in the list, or null once the list is empty.
       confirmedDistinctFillId: confirmedDistinctFillIds.at(-1) ?? null,
-      confirmedDistinctAudit: params.confirmedDistinctAudit,
+      confirmedDistinctAudit: params.confirmedDistinctAudit as Prisma.InputJsonValue,
       confirmedDistinctAt: params.confirmedDistinctAt,
       confirmedDistinctBy: params.confirmedDistinctBy,
       confirmDistinctReason: params.confirmDistinctReason,
@@ -1285,12 +1361,19 @@ export async function confirmDistinctManualRithmicProtocolFill(
       message: 'acknowledgeReapDeferred must be a boolean when provided.',
     })
   }
+  if ('acknowledgeMarkerConflict' in payload && typeof payload.acknowledgeMarkerConflict !== 'boolean') {
+    errors.push({
+      field: 'acknowledgeMarkerConflict',
+      message: 'acknowledgeMarkerConflict must be a boolean when provided.',
+    })
+  }
   if (errors.length > 0) return { ok: false, status: 'validation', errors }
   const dryRun = payload.dryRun === false ? false : true
   const acknowledgeExactMatch = payload.acknowledgeExactMatch === true
   const acknowledgeUnrelated = payload.acknowledgeUnrelated === true
   const acknowledgeAnnotatedTrades = payload.acknowledgeAnnotatedTrades === true
   const acknowledgeReapDeferred = payload.acknowledgeReapDeferred === true
+  const acknowledgeMarkerConflict = payload.acknowledgeMarkerConflict === true
   const findManualFill = deps?.findManualFill ?? defaultFindDistinctFill
   const loadAccountFills = deps?.loadAccountFills ?? defaultLoadAccountFills
   const markDistinct = deps?.markDistinct ?? defaultMarkDistinct
@@ -1341,7 +1424,10 @@ export async function confirmDistinctManualRithmicProtocolFill(
   }
   if (removing) {
     const removeId = canonicalRithmicFillId(removeUpstreamFillId) ?? ''
-    if (!previousIds.includes(removeId)) {
+    const conflict = distinctMarkerConflict(row)
+    const dropsStrayScalar =
+      conflict != null && conflict.scalar === removeId && !previousIds.includes(removeId)
+    if (!previousIds.includes(removeId) && !dropsStrayScalar) {
       return {
         ok: false,
         status: 'not_found',
@@ -1356,7 +1442,17 @@ export async function confirmDistinctManualRithmicProtocolFill(
         ],
       }
     }
-    const proposedIds = previousIds.filter((id) => id !== removeId)
+    const unorderedIds = previousIds.filter((id) => id !== removeId)
+    const ordered = orderExactLast(
+      unorderedIds,
+      exactAcknowledgedIds(row.confirmedDistinctAudit, unorderedIds, []),
+    )
+    if (!ordered.ok) return twoExactRefusal(ordered.exactIds)
+    const proposedIds = ordered.ids
+    const removesConflictScalar = conflict != null && conflict.scalar === removeId
+    if (!dryRun && conflict && !acknowledgeMarkerConflict && !removesConflictScalar) {
+      return markerConflictRefusal(row)
+    }
     const proposedSymbol = withoutProposedDistinctMarker(symbolBook, fillId, removeId)
     const proposedAccount = withoutProposedDistinctMarker(book, fillId, removeId)
     const { trades, tradeEffects } = effectsFor(proposedSymbol, proposedAccount)
@@ -1415,16 +1511,33 @@ export async function confirmDistinctManualRithmicProtocolFill(
         confirmedDistinctFillIds: proposedIds,
         expectedConfirmedDistinctFillIds: markerSnapshot(row).ids,
         expectedConfirmedDistinctFillId: markerSnapshot(row).scalar,
-        confirmedDistinctAudit: [
-          ...readDistinctAudit(row.confirmedDistinctAudit),
-          {
-            op: 'remove',
-            fillId: removeId,
-            at: confirmedDistinctAt.toISOString(),
-            by: confirmedDistinctBy,
-            reason,
-          },
-        ],
+        expectedConfirmedDistinctAudit: markerSnapshot(row).audit,
+        confirmedDistinctAudit: composeAudit(row, confirmedDistinctAt.toISOString(), confirmedDistinctBy, [
+          ...(conflict
+            ? [
+                {
+                  op: 'marker-conflict',
+                  fillId: conflict.scalar ?? '',
+                  scalar: conflict.scalar,
+                  kept: proposedIds.at(-1) ?? null,
+                  at: confirmedDistinctAt.toISOString(),
+                  by: confirmedDistinctBy,
+                  reason,
+                },
+              ]
+            : []),
+          ...(dropsStrayScalar
+            ? []
+            : [
+                {
+                  op: 'remove',
+                  fillId: removeId,
+                  at: confirmedDistinctAt.toISOString(),
+                  by: confirmedDistinctBy,
+                  reason,
+                },
+              ]),
+        ]),
         confirmedDistinctAt,
         confirmedDistinctBy,
         confirmDistinctReason: reason,
@@ -1484,9 +1597,26 @@ export async function confirmDistinctManualRithmicProtocolFill(
   }
   const orderIds = targets.map((target) => target.orderFillId)
   const addedUpstreamFillIds = orderIds.filter((id) => !previousIds.includes(id))
-  const proposedIds = [...previousIds]
+  const unorderedIds = [...previousIds]
   for (const id of orderIds) {
-    if (!proposedIds.includes(id)) proposedIds.push(id)
+    if (!unorderedIds.includes(id)) unorderedIds.push(id)
+  }
+  const ordered = orderExactLast(
+    unorderedIds,
+    exactAcknowledgedIds(
+      row.confirmedDistinctAudit,
+      unorderedIds,
+      targets.map((target) => ({
+        id: target.orderFillId,
+        exact: target.relation.kind === 'exact',
+      })),
+    ),
+  )
+  if (!ordered.ok) return twoExactRefusal(ordered.exactIds)
+  const proposedIds = ordered.ids
+  const conflict = distinctMarkerConflict(row)
+  if (!dryRun && conflict && !acknowledgeMarkerConflict) {
+    return markerConflictRefusal(row)
   }
   const relation = targets[0].relation
   const orderFillId = targets[0].orderFillId
@@ -1608,16 +1738,30 @@ export async function confirmDistinctManualRithmicProtocolFill(
       confirmedDistinctFillIds: proposedIds,
       expectedConfirmedDistinctFillIds: markerSnapshot(row).ids,
       expectedConfirmedDistinctFillId: markerSnapshot(row).scalar,
-      confirmedDistinctAudit: [
-        ...readDistinctAudit(row.confirmedDistinctAudit),
+      expectedConfirmedDistinctAudit: markerSnapshot(row).audit,
+      confirmedDistinctAudit: composeAudit(row, confirmedDistinctAt.toISOString(), confirmedDistinctBy, [
+        ...(conflict
+          ? [
+              {
+                op: 'marker-conflict',
+                fillId: conflict.scalar ?? '',
+                scalar: conflict.scalar,
+                kept: proposedIds.at(-1) ?? null,
+                at: confirmedDistinctAt.toISOString(),
+                by: confirmedDistinctBy,
+                reason,
+              },
+            ]
+          : []),
         ...added.map((target) => ({
           op: 'add' as const,
           fillId: target.orderFillId,
+          relation: target.relation.kind,
           at: confirmedDistinctAt.toISOString(),
           by: confirmedDistinctBy,
           reason,
         })),
-      ],
+      ]),
       confirmedDistinctAt,
       confirmedDistinctBy,
       confirmDistinctReason: reason,
@@ -1682,6 +1826,7 @@ export function parseManualFillCliArgs(argv: string[]):
     'acknowledge-exact-match'?: boolean
     'acknowledge-unrelated'?: boolean
     'acknowledge-reap-deferred'?: boolean
+    'acknowledge-marker-conflict'?: boolean
     'fill-id'?: string
     'upstream-fill-id'?: string
     reason?: string
@@ -1709,6 +1854,7 @@ export function parseManualFillCliArgs(argv: string[]):
         'acknowledge-exact-match': { type: 'boolean' },
         'acknowledge-unrelated': { type: 'boolean' },
         'acknowledge-reap-deferred': { type: 'boolean' },
+        'acknowledge-marker-conflict': { type: 'boolean' },
         'fill-id': { type: 'string' },
         'upstream-fill-id': { type: 'string' },
         reason: { type: 'string' },
@@ -1771,6 +1917,7 @@ export function parseManualFillCliArgs(argv: string[]):
         acknowledgeUnrelated: values['acknowledge-unrelated'] === true,
         acknowledgeAnnotatedTrades: values['acknowledge-annotated-trades'] === true,
         acknowledgeReapDeferred: values['acknowledge-reap-deferred'] === true,
+        acknowledgeMarkerConflict: values['acknowledge-marker-conflict'] === true,
       },
     }
   }
