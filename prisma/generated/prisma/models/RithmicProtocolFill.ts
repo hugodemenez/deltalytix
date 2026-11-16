@@ -132,6 +132,7 @@ export type RithmicProtocolFillCountAggregateOutputType = {
   retiredBy: number
   retireReason: number
   confirmedDistinctFillId: number
+  confirmedDistinctFillIds: number
   confirmedDistinctAt: number
   confirmedDistinctBy: number
   confirmDistinctReason: number
@@ -244,6 +245,7 @@ export type RithmicProtocolFillCountAggregateInputType = {
   retiredBy?: true
   retireReason?: true
   confirmedDistinctFillId?: true
+  confirmedDistinctFillIds?: true
   confirmedDistinctAt?: true
   confirmedDistinctBy?: true
   confirmDistinctReason?: true
@@ -363,6 +365,7 @@ export type RithmicProtocolFillGroupByOutputType = {
   retiredBy: string | null
   retireReason: string | null
   confirmedDistinctFillId: string | null
+  confirmedDistinctFillIds: string[]
   confirmedDistinctAt: Date | null
   confirmedDistinctBy: string | null
   confirmDistinctReason: string | null
@@ -418,6 +421,7 @@ export type RithmicProtocolFillWhereInput = {
   retiredBy?: Prisma.StringNullableFilter<"RithmicProtocolFill"> | string | null
   retireReason?: Prisma.StringNullableFilter<"RithmicProtocolFill"> | string | null
   confirmedDistinctFillId?: Prisma.StringNullableFilter<"RithmicProtocolFill"> | string | null
+  confirmedDistinctFillIds?: Prisma.StringNullableListFilter<"RithmicProtocolFill">
   confirmedDistinctAt?: Prisma.DateTimeNullableFilter<"RithmicProtocolFill"> | Date | string | null
   confirmedDistinctBy?: Prisma.StringNullableFilter<"RithmicProtocolFill"> | string | null
   confirmDistinctReason?: Prisma.StringNullableFilter<"RithmicProtocolFill"> | string | null
@@ -452,6 +456,7 @@ export type RithmicProtocolFillOrderByWithRelationInput = {
   retiredBy?: Prisma.SortOrderInput | Prisma.SortOrder
   retireReason?: Prisma.SortOrderInput | Prisma.SortOrder
   confirmedDistinctFillId?: Prisma.SortOrderInput | Prisma.SortOrder
+  confirmedDistinctFillIds?: Prisma.SortOrder
   confirmedDistinctAt?: Prisma.SortOrderInput | Prisma.SortOrder
   confirmedDistinctBy?: Prisma.SortOrderInput | Prisma.SortOrder
   confirmDistinctReason?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -490,6 +495,7 @@ export type RithmicProtocolFillWhereUniqueInput = Prisma.AtLeast<{
   retiredBy?: Prisma.StringNullableFilter<"RithmicProtocolFill"> | string | null
   retireReason?: Prisma.StringNullableFilter<"RithmicProtocolFill"> | string | null
   confirmedDistinctFillId?: Prisma.StringNullableFilter<"RithmicProtocolFill"> | string | null
+  confirmedDistinctFillIds?: Prisma.StringNullableListFilter<"RithmicProtocolFill">
   confirmedDistinctAt?: Prisma.DateTimeNullableFilter<"RithmicProtocolFill"> | Date | string | null
   confirmedDistinctBy?: Prisma.StringNullableFilter<"RithmicProtocolFill"> | string | null
   confirmDistinctReason?: Prisma.StringNullableFilter<"RithmicProtocolFill"> | string | null
@@ -524,6 +530,7 @@ export type RithmicProtocolFillOrderByWithAggregationInput = {
   retiredBy?: Prisma.SortOrderInput | Prisma.SortOrder
   retireReason?: Prisma.SortOrderInput | Prisma.SortOrder
   confirmedDistinctFillId?: Prisma.SortOrderInput | Prisma.SortOrder
+  confirmedDistinctFillIds?: Prisma.SortOrder
   confirmedDistinctAt?: Prisma.SortOrderInput | Prisma.SortOrder
   confirmedDistinctBy?: Prisma.SortOrderInput | Prisma.SortOrder
   confirmDistinctReason?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -564,6 +571,7 @@ export type RithmicProtocolFillScalarWhereWithAggregatesInput = {
   retiredBy?: Prisma.StringNullableWithAggregatesFilter<"RithmicProtocolFill"> | string | null
   retireReason?: Prisma.StringNullableWithAggregatesFilter<"RithmicProtocolFill"> | string | null
   confirmedDistinctFillId?: Prisma.StringNullableWithAggregatesFilter<"RithmicProtocolFill"> | string | null
+  confirmedDistinctFillIds?: Prisma.StringNullableListFilter<"RithmicProtocolFill">
   confirmedDistinctAt?: Prisma.DateTimeNullableWithAggregatesFilter<"RithmicProtocolFill"> | Date | string | null
   confirmedDistinctBy?: Prisma.StringNullableWithAggregatesFilter<"RithmicProtocolFill"> | string | null
   confirmDistinctReason?: Prisma.StringNullableWithAggregatesFilter<"RithmicProtocolFill"> | string | null
@@ -595,6 +603,7 @@ export type RithmicProtocolFillCreateInput = {
   retiredBy?: string | null
   retireReason?: string | null
   confirmedDistinctFillId?: string | null
+  confirmedDistinctFillIds?: Prisma.RithmicProtocolFillCreateconfirmedDistinctFillIdsInput | string[]
   confirmedDistinctAt?: Date | string | null
   confirmedDistinctBy?: string | null
   confirmDistinctReason?: string | null
@@ -628,6 +637,7 @@ export type RithmicProtocolFillUncheckedCreateInput = {
   retiredBy?: string | null
   retireReason?: string | null
   confirmedDistinctFillId?: string | null
+  confirmedDistinctFillIds?: Prisma.RithmicProtocolFillCreateconfirmedDistinctFillIdsInput | string[]
   confirmedDistinctAt?: Date | string | null
   confirmedDistinctBy?: string | null
   confirmDistinctReason?: string | null
@@ -659,6 +669,7 @@ export type RithmicProtocolFillUpdateInput = {
   retiredBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   retireReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   confirmedDistinctFillId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  confirmedDistinctFillIds?: Prisma.RithmicProtocolFillUpdateconfirmedDistinctFillIdsInput | string[]
   confirmedDistinctAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   confirmedDistinctBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   confirmDistinctReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -692,6 +703,7 @@ export type RithmicProtocolFillUncheckedUpdateInput = {
   retiredBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   retireReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   confirmedDistinctFillId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  confirmedDistinctFillIds?: Prisma.RithmicProtocolFillUpdateconfirmedDistinctFillIdsInput | string[]
   confirmedDistinctAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   confirmedDistinctBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   confirmDistinctReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -724,6 +736,7 @@ export type RithmicProtocolFillCreateManyInput = {
   retiredBy?: string | null
   retireReason?: string | null
   confirmedDistinctFillId?: string | null
+  confirmedDistinctFillIds?: Prisma.RithmicProtocolFillCreateconfirmedDistinctFillIdsInput | string[]
   confirmedDistinctAt?: Date | string | null
   confirmedDistinctBy?: string | null
   confirmDistinctReason?: string | null
@@ -755,6 +768,7 @@ export type RithmicProtocolFillUpdateManyMutationInput = {
   retiredBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   retireReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   confirmedDistinctFillId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  confirmedDistinctFillIds?: Prisma.RithmicProtocolFillUpdateconfirmedDistinctFillIdsInput | string[]
   confirmedDistinctAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   confirmedDistinctBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   confirmDistinctReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -786,6 +800,7 @@ export type RithmicProtocolFillUncheckedUpdateManyInput = {
   retiredBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   retireReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   confirmedDistinctFillId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  confirmedDistinctFillIds?: Prisma.RithmicProtocolFillUpdateconfirmedDistinctFillIdsInput | string[]
   confirmedDistinctAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   confirmedDistinctBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   confirmDistinctReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -833,6 +848,7 @@ export type RithmicProtocolFillCountOrderByAggregateInput = {
   retiredBy?: Prisma.SortOrder
   retireReason?: Prisma.SortOrder
   confirmedDistinctFillId?: Prisma.SortOrder
+  confirmedDistinctFillIds?: Prisma.SortOrder
   confirmedDistinctAt?: Prisma.SortOrder
   confirmedDistinctBy?: Prisma.SortOrder
   confirmDistinctReason?: Prisma.SortOrder
@@ -1003,6 +1019,15 @@ export type RithmicProtocolFillUncheckedUpdateManyWithoutAccountNestedInput = {
   deleteMany?: Prisma.RithmicProtocolFillScalarWhereInput | Prisma.RithmicProtocolFillScalarWhereInput[]
 }
 
+export type RithmicProtocolFillCreateconfirmedDistinctFillIdsInput = {
+  set: string[]
+}
+
+export type RithmicProtocolFillUpdateconfirmedDistinctFillIdsInput = {
+  set?: string[]
+  push?: string | string[]
+}
+
 export type RithmicProtocolFillCreateWithoutConnectionInput = {
   id?: string
   userId: string
@@ -1026,6 +1051,7 @@ export type RithmicProtocolFillCreateWithoutConnectionInput = {
   retiredBy?: string | null
   retireReason?: string | null
   confirmedDistinctFillId?: string | null
+  confirmedDistinctFillIds?: Prisma.RithmicProtocolFillCreateconfirmedDistinctFillIdsInput | string[]
   confirmedDistinctAt?: Date | string | null
   confirmedDistinctBy?: string | null
   confirmDistinctReason?: string | null
@@ -1058,6 +1084,7 @@ export type RithmicProtocolFillUncheckedCreateWithoutConnectionInput = {
   retiredBy?: string | null
   retireReason?: string | null
   confirmedDistinctFillId?: string | null
+  confirmedDistinctFillIds?: Prisma.RithmicProtocolFillCreateconfirmedDistinctFillIdsInput | string[]
   confirmedDistinctAt?: Date | string | null
   confirmedDistinctBy?: string | null
   confirmDistinctReason?: string | null
@@ -1118,6 +1145,7 @@ export type RithmicProtocolFillScalarWhereInput = {
   retiredBy?: Prisma.StringNullableFilter<"RithmicProtocolFill"> | string | null
   retireReason?: Prisma.StringNullableFilter<"RithmicProtocolFill"> | string | null
   confirmedDistinctFillId?: Prisma.StringNullableFilter<"RithmicProtocolFill"> | string | null
+  confirmedDistinctFillIds?: Prisma.StringNullableListFilter<"RithmicProtocolFill">
   confirmedDistinctAt?: Prisma.DateTimeNullableFilter<"RithmicProtocolFill"> | Date | string | null
   confirmedDistinctBy?: Prisma.StringNullableFilter<"RithmicProtocolFill"> | string | null
   confirmDistinctReason?: Prisma.StringNullableFilter<"RithmicProtocolFill"> | string | null
@@ -1149,6 +1177,7 @@ export type RithmicProtocolFillCreateWithoutAccountInput = {
   retiredBy?: string | null
   retireReason?: string | null
   confirmedDistinctFillId?: string | null
+  confirmedDistinctFillIds?: Prisma.RithmicProtocolFillCreateconfirmedDistinctFillIdsInput | string[]
   confirmedDistinctAt?: Date | string | null
   confirmedDistinctBy?: string | null
   confirmDistinctReason?: string | null
@@ -1180,6 +1209,7 @@ export type RithmicProtocolFillUncheckedCreateWithoutAccountInput = {
   retiredBy?: string | null
   retireReason?: string | null
   confirmedDistinctFillId?: string | null
+  confirmedDistinctFillIds?: Prisma.RithmicProtocolFillCreateconfirmedDistinctFillIdsInput | string[]
   confirmedDistinctAt?: Date | string | null
   confirmedDistinctBy?: string | null
   confirmDistinctReason?: string | null
@@ -1238,6 +1268,7 @@ export type RithmicProtocolFillCreateManyConnectionInput = {
   retiredBy?: string | null
   retireReason?: string | null
   confirmedDistinctFillId?: string | null
+  confirmedDistinctFillIds?: Prisma.RithmicProtocolFillCreateconfirmedDistinctFillIdsInput | string[]
   confirmedDistinctAt?: Date | string | null
   confirmedDistinctBy?: string | null
   confirmDistinctReason?: string | null
@@ -1268,6 +1299,7 @@ export type RithmicProtocolFillUpdateWithoutConnectionInput = {
   retiredBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   retireReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   confirmedDistinctFillId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  confirmedDistinctFillIds?: Prisma.RithmicProtocolFillUpdateconfirmedDistinctFillIdsInput | string[]
   confirmedDistinctAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   confirmedDistinctBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   confirmDistinctReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1300,6 +1332,7 @@ export type RithmicProtocolFillUncheckedUpdateWithoutConnectionInput = {
   retiredBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   retireReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   confirmedDistinctFillId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  confirmedDistinctFillIds?: Prisma.RithmicProtocolFillUpdateconfirmedDistinctFillIdsInput | string[]
   confirmedDistinctAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   confirmedDistinctBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   confirmDistinctReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1331,6 +1364,7 @@ export type RithmicProtocolFillUncheckedUpdateManyWithoutConnectionInput = {
   retiredBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   retireReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   confirmedDistinctFillId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  confirmedDistinctFillIds?: Prisma.RithmicProtocolFillUpdateconfirmedDistinctFillIdsInput | string[]
   confirmedDistinctAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   confirmedDistinctBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   confirmDistinctReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1361,6 +1395,7 @@ export type RithmicProtocolFillCreateManyAccountInput = {
   retiredBy?: string | null
   retireReason?: string | null
   confirmedDistinctFillId?: string | null
+  confirmedDistinctFillIds?: Prisma.RithmicProtocolFillCreateconfirmedDistinctFillIdsInput | string[]
   confirmedDistinctAt?: Date | string | null
   confirmedDistinctBy?: string | null
   confirmDistinctReason?: string | null
@@ -1392,6 +1427,7 @@ export type RithmicProtocolFillUpdateWithoutAccountInput = {
   retiredBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   retireReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   confirmedDistinctFillId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  confirmedDistinctFillIds?: Prisma.RithmicProtocolFillUpdateconfirmedDistinctFillIdsInput | string[]
   confirmedDistinctAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   confirmedDistinctBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   confirmDistinctReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1423,6 +1459,7 @@ export type RithmicProtocolFillUncheckedUpdateWithoutAccountInput = {
   retiredBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   retireReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   confirmedDistinctFillId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  confirmedDistinctFillIds?: Prisma.RithmicProtocolFillUpdateconfirmedDistinctFillIdsInput | string[]
   confirmedDistinctAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   confirmedDistinctBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   confirmDistinctReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1454,6 +1491,7 @@ export type RithmicProtocolFillUncheckedUpdateManyWithoutAccountInput = {
   retiredBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   retireReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   confirmedDistinctFillId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  confirmedDistinctFillIds?: Prisma.RithmicProtocolFillUpdateconfirmedDistinctFillIdsInput | string[]
   confirmedDistinctAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   confirmedDistinctBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   confirmDistinctReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1488,6 +1526,7 @@ export type RithmicProtocolFillSelect<ExtArgs extends runtime.Types.Extensions.I
   retiredBy?: boolean
   retireReason?: boolean
   confirmedDistinctFillId?: boolean
+  confirmedDistinctFillIds?: boolean
   confirmedDistinctAt?: boolean
   confirmedDistinctBy?: boolean
   confirmDistinctReason?: boolean
@@ -1522,6 +1561,7 @@ export type RithmicProtocolFillSelectCreateManyAndReturn<ExtArgs extends runtime
   retiredBy?: boolean
   retireReason?: boolean
   confirmedDistinctFillId?: boolean
+  confirmedDistinctFillIds?: boolean
   confirmedDistinctAt?: boolean
   confirmedDistinctBy?: boolean
   confirmDistinctReason?: boolean
@@ -1556,6 +1596,7 @@ export type RithmicProtocolFillSelectUpdateManyAndReturn<ExtArgs extends runtime
   retiredBy?: boolean
   retireReason?: boolean
   confirmedDistinctFillId?: boolean
+  confirmedDistinctFillIds?: boolean
   confirmedDistinctAt?: boolean
   confirmedDistinctBy?: boolean
   confirmDistinctReason?: boolean
@@ -1590,6 +1631,7 @@ export type RithmicProtocolFillSelectScalar = {
   retiredBy?: boolean
   retireReason?: boolean
   confirmedDistinctFillId?: boolean
+  confirmedDistinctFillIds?: boolean
   confirmedDistinctAt?: boolean
   confirmedDistinctBy?: boolean
   confirmDistinctReason?: boolean
@@ -1598,7 +1640,7 @@ export type RithmicProtocolFillSelectScalar = {
   updatedAt?: boolean
 }
 
-export type RithmicProtocolFillOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "accountNumber" | "accountId" | "identityKey" | "fillId" | "rawFillId" | "symbol" | "exchange" | "transactionType" | "fillPrice" | "fillSize" | "fillDate" | "fillTime" | "basketId" | "sequenceNumber" | "ssboe" | "usecs" | "source" | "retiredAt" | "retiredBy" | "retireReason" | "confirmedDistinctFillId" | "confirmedDistinctAt" | "confirmedDistinctBy" | "confirmDistinctReason" | "connectionId" | "createdAt" | "updatedAt", ExtArgs["result"]["rithmicProtocolFill"]>
+export type RithmicProtocolFillOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "accountNumber" | "accountId" | "identityKey" | "fillId" | "rawFillId" | "symbol" | "exchange" | "transactionType" | "fillPrice" | "fillSize" | "fillDate" | "fillTime" | "basketId" | "sequenceNumber" | "ssboe" | "usecs" | "source" | "retiredAt" | "retiredBy" | "retireReason" | "confirmedDistinctFillId" | "confirmedDistinctFillIds" | "confirmedDistinctAt" | "confirmedDistinctBy" | "confirmDistinctReason" | "connectionId" | "createdAt" | "updatedAt", ExtArgs["result"]["rithmicProtocolFill"]>
 export type RithmicProtocolFillInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   account?: boolean | Prisma.RithmicProtocolFill$accountArgs<ExtArgs>
   connection?: boolean | Prisma.RithmicProtocolFill$connectionArgs<ExtArgs>
@@ -1661,9 +1703,17 @@ export type $RithmicProtocolFillPayload<ExtArgs extends runtime.Types.Extensions
     retiredBy: string | null
     retireReason: string | null
     /**
-     * Plant fill this manual was confirmed distinct from. Reconcile will not match or near-miss that fill id.
+     * @deprecated Latest plant fill id written by confirm-distinct.
+     * Readers use `confirmedDistinctFillIds`. Kept so a rollback still sees
+     * the most recent id, and so rows written before that list existed are
+     * not dropped.
      */
     confirmedDistinctFillId: string | null
+    /**
+     * Plant fills this manual was confirmed distinct from. Reconcile will
+     * not match or near-miss any of these ids. A second confirm appends.
+     */
+    confirmedDistinctFillIds: string[]
     confirmedDistinctAt: Date | null
     confirmedDistinctBy: string | null
     confirmDistinctReason: string | null
@@ -2118,6 +2168,7 @@ export interface RithmicProtocolFillFieldRefs {
   readonly retiredBy: Prisma.FieldRef<"RithmicProtocolFill", 'String'>
   readonly retireReason: Prisma.FieldRef<"RithmicProtocolFill", 'String'>
   readonly confirmedDistinctFillId: Prisma.FieldRef<"RithmicProtocolFill", 'String'>
+  readonly confirmedDistinctFillIds: Prisma.FieldRef<"RithmicProtocolFill", 'String[]'>
   readonly confirmedDistinctAt: Prisma.FieldRef<"RithmicProtocolFill", 'DateTime'>
   readonly confirmedDistinctBy: Prisma.FieldRef<"RithmicProtocolFill", 'String'>
   readonly confirmDistinctReason: Prisma.FieldRef<"RithmicProtocolFill", 'String'>

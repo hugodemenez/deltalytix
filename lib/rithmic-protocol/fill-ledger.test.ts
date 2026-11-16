@@ -1037,6 +1037,60 @@ describe('manual fills', () => {
     expect(omitAmbiguousManualBooks(prepared.fills, prepared.nearMisses)).toEqual([])
   })
 
+  it('warns until every near-miss plant fill is confirmed distinct', () => {
+    const first = { ...nearbyOneLot, fillId: '1403850' }
+    const second = {
+      ...nearbyOneLot,
+      fillId: '1402237',
+      fillPrice: 5810.5,
+      ssboe: atMs / 1000 + 40,
+    }
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const none = prepareRithmicProtocolFills([manual, first, second])
+      expect(none.nearMisses.map((miss) => miss.upstream.fillId)).toEqual(['1403850'])
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('upstream fillId=1403850'))
+
+      warn.mockClear()
+      const one = prepareRithmicProtocolFills([
+        { ...manual, confirmedDistinctFillIds: ['1403850'] },
+        first,
+        second,
+      ])
+      expect(one.nearMisses.map((miss) => miss.upstream.fillId)).toEqual(['1402237'])
+      expect(one.retirements).toEqual([])
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('upstream fillId=1402237'))
+
+      warn.mockClear()
+      const both = prepareRithmicProtocolFills([
+        { ...manual, confirmedDistinctFillIds: ['1403850', '1402237'] },
+        first,
+        second,
+      ])
+      expect(both.nearMisses).toEqual([])
+      expect(both.retirements).toEqual([])
+      expect(both.fills.map((row) => row.fillId).sort()).toEqual([
+        '1402237',
+        '1403850',
+        'manual-gap',
+      ])
+      expect(warn).not.toHaveBeenCalled()
+
+      const legacyAndList = prepareRithmicProtocolFills([
+        {
+          ...manual,
+          confirmedDistinctFillId: '1402237',
+          confirmedDistinctFillIds: ['1403850'],
+        },
+        first,
+        second,
+      ])
+      expect(legacyAndList.nearMisses).toEqual([])
+    } finally {
+      warn.mockRestore()
+    }
+  })
+
   it('keeps a plant fill that was confirmed distinct from the manual', () => {
     const marked = { ...manual, confirmedDistinctFillId: '88422' }
     const qty = prepareRithmicProtocolFills([marked, nearbyOneLot])
@@ -1343,6 +1397,38 @@ describe('confirm-distinct does not replace the manual trade', () => {
         distinctPlantIdByManualFillId: new Map([['manual-gap', '88421']]),
       }),
     ).toBe('reap')
+  })
+
+  it('treats every id on the list as a different execution', () => {
+    const otherPlant = {
+      ...plantTrade,
+      id: 'plant-b',
+      entryId: '1402237',
+      entryDate: '2026-09-25T15:07:20.000Z',
+    }
+    const both = new Map<string, ReadonlySet<string>>([
+      ['manual-gap', new Set(['88421', '1402237'])],
+    ])
+    expect(
+      manualTradeReplacedByPlantTrade(stored, plantTrade, {
+        distinctPlantIdByManualFillId: both,
+      }),
+    ).toBe(false)
+    expect(
+      manualTradeReplacedByPlantTrade(stored, otherPlant, {
+        distinctPlantIdByManualFillId: both,
+      }),
+    ).toBe(false)
+    expect(
+      manualTradeReplacedByPlantTrade(stored, otherPlant, {
+        distinctPlantIdByManualFillId: new Map([['manual-gap', '88421']]),
+      }),
+    ).toBe(true)
+    expect(
+      manualTradeReplacedByPlantTrade(stored, plantTrade, {
+        distinctPlantIdByManualFillId: new Map([['manual-gap', '88421']]),
+      }),
+    ).toBe(false)
   })
 
   it('still rematches when only one of two manual legs is replaced', () => {

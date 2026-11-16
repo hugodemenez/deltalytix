@@ -412,6 +412,28 @@ describe('confirmDistinctManualRithmicProtocolFill', () => {
     expect(deferred.ok).toBe(true)
     if (!deferred.ok) return
     expect(deferred.input.acknowledgeReapDeferred).toBe(true)
+    const remove = parseManualFillCliArgs([
+      '--confirm-distinct',
+      '--remove',
+      '--apply',
+      '--user-id',
+      base.userId,
+      '--account',
+      base.accountNumber,
+      '--fill-id',
+      'manual-gap',
+      '--upstream-fill-id',
+      '1403850',
+      '--reason',
+      'drop this id only',
+    ])
+    expect(remove.ok).toBe(true)
+    if (!remove.ok) return
+    expect(remove.input.removeUpstreamFillId).toBe('1403850')
+    expect(remove.input.upstreamFillId).toBeUndefined()
+    expect(remove.input.dryRun).toBe(false)
+    const bareRemove = parseManualFillCliArgs(['--remove', '--upstream-fill-id', '1403850'])
+    expect(bareRemove.ok).toBe(false)
   })
 
   it('refuses a missing plant fill and an unacknowledged exact match', async () => {
@@ -893,7 +915,7 @@ describe('confirmDistinctManualRithmicProtocolFill', () => {
     expect(markDistinct).not.toHaveBeenCalled()
   })
 
-  it('gates an annotated trade on the plant fill an overwritten marker frees', async () => {
+  it('gates an annotated trade when removing the marker frees that plant fill', async () => {
     const ssboe = manualRow.ssboe
     findManualFill.mockResolvedValue({
       ...manualRow,
@@ -952,10 +974,9 @@ describe('confirmDistinctManualRithmicProtocolFill', () => {
         userId: 'user-1',
         accountNumber: base.accountNumber,
         fillId: 'manual-gap',
-        upstreamFillId: '7700',
+        removeUpstreamFillId: '88421',
         reason: 'point the marker at a different fill',
         dryRun: false,
-        acknowledgeUnrelated: true,
       },
       { findManualFill, loadAccountFills, markDistinct, findDerivedTrades },
     )
@@ -972,7 +993,7 @@ describe('confirmDistinctManualRithmicProtocolFill', () => {
     expect(markDistinct).not.toHaveBeenCalled()
   })
 
-  it('gates the old pair when an overwrite lets the freed plant fill match exactly', async () => {
+  it('gates the old pair when removing the marker lets the plant fill match exactly', async () => {
     const ssboe = manualRow.ssboe
     findManualFill.mockResolvedValue({
       ...manualRow,
@@ -1026,10 +1047,9 @@ describe('confirmDistinctManualRithmicProtocolFill', () => {
         userId: 'user-1',
         accountNumber: base.accountNumber,
         fillId: 'manual-gap',
-        upstreamFillId: '7700',
+        removeUpstreamFillId: '88421',
         reason: 'let the earlier plant fill take the close',
         dryRun: false,
-        acknowledgeUnrelated: true,
       },
       { findManualFill, loadAccountFills, markDistinct, findDerivedTrades },
     )
@@ -1335,7 +1355,7 @@ describe('confirmDistinctManualRithmicProtocolFill', () => {
     expect(markDistinct).not.toHaveBeenCalled()
   })
 
-  it('gates an annotated trade when a near-miss overwrite frees the previous plant fill', async () => {
+  it('gates an annotated trade when removing a marker frees the previous plant fill', async () => {
     const ssboe = manualRow.ssboe
     findManualFill.mockResolvedValue({
       ...manualRow,
@@ -1375,7 +1395,7 @@ describe('confirmDistinctManualRithmicProtocolFill', () => {
         userId: 'user-1',
         accountNumber: base.accountNumber,
         fillId: 'manual-gap',
-        upstreamFillId: '7700',
+        removeUpstreamFillId: '88421',
         reason: 'point the marker at the near-miss',
         dryRun: false,
       },
@@ -1383,7 +1403,8 @@ describe('confirmDistinctManualRithmicProtocolFill', () => {
     )
     expect(refused.ok).toBe(false)
     if (refused.ok) return
-    expect(refused.relation?.kind).toBe('near-miss')
+    expect(refused.removedUpstreamFillId).toBe('88421')
+    expect(refused.confirmedDistinctFillIds).toEqual([])
     expect(refused.errors[0]?.field).toBe('acknowledgeAnnotatedTrades')
     expect(refused.trades?.map((trade) => trade.id)).toEqual(['stored-freed'])
     expect(refused.tradeEffects?.nextBookBlocked).toBe(true)
@@ -1601,28 +1622,203 @@ describe('confirmDistinctManualRithmicProtocolFill', () => {
     expect(prepared.fills.some((fill) => fill.fillId === 'manual-gap')).toBe(true)
   })
 
-  it('returns the marker a later confirm-distinct overwrites', async () => {
+  it('appends a later confirm-distinct instead of replacing the first id', async () => {
     findManualFill.mockResolvedValue({
       ...manualRow,
       confirmedDistinctFillId: '7700',
+      confirmedDistinctFillIds: ['7700'],
       confirmedDistinctAt: new Date('2026-09-01T00:00:00Z'),
     })
+    loadAccountFills.mockResolvedValue([
+      {
+        ...manualRow,
+        confirmedDistinctFillId: '7700',
+        confirmedDistinctFillIds: ['7700'],
+      },
+      nearMiss,
+      { ...nearMiss, fillId: '7700', fillPrice: 1, fillDate: '20260901', ssboe: 1_700_000_000 },
+    ])
     const applied = await confirmDistinctManualRithmicProtocolFill(
       {
         userId: 'user-1',
         accountNumber: base.accountNumber,
         fillId: 'manual-gap',
         upstreamFillId: '88422',
-        reason: 'replace the old marker',
+        reason: 'also distinct from the second fill',
         dryRun: false,
+        acknowledgeUnrelated: true,
       },
       { findManualFill, loadAccountFills, markDistinct },
     )
     expect(applied.ok).toBe(true)
     if (!applied.ok) return
     expect(applied.previousConfirmedDistinctFillId).toBe('7700')
+    expect(applied.previousConfirmedDistinctFillIds).toEqual(['7700'])
     expect(applied.idempotent).toBe(false)
     expect(applied.upstreamFillId).toBe('88422')
+    expect(applied.addedUpstreamFillIds).toEqual(['88422'])
+    expect(applied.confirmedDistinctFillIds).toEqual(['7700', '88422'])
+    expect(markDistinct).toHaveBeenCalledTimes(1)
+    expect(markDistinct.mock.calls[0][0].confirmedDistinctFillIds).toEqual(['7700', '88422'])
+  })
+
+  it('confirms several plant fills, dedupes repeats, and keeps both ids', async () => {
+    const manual = { ...manualRow, fillPrice: 7777, fillSize: 2 }
+    const first = { ...nearMiss, fillId: '1403850', fillPrice: 7777 }
+    const second = {
+      ...nearMiss,
+      fillId: '1402237',
+      fillPrice: 7777.25,
+      ssboe: manualRow.ssboe + 30,
+    }
+    findManualFill.mockResolvedValue(manual)
+    loadAccountFills.mockResolvedValue([manual, first, second])
+    const deduped = await confirmDistinctManualRithmicProtocolFill(
+      {
+        userId: 'user-1',
+        accountNumber: base.accountNumber,
+        fillId: 'manual-gap',
+        upstreamFillId: '1403850',
+        upstreamFillIds: ['1403850', '1403850'],
+        reason: 'manual BUY 2 @7777 is not fill 1403850',
+        dryRun: false,
+      },
+      { findManualFill, loadAccountFills, markDistinct },
+    )
+    expect(deduped.ok).toBe(true)
+    if (!deduped.ok) return
+    expect(deduped.addedUpstreamFillIds).toEqual(['1403850'])
+    expect(deduped.confirmedDistinctFillIds).toEqual(['1403850'])
+    expect(markDistinct).toHaveBeenCalledTimes(1)
+
+    const marked = {
+      ...manual,
+      confirmedDistinctFillId: '1403850',
+      confirmedDistinctFillIds: ['1403850'],
+      confirmedDistinctAt: new Date('2026-11-16T12:00:00Z'),
+    }
+    findManualFill.mockResolvedValue(marked)
+    loadAccountFills.mockResolvedValue([marked, first, second])
+    const secondConfirm = await confirmDistinctManualRithmicProtocolFill(
+      {
+        userId: 'user-1',
+        accountNumber: base.accountNumber,
+        fillId: 'manual-gap',
+        upstreamFillId: '1402237',
+        reason: 'manual BUY 2 @7777 is not fill 1402237 either',
+        dryRun: false,
+        acknowledgeUnrelated: true,
+      },
+      { findManualFill, loadAccountFills, markDistinct },
+    )
+    expect(secondConfirm.ok).toBe(true)
+    if (!secondConfirm.ok) return
+    expect(secondConfirm.idempotent).toBe(false)
+    expect(secondConfirm.previousConfirmedDistinctFillIds).toEqual(['1403850'])
+    expect(secondConfirm.addedUpstreamFillIds).toEqual(['1402237'])
+    expect(secondConfirm.confirmedDistinctFillIds).toEqual(['1403850', '1402237'])
+    expect(markDistinct.mock.calls[1][0].confirmedDistinctFillIds).toEqual([
+      '1403850',
+      '1402237',
+    ])
+
+    findManualFill.mockResolvedValue({
+      ...marked,
+      confirmedDistinctFillId: '1402237',
+      confirmedDistinctFillIds: ['1403850', '1402237'],
+      confirmedDistinctBy: 'admin-1',
+      confirmDistinctReason: 'manual BUY 2 @7777 is not fill 1402237 either',
+    })
+    const repeat = await confirmDistinctManualRithmicProtocolFill(
+      {
+        userId: 'user-1',
+        accountNumber: base.accountNumber,
+        fillId: 'manual-gap',
+        upstreamFillId: '1403850',
+        reason: 'already confirmed',
+        dryRun: false,
+      },
+      { findManualFill, loadAccountFills, markDistinct },
+    )
+    expect(repeat.ok).toBe(true)
+    if (!repeat.ok) return
+    expect(repeat.idempotent).toBe(true)
+    expect(repeat.addedUpstreamFillIds).toEqual([])
+    expect(repeat.confirmedDistinctFillIds).toEqual(['1403850', '1402237'])
+    expect(markDistinct).toHaveBeenCalledTimes(2)
+
+    findManualFill.mockResolvedValue(manual)
+    loadAccountFills.mockResolvedValue([manual, first, second])
+    markDistinct.mockClear()
+    const together = await confirmDistinctManualRithmicProtocolFill(
+      {
+        userId: 'user-1',
+        accountNumber: base.accountNumber,
+        fillId: 'manual-gap',
+        upstreamFillIds: ['1403850', '1402237'],
+        reason: 'both plant fills are different executions',
+        dryRun: false,
+        acknowledgeUnrelated: true,
+      },
+      { findManualFill, loadAccountFills, markDistinct },
+    )
+    expect(together.ok).toBe(true)
+    if (!together.ok) return
+    expect(together.confirmedDistinctFillIds).toEqual(['1403850', '1402237'])
+    expect(markDistinct.mock.calls[0][0].confirmedDistinctFillIds).toEqual([
+      '1403850',
+      '1402237',
+    ])
+  })
+
+  it('removes one confirmed id and leaves the others', async () => {
+    findManualFill.mockResolvedValue({
+      ...manualRow,
+      confirmedDistinctFillId: '1402237',
+      confirmedDistinctFillIds: ['1403850', '1402237'],
+      confirmedDistinctAt: new Date('2026-11-16T12:00:00Z'),
+    })
+    loadAccountFills.mockResolvedValue([
+      {
+        ...manualRow,
+        confirmedDistinctFillId: '1402237',
+        confirmedDistinctFillIds: ['1403850', '1402237'],
+      },
+      { ...nearMiss, fillId: '1403850' },
+      { ...nearMiss, fillId: '1402237', fillPrice: 7777.25 },
+    ])
+    const removed = await confirmDistinctManualRithmicProtocolFill(
+      {
+        userId: 'user-1',
+        accountNumber: base.accountNumber,
+        fillId: 'manual-gap',
+        removeUpstreamFillId: '1403850',
+        reason: 'that one was the same execution',
+        dryRun: false,
+      },
+      { findManualFill, loadAccountFills, markDistinct },
+    )
+    expect(removed.ok).toBe(true)
+    if (!removed.ok) return
+    expect(removed.removedUpstreamFillId).toBe('1403850')
+    expect(removed.confirmedDistinctFillIds).toEqual(['1402237'])
+    expect(removed.addedUpstreamFillIds).toEqual([])
+    expect(markDistinct.mock.calls[0][0].confirmedDistinctFillIds).toEqual(['1402237'])
+
+    const missing = await confirmDistinctManualRithmicProtocolFill(
+      {
+        userId: 'user-1',
+        accountNumber: base.accountNumber,
+        fillId: 'manual-gap',
+        removeUpstreamFillId: '9999',
+        reason: 'not on the row',
+        dryRun: false,
+      },
+      { findManualFill, loadAccountFills, markDistinct },
+    )
+    expect(missing.ok).toBe(false)
+    if (missing.ok) return
+    expect(missing.status).toBe('not_found')
     expect(markDistinct).toHaveBeenCalledTimes(1)
   })
 
@@ -1688,6 +1884,7 @@ describe('confirm-distinct where clause', () => {
         symbol: true,
         transactionType: true,
         confirmedDistinctFillId: true,
+        confirmedDistinctFillIds: true,
       }),
     })
     expect(updateMany).not.toHaveBeenCalled()
@@ -1765,6 +1962,7 @@ describe('confirm-distinct where clause', () => {
         source: 'manual',
       },
       data: expect.objectContaining({
+        confirmedDistinctFillIds: ['88422'],
         confirmedDistinctFillId: '88422',
         confirmedDistinctBy: 'admin',
         confirmDistinctReason: 'this account only',

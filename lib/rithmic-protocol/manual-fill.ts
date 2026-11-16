@@ -5,6 +5,7 @@ import { RITHMIC_PROTOCOL_TRADE_TAG } from '@/lib/trade-id-utils'
 import { canonicalRithmicFillId, fillIdentityKey } from './dedupe-fills'
 import {
   hasTradeJournalAnnotations,
+  listConfirmedDistinctFillIds,
   manualFillBookRelation,
   planManualFillSyncEffects,
   prepareRithmicProtocolFills,
@@ -783,7 +784,16 @@ export type ManualFillDistinctResult =
       confirmedDistinctBy: string
       confirmDistinctReason: string
       relation: ManualFillDistinctRelation
+      /** Deprecated scalar that was stored before this call. */
       previousConfirmedDistinctFillId: string | null
+      /** Every plant id on the row before this call. */
+      previousConfirmedDistinctFillIds: string[]
+      /** Every plant id after this call. On a refusal, the list this call would write. */
+      confirmedDistinctFillIds: string[]
+      /** Plant ids this call appended. Empty when the call removes one id or changes nothing. */
+      addedUpstreamFillIds: string[]
+      /** Set when this call removes one id. */
+      removedUpstreamFillId: string | null
       trades: ManualFillDerivedTrade[]
       tradeEffects: ManualFillTradeEffects
     }
@@ -793,6 +803,10 @@ export type ManualFillDistinctResult =
       errors: ManualFillFieldError[]
       relation?: ManualFillDistinctRelation
       previousConfirmedDistinctFillId?: string | null
+      previousConfirmedDistinctFillIds?: string[]
+      confirmedDistinctFillIds?: string[]
+      addedUpstreamFillIds?: string[]
+      removedUpstreamFillId?: string | null
       trades?: ManualFillDerivedTrade[]
       tradeEffects?: ManualFillTradeEffects
     }
@@ -813,6 +827,7 @@ type DistinctRow = {
   exchange: string | null
   sequenceNumber: string | null
   confirmedDistinctFillId: string | null
+  confirmedDistinctFillIds?: string[] | null
   confirmedDistinctAt: Date | null
   confirmedDistinctBy: string | null
   confirmDistinctReason: string | null
@@ -834,6 +849,7 @@ const DISTINCT_FILL_SELECT = {
   exchange: true,
   sequenceNumber: true,
   confirmedDistinctFillId: true,
+  confirmedDistinctFillIds: true,
   confirmedDistinctAt: true,
   confirmedDistinctBy: true,
   confirmDistinctReason: true,
@@ -859,6 +875,7 @@ function distinctRowToFill(row: DistinctRow): RithmicProtocolFill {
     usecs: row.usecs,
     source: row.source,
     confirmedDistinctFillId: row.confirmedDistinctFillId,
+    confirmedDistinctFillIds: row.confirmedDistinctFillIds ?? undefined,
   })
 }
 
@@ -915,11 +932,14 @@ async function defaultMarkDistinct(params: {
   userId: string
   accountNumber: string
   fillId: string
+  /** Id this call added or removed. The persisted list is `confirmedDistinctFillIds`. */
   upstreamFillId: string
+  confirmedDistinctFillIds: string[]
   confirmedDistinctAt: Date
   confirmedDistinctBy: string
   confirmDistinctReason: string
 }): Promise<void> {
+  const confirmedDistinctFillIds = params.confirmedDistinctFillIds
   await prisma.rithmicProtocolFill.updateMany({
     where: {
       userId: params.userId,
@@ -928,7 +948,9 @@ async function defaultMarkDistinct(params: {
       source: 'manual',
     },
     data: {
-      confirmedDistinctFillId: params.upstreamFillId,
+      confirmedDistinctFillIds,
+      // Deprecated mirror of the latest id. Empty after the last id is removed.
+      confirmedDistinctFillId: confirmedDistinctFillIds.at(-1) ?? null,
       confirmedDistinctAt: params.confirmedDistinctAt,
       confirmedDistinctBy: params.confirmedDistinctBy,
       confirmDistinctReason: params.confirmDistinctReason,
@@ -964,16 +986,52 @@ function syncProtocolPairKeys(fills: RithmicProtocolFill[], userId: string): Set
   return keys
 }
 
+function withDistinctIds(
+  fill: RithmicProtocolFill,
+  ids: string[],
+): RithmicProtocolFill {
+  return {
+    ...fill,
+    confirmedDistinctFillIds: ids,
+    confirmedDistinctFillId: ids.at(-1),
+  }
+}
+
+/** Append plant ids. Ids already on the row stay, in their existing order. */
 function withProposedDistinctMarker(
+  fills: RithmicProtocolFill[],
+  manualId: string,
+  orderFillIds: string | readonly string[],
+): RithmicProtocolFill[] {
+  const adding = (typeof orderFillIds === 'string' ? [orderFillIds] : orderFillIds)
+    .map((id) => canonicalRithmicFillId(id))
+    .filter((id): id is string => Boolean(id))
+  return fills.map((fill) => {
+    if (!(fill.source === 'manual' && canonicalRithmicFillId(fill.fillId) === manualId)) {
+      return fill
+    }
+    const ids = listConfirmedDistinctFillIds(fill)
+    for (const id of adding) {
+      if (!ids.includes(id)) ids.push(id)
+    }
+    return withDistinctIds(fill, ids)
+  })
+}
+
+/** Drop one plant id. The others stay. */
+function withoutProposedDistinctMarker(
   fills: RithmicProtocolFill[],
   manualId: string,
   orderFillId: string,
 ): RithmicProtocolFill[] {
-  return fills.map((fill) =>
-    fill.source === 'manual' && canonicalRithmicFillId(fill.fillId) === manualId
-      ? { ...fill, confirmedDistinctFillId: orderFillId }
-      : fill,
-  )
+  const removing = canonicalRithmicFillId(orderFillId)
+  return fills.map((fill) => {
+    if (!(fill.source === 'manual' && canonicalRithmicFillId(fill.fillId) === manualId)) {
+      return fill
+    }
+    const ids = listConfirmedDistinctFillIds(fill).filter((id) => id !== removing)
+    return withDistinctIds(fill, ids)
+  })
 }
 
 /** Sync blocks one raw contract, not the whole root. Key on the target symbol. */
@@ -1016,15 +1074,37 @@ function displacedStoredTrades(
 }
 
 /** Any remaining near-miss retains the whole account, so sync will not reap. */
-function accountReapDeferred(
-  fills: RithmicProtocolFill[],
-  manualId: string,
-  orderFillId: string,
-): boolean {
-  return (
-    prepareRithmicProtocolFills(withProposedDistinctMarker(fills, manualId, orderFillId))
-      .nearMisses.length > 0
-  )
+function accountReapDeferred(proposedFills: RithmicProtocolFill[]): boolean {
+  return prepareRithmicProtocolFills(proposedFills).nearMisses.length > 0
+}
+
+function readUpstreamFillIds(value: unknown): { ok: true; ids: string[] } | { ok: false } {
+  if (value == null) return { ok: true, ids: [] }
+  if (!Array.isArray(value)) return { ok: false }
+  const ids: string[] = []
+  for (const item of value) {
+    if (typeof item !== 'string') return { ok: false }
+    const trimmed = item.trim()
+    if (trimmed) ids.push(trimmed)
+  }
+  return { ok: true, ids }
+}
+
+function uniqueStrings(ids: string[]): string[] {
+  const seen = new Set<string>()
+  const unique: string[] = []
+  for (const id of ids) {
+    if (seen.has(id)) continue
+    seen.add(id)
+    unique.push(id)
+  }
+  return unique
+}
+
+type DistinctTarget = {
+  namedFillId: string
+  orderFillId: string
+  relation: ManualFillBookRelation
 }
 
 function tradeEffectCounts(
@@ -1041,9 +1121,11 @@ function tradeEffectCounts(
 }
 
 /**
- * Mark one manual fill as a different execution from one plant fill.
+ * Mark one manual fill as a different execution from one or more plant fills.
+ * Each call appends ids. An id already on the row is left in place.
  * Preview is the default. Reconcile then neither matches nor near-misses
- * that plant fill id, so both fills stay in the book.
+ * any listed plant fill id, so those fills stay in the book.
+ * `removeUpstreamFillId` drops one id and leaves the rest.
  */
 export async function confirmDistinctManualRithmicProtocolFill(
   input: unknown,
@@ -1067,6 +1149,9 @@ export async function confirmDistinctManualRithmicProtocolFill(
   const accountNumber = readTrimmed(payload.accountNumber)
   const fillId = readTrimmed(payload.fillId)
   const upstreamFillId = readTrimmed(payload.upstreamFillId)
+  const upstreamFillIdList = readUpstreamFillIds(payload.upstreamFillIds)
+  const removing = 'removeUpstreamFillId' in payload
+  const removeUpstreamFillId = readTrimmed(payload.removeUpstreamFillId)
   const reason = readTrimmed(payload.reason)
   const confirmedDistinctBy = readTrimmed(payload.confirmedDistinctBy) || 'admin'
   if (!userId) errors.push({ field: 'userId', message: 'userId is required.' })
@@ -1079,7 +1164,27 @@ export async function confirmDistinctManualRithmicProtocolFill(
       message: 'fillId must be the manual- id of the row to mark.',
     })
   }
-  if (!upstreamFillId || upstreamFillId.startsWith('manual-')) {
+  if (!upstreamFillIdList.ok) {
+    errors.push({
+      field: 'upstreamFillIds',
+      message: 'upstreamFillIds must be an array of plant fill ids when provided.',
+    })
+  }
+  const requestedIds = uniqueStrings([
+    ...(upstreamFillId ? [upstreamFillId] : []),
+    ...(upstreamFillIdList.ok ? upstreamFillIdList.ids : []),
+  ])
+  if (removing && (upstreamFillId || requestedIds.length > 0)) {
+    errors.push({
+      field: 'removeUpstreamFillId',
+      message: 'Pass either upstreamFillId or removeUpstreamFillId, not both.',
+    })
+  } else if (removing && (!removeUpstreamFillId || removeUpstreamFillId.startsWith('manual-'))) {
+    errors.push({
+      field: 'removeUpstreamFillId',
+      message: 'removeUpstreamFillId must be the plant fill id to drop from this manual row.',
+    })
+  } else if (!removing && (requestedIds.length === 0 || requestedIds.some((id) => id.startsWith('manual-')))) {
     errors.push({
       field: 'upstreamFillId',
       message: 'upstreamFillId must be the plant fill id this manual is distinct from.',
@@ -1146,48 +1251,188 @@ export async function confirmDistinctManualRithmicProtocolFill(
       errors: [{ field: 'fillId', message: 'Only a manual fill can be marked distinct.' }],
     }
   }
-  const accountFills = await loadAccountFills({ userId, accountNumber })
-  const upstream = pickUpstreamFill(accountFills, row, upstreamFillId)
-  if (!upstream) {
-    return {
-      ok: false,
-      status: 'not_found',
-      errors: [
-        {
-          field: 'upstreamFillId',
-          message:
-            'No plant fill with that id, symbol, and side belongs to this account.',
-        },
-      ],
-    }
-  }
-  const book = accountFills.map(distinctRowToFill)
-  const upstreamFill = distinctRowToFill(upstream)
-  const relation = manualFillBookRelation(book, fillId, upstreamFill)
-  const orderFillId = relation.orderFillId
+  const previousIds = listConfirmedDistinctFillIds(row)
   const previousConfirmedDistinctFillId = row.confirmedDistinctFillId
+  const accountFills = await loadAccountFills({ userId, accountNumber })
+  const book = accountFills.map(distinctRowToFill)
   const instrument = normalizeInstrument(row.symbol)
   const symbolBook = fillsOnInstrument(book, row.symbol)
-  const proposedBook = withProposedDistinctMarker(symbolBook, fillId, orderFillId)
   const storedTrades = await findDerivedTrades({ userId, accountNumber, instrument })
-  const displaced = displacedStoredTrades(
-    storedTrades,
-    symbolBook,
-    proposedBook,
-    userId,
-    instrument,
-    row.symbol,
+  const effectsFor = (
+    proposedSymbol: RithmicProtocolFill[],
+    proposedAccount: RithmicProtocolFill[],
+  ) => {
+    const displaced = displacedStoredTrades(
+      storedTrades,
+      symbolBook,
+      proposedSymbol,
+      userId,
+      instrument,
+      row.symbol,
+    )
+    const reapDeferred = accountReapDeferred(proposedAccount)
+    return {
+      trades: displaced.trades,
+      tradeEffects: tradeEffectCounts(
+        displaced.trades,
+        displaced.nextBookBlocked,
+        reapDeferred,
+      ),
+    }
+  }
+  if (removing) {
+    const removeId = canonicalRithmicFillId(removeUpstreamFillId) ?? ''
+    if (!previousIds.includes(removeId)) {
+      return {
+        ok: false,
+        status: 'not_found',
+        previousConfirmedDistinctFillId,
+        previousConfirmedDistinctFillIds: previousIds,
+        confirmedDistinctFillIds: previousIds,
+        errors: [
+          {
+            field: 'removeUpstreamFillId',
+            message: 'That plant fill id is not on this manual row.',
+          },
+        ],
+      }
+    }
+    const proposedIds = previousIds.filter((id) => id !== removeId)
+    const proposedSymbol = withoutProposedDistinctMarker(symbolBook, fillId, removeId)
+    const proposedAccount = withoutProposedDistinctMarker(book, fillId, removeId)
+    const { trades, tradeEffects } = effectsFor(proposedSymbol, proposedAccount)
+    const removedUpstream = pickUpstreamFill(accountFills, row, removeUpstreamFillId)
+    const relation: ManualFillDistinctRelation = removedUpstream
+      ? manualFillBookRelation(book, fillId, distinctRowToFill(removedUpstream))
+      : { kind: 'unrelated', orderFillId: removeId }
+    const annotated = trades.some((trade) => trade.annotated)
+    if (!dryRun && annotated && !acknowledgeAnnotatedTrades) {
+      return {
+        ok: false,
+        status: 'acknowledgement_required',
+        relation,
+        previousConfirmedDistinctFillId,
+        previousConfirmedDistinctFillIds: previousIds,
+        confirmedDistinctFillIds: proposedIds,
+        removedUpstreamFillId: removeId,
+        trades,
+        tradeEffects,
+        errors: [
+          {
+            field: 'acknowledgeAnnotatedTrades',
+            message:
+              'Apply refused because a stored trade whose fill pair this marker removes is annotated. Move the annotation if you want to keep it, delete the stored row, then run a sync or rebuild. Then re-send confirm-distinct with acknowledgeAnnotatedTrades: true.',
+          },
+        ],
+      }
+    }
+    if (!dryRun && tradeEffects.displaced > 0 && tradeEffects.reapDeferred && !acknowledgeReapDeferred) {
+      return {
+        ok: false,
+        status: 'acknowledgement_required',
+        relation,
+        previousConfirmedDistinctFillId,
+        previousConfirmedDistinctFillIds: previousIds,
+        confirmedDistinctFillIds: proposedIds,
+        removedUpstreamFillId: removeId,
+        trades,
+        tradeEffects,
+        errors: [
+          {
+            field: 'acknowledgeReapDeferred',
+            message:
+              'Apply refused because another near-miss on this account keeps reap off. The next sync can insert the new pairs beside these displaced rows until that near-miss is resolved. Pass acknowledgeReapDeferred: true only if that double count is acceptable.',
+          },
+        ],
+      }
+    }
+    const confirmedDistinctAt = new Date()
+    if (!dryRun) {
+      await markDistinct({
+        userId,
+        accountNumber,
+        fillId,
+        upstreamFillId: removeId,
+        confirmedDistinctFillIds: proposedIds,
+        confirmedDistinctAt,
+        confirmedDistinctBy,
+        confirmDistinctReason: reason,
+      })
+      console.info(
+        `[RITHMIC-MANUAL-FILL] confirm-distinct remove userId=${userId} account=${accountNumber} fillId=${fillId} upstreamFillId=${removeId} by=${confirmedDistinctBy} reason=${JSON.stringify(reason)}`,
+      )
+    }
+    return {
+      ok: true,
+      dryRun,
+      idempotent: false,
+      fillId,
+      upstreamFillId: removeId,
+      confirmedDistinctAt: confirmedDistinctAt.toISOString(),
+      confirmedDistinctBy,
+      confirmDistinctReason: reason,
+      relation,
+      previousConfirmedDistinctFillId,
+      previousConfirmedDistinctFillIds: previousIds,
+      confirmedDistinctFillIds: proposedIds,
+      addedUpstreamFillIds: [],
+      removedUpstreamFillId: removeId,
+      trades,
+      tradeEffects,
+    }
+  }
+  const targets: DistinctTarget[] = []
+  const seenOrders = new Set<string>()
+  for (const named of requestedIds) {
+    const upstream = pickUpstreamFill(accountFills, row, named)
+    if (!upstream) {
+      return {
+        ok: false,
+        status: 'not_found',
+        previousConfirmedDistinctFillId,
+        previousConfirmedDistinctFillIds: previousIds,
+        confirmedDistinctFillIds: previousIds,
+        errors: [
+          {
+            field: 'upstreamFillId',
+            message:
+              'No plant fill with that id, symbol, and side belongs to this account.',
+          },
+        ],
+      }
+    }
+    const targetRelation = manualFillBookRelation(book, fillId, distinctRowToFill(upstream))
+    if (seenOrders.has(targetRelation.orderFillId)) continue
+    seenOrders.add(targetRelation.orderFillId)
+    targets.push({
+      namedFillId: named,
+      orderFillId: targetRelation.orderFillId,
+      relation: targetRelation,
+    })
+  }
+  const orderIds = targets.map((target) => target.orderFillId)
+  const addedUpstreamFillIds = orderIds.filter((id) => !previousIds.includes(id))
+  const proposedIds = [...previousIds]
+  for (const id of orderIds) {
+    if (!proposedIds.includes(id)) proposedIds.push(id)
+  }
+  const relation = targets[0].relation
+  const orderFillId = targets[0].orderFillId
+  const { trades, tradeEffects } = effectsFor(
+    withProposedDistinctMarker(symbolBook, fillId, orderIds),
+    withProposedDistinctMarker(book, fillId, orderIds),
   )
-  const trades = displaced.trades
-  const reapDeferred = accountReapDeferred(book, fillId, orderFillId)
-  const tradeEffects = tradeEffectCounts(trades, displaced.nextBookBlocked, reapDeferred)
   const annotated = trades.some((trade) => trade.annotated)
-  if (relation.kind === 'exact' && !dryRun && !acknowledgeExactMatch) {
+  const exactTarget = targets.find((target) => target.relation.kind === 'exact')
+  if (exactTarget && !dryRun && !acknowledgeExactMatch) {
     return {
       ok: false,
       status: 'acknowledgement_required',
-      relation,
+      relation: exactTarget.relation,
       previousConfirmedDistinctFillId,
+      previousConfirmedDistinctFillIds: previousIds,
+      confirmedDistinctFillIds: proposedIds,
+      addedUpstreamFillIds,
       errors: [
         {
           field: 'acknowledgeExactMatch',
@@ -1199,12 +1444,16 @@ export async function confirmDistinctManualRithmicProtocolFill(
       tradeEffects,
     }
   }
-  if (relation.kind === 'unrelated' && !dryRun && !acknowledgeUnrelated) {
+  const unrelatedTarget = targets.find((target) => target.relation.kind === 'unrelated')
+  if (unrelatedTarget && !dryRun && !acknowledgeUnrelated) {
     return {
       ok: false,
       status: 'acknowledgement_required',
-      relation,
+      relation: unrelatedTarget.relation,
       previousConfirmedDistinctFillId,
+      previousConfirmedDistinctFillIds: previousIds,
+      confirmedDistinctFillIds: proposedIds,
+      addedUpstreamFillIds,
       errors: [
         {
           field: 'acknowledgeUnrelated',
@@ -1222,6 +1471,9 @@ export async function confirmDistinctManualRithmicProtocolFill(
       status: 'acknowledgement_required',
       relation,
       previousConfirmedDistinctFillId,
+      previousConfirmedDistinctFillIds: previousIds,
+      confirmedDistinctFillIds: proposedIds,
+      addedUpstreamFillIds,
       trades,
       tradeEffects,
       errors: [
@@ -1233,12 +1485,15 @@ export async function confirmDistinctManualRithmicProtocolFill(
       ],
     }
   }
-  if (!dryRun && tradeEffects.displaced > 0 && reapDeferred && !acknowledgeReapDeferred) {
+  if (!dryRun && tradeEffects.displaced > 0 && tradeEffects.reapDeferred && !acknowledgeReapDeferred) {
     return {
       ok: false,
       status: 'acknowledgement_required',
       relation,
       previousConfirmedDistinctFillId,
+      previousConfirmedDistinctFillIds: previousIds,
+      confirmedDistinctFillIds: proposedIds,
+      addedUpstreamFillIds,
       trades,
       tradeEffects,
       errors: [
@@ -1250,7 +1505,7 @@ export async function confirmDistinctManualRithmicProtocolFill(
       ],
     }
   }
-  if (row.confirmedDistinctFillId === orderFillId && row.confirmedDistinctAt) {
+  if (addedUpstreamFillIds.length === 0 && row.confirmedDistinctAt) {
     return {
       ok: true,
       dryRun,
@@ -1262,6 +1517,10 @@ export async function confirmDistinctManualRithmicProtocolFill(
       confirmDistinctReason: row.confirmDistinctReason || reason,
       relation,
       previousConfirmedDistinctFillId,
+      previousConfirmedDistinctFillIds: previousIds,
+      confirmedDistinctFillIds: previousIds,
+      addedUpstreamFillIds: [],
+      removedUpstreamFillId: null,
       trades,
       tradeEffects,
     }
@@ -1272,14 +1531,18 @@ export async function confirmDistinctManualRithmicProtocolFill(
       userId,
       accountNumber,
       fillId,
-      upstreamFillId: orderFillId,
+      upstreamFillId: addedUpstreamFillIds.at(-1) ?? orderFillId,
+      confirmedDistinctFillIds: proposedIds,
       confirmedDistinctAt,
       confirmedDistinctBy,
       confirmDistinctReason: reason,
     })
-    console.info(
-      `[RITHMIC-MANUAL-FILL] confirm-distinct userId=${userId} account=${accountNumber} fillId=${fillId} upstreamFillId=${orderFillId} named=${upstreamFillId} by=${confirmedDistinctBy} reason=${JSON.stringify(reason)}`,
-    )
+    for (const target of targets) {
+      if (previousIds.includes(target.orderFillId)) continue
+      console.info(
+        `[RITHMIC-MANUAL-FILL] confirm-distinct userId=${userId} account=${accountNumber} fillId=${fillId} upstreamFillId=${target.orderFillId} named=${target.namedFillId} by=${confirmedDistinctBy} reason=${JSON.stringify(reason)}`,
+      )
+    }
   }
   return {
     ok: true,
@@ -1292,6 +1555,10 @@ export async function confirmDistinctManualRithmicProtocolFill(
     confirmDistinctReason: reason,
     relation,
     previousConfirmedDistinctFillId,
+    previousConfirmedDistinctFillIds: previousIds,
+    confirmedDistinctFillIds: proposedIds,
+    addedUpstreamFillIds,
+    removedUpstreamFillId: null,
     trades,
     tradeEffects,
   }
@@ -1326,6 +1593,7 @@ export function parseManualFillCliArgs(argv: string[]):
     'acknowledge-annotated-trades'?: boolean
     retire?: boolean
     'confirm-distinct'?: boolean
+    remove?: boolean
     'acknowledge-exact-match'?: boolean
     'acknowledge-unrelated'?: boolean
     'acknowledge-reap-deferred'?: boolean
@@ -1352,6 +1620,7 @@ export function parseManualFillCliArgs(argv: string[]):
         'acknowledge-annotated-trades': { type: 'boolean' },
         retire: { type: 'boolean' },
         'confirm-distinct': { type: 'boolean' },
+        remove: { type: 'boolean' },
         'acknowledge-exact-match': { type: 'boolean' },
         'acknowledge-unrelated': { type: 'boolean' },
         'acknowledge-reap-deferred': { type: 'boolean' },
@@ -1377,7 +1646,7 @@ export function parseManualFillCliArgs(argv: string[]):
       ],
     }
   }
-  if (values.retire && values['confirm-distinct']) {
+  if (values.retire && (values['confirm-distinct'] || values.remove)) {
     return {
       ok: false,
       errors: [
@@ -1388,7 +1657,19 @@ export function parseManualFillCliArgs(argv: string[]):
       ],
     }
   }
+  if (values.remove && !values['confirm-distinct']) {
+    return {
+      ok: false,
+      errors: [
+        {
+          field: 'remove',
+          message: '--remove applies to --confirm-distinct.',
+        },
+      ],
+    }
+  }
   if (values['confirm-distinct']) {
+    const named = values['upstream-fill-id']
     return {
       ok: true,
       command: 'confirm-distinct',
@@ -1396,7 +1677,9 @@ export function parseManualFillCliArgs(argv: string[]):
         userId: values['user-id'],
         accountNumber: values.account,
         fillId: values['fill-id'],
-        upstreamFillId: values['upstream-fill-id'],
+        ...(values.remove
+          ? { removeUpstreamFillId: named }
+          : { upstreamFillId: named }),
         reason: values.reason,
         dryRun: values.apply ? false : true,
         acknowledgeExactMatch: values['acknowledge-exact-match'] === true,

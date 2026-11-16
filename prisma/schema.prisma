@@ -682,11 +682,17 @@ model RithmicProtocolFill {
   retiredAt       DateTime?
   retiredBy       String?
   retireReason    String?
-  /// Plant fill this manual was confirmed distinct from. Reconcile will not match or near-miss that fill id.
-  confirmedDistinctFillId String?
-  confirmedDistinctAt     DateTime?
-  confirmedDistinctBy     String?
-  confirmDistinctReason   String?
+  /// @deprecated Latest plant fill id written by confirm-distinct.
+  /// Readers use `confirmedDistinctFillIds`. Kept so a rollback still sees
+  /// the most recent id, and so rows written before that list existed are
+  /// not dropped.
+  confirmedDistinctFillId  String?
+  /// Plant fills this manual was confirmed distinct from. Reconcile will
+  /// not match or near-miss any of these ids. A second confirm appends.
+  confirmedDistinctFillIds String[] @default([])
+  confirmedDistinctAt      DateTime?
+  confirmedDistinctBy      String?
+  confirmDistinctReason    String?
   connectionId    String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

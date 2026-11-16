@@ -48,8 +48,13 @@ export interface RithmicProtocolFill {
    * reconcile, coverage, and sync ignore it.
    */
   source?: 'history' | 'replay' | 'manual' | 'manual-retired'
-  /** Plant fill id an admin confirmed is a different execution. Reconcile skips that id. */
+  /**
+   * @deprecated Latest plant fill id. Readers use `confirmedDistinctFillIds`.
+   * Still set so a row written before the list existed stays distinct from that fill.
+   */
   confirmedDistinctFillId?: string
+  /** Plant fill ids an admin confirmed are different executions. Reconcile skips each id. */
+  confirmedDistinctFillIds?: string[]
 }
 
 export interface RithmicProtocolCredentials {

@@ -141,6 +141,12 @@ export async function POST(request: NextRequest) {
             field: 'previousConfirmedDistinctFillId',
             message: marked.previousConfirmedDistinctFillId ?? '',
           },
+          {
+            field: 'confirmedDistinctFillIds',
+            message: (marked.confirmedDistinctFillIds ?? marked.previousConfirmedDistinctFillIds ?? []).join(
+              ',',
+            ),
+          },
           ...(marked.trades ?? []).map((trade) => ({
             field: 'trades',
             message: `${trade.id} ${trade.instrument ?? ''} entry=${trade.entryId ?? ''} close=${trade.closeId ?? ''} annotated=${trade.annotated}`,
@@ -191,7 +197,7 @@ export async function POST(request: NextRequest) {
       }
       if (marked.ok) {
         console.info(
-          `[RITHMIC-MANUAL-FILL] route confirm-distinct actor=${actor} dryRun=${marked.dryRun} fillId=${marked.fillId} upstreamFillId=${marked.upstreamFillId}`,
+          `[RITHMIC-MANUAL-FILL] route confirm-distinct actor=${actor} dryRun=${marked.dryRun} fillId=${marked.fillId} upstreamFillId=${marked.upstreamFillId} confirmedDistinctFillIds=${(marked.confirmedDistinctFillIds ?? []).join(',')} removed=${marked.removedUpstreamFillId ?? ''}`,
         )
         return NextResponse.json(marked)
       }
@@ -209,7 +215,7 @@ export async function POST(request: NextRequest) {
       return jsonError({
         code: 'bad_request',
         message: 'Confirm-distinct input is invalid.',
-        hint: 'Send { action: "confirm-distinct", userId, accountNumber, fillId, upstreamFillId, reason, dryRun?: boolean }.',
+        hint: 'Send { action: "confirm-distinct", userId, accountNumber, fillId, upstreamFillId, reason, dryRun?: boolean }. upstreamFillIds appends several ids. removeUpstreamFillId drops one. A single upstreamFillId is added, not overwritten.',
         details: marked.errors,
       })
     }
