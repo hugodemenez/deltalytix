@@ -48,7 +48,15 @@ export interface RithmicProtocolFill {
    * reconcile, coverage, and sync ignore it.
    */
   source?: 'history' | 'replay' | 'manual' | 'manual-retired'
-  /** Plant fill id an admin confirmed is a different execution. Reconcile skips that id. */
+  /**
+   * Plant fill ids an admin confirmed are different executions. Reconcile
+   * skips each id. A legacy row may still carry only `confirmedDistinctFillId`.
+   */
+  confirmedDistinctFillIds?: string[]
+  /**
+   * @deprecated Single plant fill id. Readers use `confirmedDistinctFillIds`
+   * and still honor this field so a row written before the list exists.
+   */
   confirmedDistinctFillId?: string
 }
 

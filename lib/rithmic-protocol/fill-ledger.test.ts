@@ -10,7 +10,9 @@ import {
   deriveTradesFromFillLedger,
   dropSeenLedgerFills,
   hasTradeJournalAnnotations,
+  listConfirmedDistinctFillIds,
   manualTradeReplacedByPlantTrade,
+  mergeConfirmedDistinctFillIds,
   mergeFillLedgers,
   omitAmbiguousManualBooks,
   planManualFillSyncEffects,
@@ -22,6 +24,7 @@ import {
   shouldReplaceStoredFill,
   summarizeFillLedgerNets,
   uncoveredProtocolTrades,
+  withoutConfirmedDistinctFillId,
   duplicateRebuildTradeIds,
   protocolTradeSetsMatch,
 } from './fill-ledger'
@@ -1092,6 +1095,91 @@ describe('manual fills', () => {
     expect(clockless.fills.map((row) => row.fillId).sort()).toEqual(['9300', 'manual-gap'])
   })
 
+  it('passes a manual that near-misses two plant fills only after both are confirmed', () => {
+    const left = markFillSource(
+      [
+        fill({
+          fillId: '1403850',
+          fillSize: 1,
+          fillPrice: 7777,
+          fillDate: '20260925',
+          ssboe: atMs / 1000 + 10,
+        }),
+      ],
+      'history',
+    )[0]
+    const right = markFillSource(
+      [
+        fill({
+          fillId: '1402237',
+          fillSize: 1,
+          fillPrice: 7778,
+          fillDate: '20260925',
+          ssboe: atMs / 1000 + 50,
+        }),
+      ],
+      'history',
+    )[0]
+    const patch = {
+      ...manual,
+      fillPrice: 7777,
+      fillSize: 2,
+    }
+    const one = prepareRithmicProtocolFills([
+      { ...patch, confirmedDistinctFillIds: ['1403850'] },
+      left,
+      right,
+    ])
+    expect(one.nearMisses.map((miss) => miss.upstream.fillId)).toEqual(['1402237'])
+    expect(one.nearMisses[0]?.reason).toMatch(/price|qty/)
+    expect(omitAmbiguousManualBooks(one.fills, one.nearMisses)).toEqual([])
+
+    const legacyOnly = prepareRithmicProtocolFills([
+      { ...patch, confirmedDistinctFillId: '1403850' },
+      left,
+      right,
+    ])
+    expect(legacyOnly.nearMisses.map((miss) => miss.upstream.fillId)).toEqual(['1402237'])
+
+    const both = prepareRithmicProtocolFills([
+      { ...patch, confirmedDistinctFillIds: ['1403850', '1402237'] },
+      left,
+      right,
+    ])
+    expect(both.nearMisses).toEqual([])
+    expect(both.retirements).toEqual([])
+    expect(omitAmbiguousManualBooks(both.fills, both.nearMisses).map((row) => row.fillId).sort()).toEqual(
+      ['1402237', '1403850', 'manual-gap'],
+    )
+  })
+
+  it('dedupes a legacy single id into the confirmed-distinct list', () => {
+    expect(
+      listConfirmedDistinctFillIds({
+        confirmedDistinctFillId: '1403850',
+      }),
+    ).toEqual(['1403850'])
+    expect(
+      listConfirmedDistinctFillIds({
+        confirmedDistinctFillIds: ['1403850'],
+        confirmedDistinctFillId: '1403850',
+      }),
+    ).toEqual(['1403850'])
+    expect(
+      listConfirmedDistinctFillIds({
+        confirmedDistinctFillIds: ['1402237', '1402237'],
+        confirmedDistinctFillId: ' 1403850 ',
+      }),
+    ).toEqual(['1402237', '1403850'])
+    expect(mergeConfirmedDistinctFillIds(['1403850'], ['1403850', '1402237']).added).toEqual([
+      '1402237',
+    ])
+    expect(withoutConfirmedDistinctFillId(['1403850', '1402237'], '1403850')).toEqual({
+      ids: ['1402237'],
+      removed: true,
+    })
+  })
+
   it('ignores a retired manual fill in reconcile and FIFO', () => {
     const retired = { ...manual, source: 'manual-retired' as const }
     const prepared = prepareRithmicProtocolFills([retired, upstream])
@@ -1333,14 +1421,14 @@ describe('confirm-distinct does not replace the manual trade', () => {
     ).toBe(false)
     expect(
       manualTradeReplacedByPlantTrade(stored, plantTrade, {
-        distinctPlantIdByManualFillId: new Map([['manual-gap', '88421']]),
+        distinctPlantIdByManualFillId: new Map([['manual-gap', new Set(['88421'])]]),
       }),
     ).toBe(false)
     expect(
       classifyStoredProtocolTrade(stored, {
         derived: [plantTrade],
         ledgerFillIds: new Set(['manual-gap', '1002', '88421']),
-        distinctPlantIdByManualFillId: new Map([['manual-gap', '88421']]),
+        distinctPlantIdByManualFillId: new Map([['manual-gap', new Set(['88421'])]]),
       }),
     ).toBe('reap')
   })

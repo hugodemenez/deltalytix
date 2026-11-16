@@ -39,17 +39,31 @@
  * want to keep it, delete the stored row, then run a sync or rebuild.
  * The trade itself is never deleted by this script.
  *
- * Confirm a plant fill is a different execution (preview, then write):
+ * Confirm plant fills are different executions (preview, then write).
+ * Repeat `--upstream-fill-id` to add several. Each id is appended. A repeat
+ * does not replace ids already on the row.
  *   bun scripts/insert-rithmic-manual-fill.ts \
  *     --confirm-distinct \
  *     --user-id USER_ID \
  *     --account ACCOUNT_NUMBER \
  *     --fill-id manual-FILL_ID \
  *     --upstream-fill-id PLANT_FILL_ID \
- *     --reason "next-session fill, not this patch" \
+ *     --upstream-fill-id OTHER_PLANT_FILL_ID \
+ *     --reason "next-session fills, not this patch" \
  *     --apply
  *
- * `--apply` is refused when the plant fill is an exact match or unrelated.
+ * Remove one confirmed id:
+ *   bun scripts/insert-rithmic-manual-fill.ts \
+ *     --confirm-distinct \
+ *     --remove-distinct \
+ *     --user-id USER_ID \
+ *     --account ACCOUNT_NUMBER \
+ *     --fill-id manual-FILL_ID \
+ *     --upstream-fill-id PLANT_FILL_ID \
+ *     --reason "this plant fill is the same execution after all" \
+ *     --apply
+ *
+ * `--apply` is refused when a newly added plant fill is an exact match or unrelated.
  * Re-send with `--acknowledge-exact-match` or `--acknowledge-unrelated`.
  * A split piece is stored as the consolidated order id.
  * Preview lists stored trades on that symbol whose fill pair would disappear.

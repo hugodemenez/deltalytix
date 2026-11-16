@@ -682,11 +682,16 @@ model RithmicProtocolFill {
   retiredAt       DateTime?
   retiredBy       String?
   retireReason    String?
-  /// Plant fill this manual was confirmed distinct from. Reconcile will not match or near-miss that fill id.
-  confirmedDistinctFillId String?
-  confirmedDistinctAt     DateTime?
-  confirmedDistinctBy     String?
-  confirmDistinctReason   String?
+  /// @deprecated Single plant fill. `confirmedDistinctFillIds` is the list
+  /// reconcile honors. Kept so a deploy does not drop a column the previous
+  /// app still selects. Writes mirror the first id in the list.
+  confirmedDistinctFillId  String?
+  /// Plant fills this manual was confirmed distinct from. Reconcile will not
+  /// match or near-miss any of these fill ids.
+  confirmedDistinctFillIds String[] @default([])
+  confirmedDistinctAt      DateTime?
+  confirmedDistinctBy      String?
+  confirmDistinctReason    String?
   connectionId    String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

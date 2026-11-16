@@ -5,6 +5,7 @@ import type { RithmicProtocolFill } from './types'
 import { canonicalRithmicFillId, fillIdentityKey } from './dedupe-fills'
 import {
   type AnnotatedProtocolTrade,
+  type DistinctPlantIdsByManualFillId,
   countDistinctManualTradesKept,
   countRetiredManualTradesKept,
   partitionIncomingFills,
@@ -48,7 +49,9 @@ function sourceOf(
   return normalizePersistedFillSource(value)
 }
 
-export function rowToFill(row: FillRow): RithmicProtocolFill {
+export function rowToFill(
+  row: FillRow & { confirmedDistinctFillIds?: string[] | null },
+): RithmicProtocolFill {
   return {
     accountId: row.accountNumber,
     symbol: row.symbol,
@@ -65,6 +68,10 @@ export function rowToFill(row: FillRow): RithmicProtocolFill {
     usecs: row.usecs ?? undefined,
     source: sourceOf(row.source),
     confirmedDistinctFillId: row.confirmedDistinctFillId || undefined,
+    confirmedDistinctFillIds:
+      row.confirmedDistinctFillIds && row.confirmedDistinctFillIds.length > 0
+        ? [...row.confirmedDistinctFillIds]
+        : undefined,
   }
 }
 
@@ -231,8 +238,8 @@ export async function deleteUnannotatedPhantomProtocolTrades(params: {
   ledgerFillIds: Set<string>
   /** `manual-retired` fill ids still present on the ledger. Annotated trades that use them are counted, not deleted. */
   retiredFillIds?: Set<string>
-  /** Manual fill id → plant fill id confirmed as a different execution. */
-  distinctPlantIdByManualFillId?: ReadonlyMap<string, string>
+  /** Manual fill id → plant fill ids confirmed as different executions. */
+  distinctPlantIdByManualFillId?: DistinctPlantIdsByManualFillId
   /** Accounts whose symbol was skipped as a manual near-miss. Do not reap those trades. */
   retainAccountNumbers?: string[]
   db?: ProtocolStore

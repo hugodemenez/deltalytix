@@ -12,7 +12,10 @@ import {
   filterRithmicProtocolTradesCoveredByStoredRows,
   resolveRithmicProtocolPersistedId,
 } from "@/lib/rithmic-protocol/dedupe-fills"
-import { manualTradeReplacedByPlantTrade } from "@/lib/rithmic-protocol/fill-ledger"
+import {
+  listConfirmedDistinctFillIds,
+  manualTradeReplacedByPlantTrade,
+} from "@/lib/rithmic-protocol/fill-ledger"
 import {
   isTradovatePersistedTrade,
   resolveTradovatePersistedId,
@@ -130,7 +133,7 @@ async function assignExistingTradovateIds(
 async function loadConfirmedDistinctMarkers(
   userId: string,
   trades: Array<{ entryId?: string | null; closeId?: string | null }>,
-): Promise<Map<string, string>> {
+): Promise<Map<string, ReadonlySet<string>>> {
   const manualIds = new Set<string>()
   for (const trade of trades) {
     for (const raw of [trade.entryId, trade.closeId]) {
@@ -144,15 +147,25 @@ async function loadConfirmedDistinctMarkers(
       userId,
       fillId: { in: [...manualIds] },
       source: "manual",
-      confirmedDistinctFillId: { not: null },
+      OR: [
+        { confirmedDistinctFillIds: { isEmpty: false } },
+        { confirmedDistinctFillId: { not: null } },
+      ],
     },
-    select: { fillId: true, confirmedDistinctFillId: true },
+    select: {
+      fillId: true,
+      confirmedDistinctFillId: true,
+      confirmedDistinctFillIds: true,
+    },
   })
-  const markers = new Map<string, string>()
+  const markers = new Map<string, Set<string>>()
   for (const row of rows) {
     const manualId = canonicalRithmicFillId(row.fillId)
-    const plantId = canonicalRithmicFillId(row.confirmedDistinctFillId)
-    if (manualId && plantId) markers.set(manualId, plantId)
+    const plantIds = listConfirmedDistinctFillIds(row)
+    if (!manualId || plantIds.length === 0) continue
+    const existing = markers.get(manualId) ?? new Set<string>()
+    for (const plantId of plantIds) existing.add(plantId)
+    markers.set(manualId, existing)
   }
   return markers
 }

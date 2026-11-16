@@ -255,7 +255,7 @@ describe("saveTradesCore Rithmic coverage guard", () => {
       accountNumbers: [ACCOUNT],
       derivedTrades: [plant],
       ledgerFillIds: new Set(["manual-gap", "1002", "88421"]),
-      distinctPlantIdByManualFillId: new Map([["manual-gap", "88421"]]),
+      distinctPlantIdByManualFillId: new Map([["manual-gap", new Set(["88421"])]]),
       db: {
         trade: {
           findMany: async () => [storedManual],

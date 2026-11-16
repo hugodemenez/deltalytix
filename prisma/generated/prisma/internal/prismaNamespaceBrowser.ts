@@ -632,6 +632,7 @@ export const RithmicProtocolFillScalarFieldEnum = {
   retiredBy: 'retiredBy',
   retireReason: 'retireReason',
   confirmedDistinctFillId: 'confirmedDistinctFillId',
+  confirmedDistinctFillIds: 'confirmedDistinctFillIds',
   confirmedDistinctAt: 'confirmedDistinctAt',
   confirmedDistinctBy: 'confirmedDistinctBy',
   confirmDistinctReason: 'confirmDistinctReason',

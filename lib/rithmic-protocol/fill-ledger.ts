@@ -216,13 +216,75 @@ function plantFillLacksClock(fill: RithmicProtocolFill): boolean {
   return noSsboe && noTime
 }
 
+/**
+ * Canonical plant ids this manual was confirmed distinct from.
+ * The list is the source of truth. A deprecated single id is included when
+ * the list does not already contain it, so a row written before the list
+ * (or by the previous app during a rolling deploy) is not dropped.
+ */
+export function listConfirmedDistinctFillIds(fill: {
+  confirmedDistinctFillIds?: readonly (string | null | undefined)[] | null
+  confirmedDistinctFillId?: string | null
+}): string[] {
+  const seen = new Set<string>()
+  const ids: string[] = []
+  const raw: Array<string | null | undefined> = [
+    ...(fill.confirmedDistinctFillIds ?? []),
+    fill.confirmedDistinctFillId,
+  ]
+  for (const value of raw) {
+    const id = canonicalRithmicFillId(value ?? undefined)
+    if (!id || seen.has(id)) continue
+    seen.add(id)
+    ids.push(id)
+  }
+  return ids
+}
+
+/** Append plant ids that are not already on the list. Order is preserved. */
+export function mergeConfirmedDistinctFillIds(
+  existing: readonly string[],
+  adding: readonly string[],
+): { ids: string[]; added: string[] } {
+  const ids = [...existing]
+  const seen = new Set(existing)
+  const added: string[] = []
+  for (const value of adding) {
+    const id = canonicalRithmicFillId(value)
+    if (!id || seen.has(id)) continue
+    seen.add(id)
+    ids.push(id)
+    added.push(id)
+  }
+  return { ids, added }
+}
+
+/** Drop one plant id. Other ids stay, in order. */
+export function withoutConfirmedDistinctFillId(
+  existing: readonly string[],
+  removing: string,
+): { ids: string[]; removed: boolean } {
+  const target = canonicalRithmicFillId(removing)
+  if (!target) return { ids: [...existing], removed: false }
+  const ids = existing.filter((id) => canonicalRithmicFillId(id) !== target)
+  return { ids, removed: ids.length !== existing.length }
+}
+
 function confirmedDistinctFrom(
   manual: RithmicProtocolFill,
   upstream: RithmicProtocolFill,
 ): boolean {
-  const marked = canonicalRithmicFillId(manual.confirmedDistinctFillId)
   const upstreamId = canonicalRithmicFillId(upstream.fillId)
-  return Boolean(marked && upstreamId && marked === upstreamId)
+  if (!upstreamId) return false
+  return listConfirmedDistinctFillIds(manual).includes(upstreamId)
+}
+
+function clearDistinctMarker(fill: RithmicProtocolFill): RithmicProtocolFill {
+  return {
+    ...fill,
+    confirmedDistinctFillId: undefined,
+    confirmedDistinctFillIds: undefined,
+  }
 }
 
 export function manualFillMatchesUpstream(
@@ -274,7 +336,7 @@ export function manualFillRelation(
   manual: RithmicProtocolFill,
   upstream: RithmicProtocolFill,
 ): { kind: 'exact' } | { kind: 'near-miss'; reason: string } | { kind: 'unrelated' } {
-  const unmarked = { ...manual, confirmedDistinctFillId: undefined }
+  const unmarked = clearDistinctMarker(manual)
   if (manualFillMatchesUpstream(unmarked, upstream)) return { kind: 'exact' }
   const reason = manualNearMissReason(unmarked, upstream)
   if (reason) return { kind: 'near-miss', reason }
@@ -322,7 +384,7 @@ export function manualFillBookRelation(
   }
   const cleared = fills.map((fill) =>
     fill.source === 'manual' && canonicalRithmicFillId(fill.fillId) === manualId
-      ? { ...fill, confirmedDistinctFillId: undefined }
+      ? clearDistinctMarker(fill)
       : fill,
   )
   const prepared = prepareRithmicProtocolFills(cleared)
@@ -345,6 +407,22 @@ export function manualFillBookRelation(
       kind: 'near-miss',
       reason: near.reason,
       orderFillId: canonicalRithmicFillId(near.upstream.fillId) ?? namedId,
+    }
+  }
+  // Reconcile records only the closest near-miss. A farther fill on the same
+  // book is still a near-miss and must not be treated as unrelated.
+  const manual = cleared.find(
+    (fill) =>
+      fill.source === 'manual' && canonicalRithmicFillId(fill.fillId) === manualId,
+  )
+  if (manual) {
+    const direct = manualFillRelation(manual, upstream)
+    if (direct.kind === 'near-miss') {
+      return {
+        kind: 'near-miss',
+        reason: direct.reason,
+        orderFillId: consolidatedFillIdForPiece(cleared, upstream) ?? namedId,
+      }
     }
   }
   return { kind: 'unrelated', orderFillId: namedId }
@@ -632,19 +710,27 @@ export function canonicalLedgerFillIds(
   return ids
 }
 
+/** Manual fill id → every plant fill id confirmed as a different execution. */
+export type DistinctPlantIdsByManualFillId = ReadonlyMap<string, ReadonlySet<string>>
+
 export function confirmedDistinctMarkers(
   fills: Array<{
     source?: string | null
     fillId?: string | null
     confirmedDistinctFillId?: string | null
+    confirmedDistinctFillIds?: readonly (string | null | undefined)[] | null
   }>,
-): Map<string, string> {
-  const markers = new Map<string, string>()
+): Map<string, ReadonlySet<string>> {
+  const markers = new Map<string, Set<string>>()
   for (const fill of fills) {
     if (fill.source !== 'manual') continue
     const manualId = canonicalRithmicFillId(fill.fillId)
-    const plantId = canonicalRithmicFillId(fill.confirmedDistinctFillId)
-    if (manualId && plantId) markers.set(manualId, plantId)
+    if (!manualId) continue
+    const plantIds = listConfirmedDistinctFillIds(fill)
+    if (plantIds.length === 0) continue
+    const existing = markers.get(manualId) ?? new Set<string>()
+    for (const plantId of plantIds) existing.add(plantId)
+    markers.set(manualId, existing)
   }
   return markers
 }
@@ -681,7 +767,7 @@ export function countDistinctManualTradesKept(params: {
   existing: AnnotatedProtocolTrade[]
   derived: Array<{ id: string } & RithmicProtocolFillPairIdentity>
   ledgerFillIds: Set<string>
-  distinctPlantIdByManualFillId?: ReadonlyMap<string, string>
+  distinctPlantIdByManualFillId?: DistinctPlantIdsByManualFillId
 }): number {
   if (!params.distinctPlantIdByManualFillId || params.distinctPlantIdByManualFillId.size === 0) {
     return 0
@@ -702,7 +788,7 @@ export function countRetiredManualTradesKept(params: {
   derived: Array<{ id: string } & RithmicProtocolFillPairIdentity>
   ledgerFillIds: Set<string>
   retiredFillIds: Set<string>
-  distinctPlantIdByManualFillId?: ReadonlyMap<string, string>
+  distinctPlantIdByManualFillId?: DistinctPlantIdsByManualFillId
 }): number {
   if (params.retiredFillIds.size === 0) return 0
   let kept = 0
@@ -846,7 +932,7 @@ export function phantomProtocolTradeIds(params: {
   existing: AnnotatedProtocolTrade[]
   derived: Array<{ id: string } & RithmicProtocolFillPairIdentity>
   ledgerFillIds: Set<string>
-  distinctPlantIdByManualFillId?: ReadonlyMap<string, string>
+  distinctPlantIdByManualFillId?: DistinctPlantIdsByManualFillId
 }): string[] {
   const toDelete: string[] = []
   for (const row of params.existing) {
@@ -865,7 +951,7 @@ export function classifyStoredProtocolTrade(
   params: {
     derived: Array<{ id: string } & RithmicProtocolFillPairIdentity>
     ledgerFillIds: Set<string>
-    distinctPlantIdByManualFillId?: ReadonlyMap<string, string>
+    distinctPlantIdByManualFillId?: DistinctPlantIdsByManualFillId
   },
 ): 'rematch' | 'reap' | 'keep' {
   const replaced = params.derived.some((incoming) =>
@@ -903,8 +989,8 @@ function tradeClockMs(value: string | null | undefined): number | null {
 export type ManualReplacementContext = {
   /** Derived trades in this sync. A manual leg still present is not a replacement. */
   derivedBatch?: ReadonlyArray<{ entryId?: string | null; closeId?: string | null }>
-  /** Manual fill id → plant fill id an admin confirmed is a different execution. */
-  distinctPlantIdByManualFillId?: ReadonlyMap<string, string>
+  /** Manual fill id → plant fill ids an admin confirmed are different executions. */
+  distinctPlantIdByManualFillId?: DistinctPlantIdsByManualFillId
 }
 
 function manualLegIds(trade: {
@@ -956,10 +1042,11 @@ function markedDistinctFromPlant(
   )
   return manualLegIds(stored).some((leg) => {
     const marked = map.get(leg)
-    if (!marked) return false
-    if (leg === storedEntry && derivedEntry && marked === derivedEntry) return true
-    if (leg === storedClose && derivedClose && marked === derivedClose) return true
-    return plantIds.includes(marked)
+    if (!marked || marked.size === 0) return false
+    const hit = (id: string | null | undefined) => Boolean(id && marked.has(id))
+    if (leg === storedEntry && hit(derivedEntry)) return true
+    if (leg === storedClose && hit(derivedClose)) return true
+    return plantIds.some((id) => marked.has(id))
   })
 }
 
