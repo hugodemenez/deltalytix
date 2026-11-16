@@ -216,24 +216,43 @@ function plantFillLacksClock(fill: RithmicProtocolFill): boolean {
   return noSsboe && noTime
 }
 
-/**
- * Plant fill ids this manual was confirmed distinct from.
- * The list is the source of truth. The deprecated scalar is included when
- * it is not already there, so a row written before the list existed — or
- * written by the previous app during deploy — still counts.
- */
-export function listConfirmedDistinctFillIds(fill: {
+type DistinctMarkerRow = {
   confirmedDistinctFillId?: string | null
   confirmedDistinctFillIds?: readonly (string | null | undefined)[] | null
-}): string[] {
+}
+
+function storedDistinctFillIds(fill: DistinctMarkerRow): string[] {
   const ids: string[] = []
-  const push = (raw: string | null | undefined) => {
+  for (const raw of fill.confirmedDistinctFillIds ?? []) {
     const id = canonicalRithmicFillId(raw)
     if (id && !ids.includes(id)) ids.push(id)
   }
-  for (const raw of fill.confirmedDistinctFillIds ?? []) push(raw)
-  push(fill.confirmedDistinctFillId)
   return ids
+}
+
+/**
+ * Plant fill ids this manual was confirmed distinct from.
+ * A non-empty list is the source of truth. An empty list with a scalar is
+ * the pre-migration row: that one id still counts. A scalar that is missing
+ * from a non-empty list is not added here.
+ */
+export function listConfirmedDistinctFillIds(fill: DistinctMarkerRow): string[] {
+  const list = storedDistinctFillIds(fill)
+  if (list.length > 0) return list
+  const scalar = canonicalRithmicFillId(fill.confirmedDistinctFillId)
+  return scalar ? [scalar] : []
+}
+
+/**
+ * Scalar set, list non-empty, scalar not in the list. Prod (old app) and
+ * beta (new app) would disagree about which plant fill is distinct. Callers
+ * block that book instead of treating the scalar as another id.
+ */
+export function distinctMarkerConflict(fill: DistinctMarkerRow): string | null {
+  const list = storedDistinctFillIds(fill)
+  const scalar = canonicalRithmicFillId(fill.confirmedDistinctFillId)
+  if (!scalar || list.length === 0 || list.includes(scalar)) return null
+  return scalar
 }
 
 /** One plant id, or every plant id a manual fill was confirmed distinct from. */
@@ -520,6 +539,20 @@ export function reconcileManualFills(
     (left, right) => fillTimestampMs(left) - fillTimestampMs(right),
   )
   for (const manual of ordered) {
+    const conflict = distinctMarkerConflict(manual)
+    if (conflict) {
+      kept.push(manual)
+      const listed = listConfirmedDistinctFillIds(manual).join(',')
+      const upstream =
+        consolidatedUpstream.find(
+          (fill) => canonicalRithmicFillId(fill.fillId) === conflict,
+        ) ?? { ...manual, fillId: conflict, source: 'history' as const }
+      nearMisses.push({ manual, upstream, reason: 'marker-conflict' })
+      console.warn(
+        `[RITHMIC-MANUAL-FILL] marker-conflict manual fillId=${manual.fillId ?? ''} account=${manual.accountId} symbol=${(manual.symbol || '').trim().toUpperCase()} scalar=${conflict} list=${listed}`,
+      )
+      continue
+    }
     let best: RithmicProtocolFill | undefined
     let bestDt = Number.POSITIVE_INFINITY
     for (const candidate of consolidatedUpstream) {

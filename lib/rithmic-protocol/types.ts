@@ -49,8 +49,9 @@ export interface RithmicProtocolFill {
    */
   source?: 'history' | 'replay' | 'manual' | 'manual-retired'
   /**
-   * @deprecated Latest plant fill id. Readers use `confirmedDistinctFillIds`.
-   * Still set so a row written before the list existed stays distinct from that fill.
+   * @deprecated Latest id in `confirmedDistinctFillIds`, or unset when that list
+   * is empty. A scalar missing from a non-empty list blocks the symbol.
+   * An empty list with this set is the pre-migration row.
    */
   confirmedDistinctFillId?: string
   /** Plant fill ids an admin confirmed are different executions. Reconcile skips each id. */

@@ -489,4 +489,32 @@ describe('POST /api/admin/rithmic-protocol/manual-fill', () => {
     expect(payload.error.message).toMatch(/not on this manual row/)
     expect(payload.error.hint).toMatch(/already listed/)
   })
+
+  it('returns 409 when the marker changed after it was read', async () => {
+    authorizeAdminRequest.mockResolvedValue({ ok: true, via: 'cron' })
+    confirmDistinctManualRithmicProtocolFill.mockResolvedValue({
+      ok: false,
+      status: 'conflict',
+      errors: [
+        {
+          field: 'confirmedDistinctFillIds',
+          message: 'This manual fill changed while the confirm was running. Nothing was written.',
+        },
+      ],
+    })
+    const response = await post({
+      action: 'confirm-distinct',
+      userId: body.userId,
+      accountNumber: body.accountNumber,
+      fillId: 'manual-gap',
+      upstreamFillId: '1402237',
+      reason: 'second plant fill',
+      dryRun: false,
+    })
+    expect(response.status).toBe(409)
+    const payload = await response.json()
+    expect(payload.error.code).toBe('conflict')
+    expect(payload.error.message).toMatch(/changed while the confirm was running/)
+    expect(payload.error.hint).toMatch(/Nothing was written/)
+  })
 })

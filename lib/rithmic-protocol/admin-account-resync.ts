@@ -1276,6 +1276,12 @@ export async function resyncRithmicProtocolAccount(params: {
             'A manual fill is close to an upstream fill but does not match it. Live apply refuses with MANUAL_FILL_AMBIGUOUS. Ordinary sync will not derive that symbol.',
           )
         }
+        for (const miss of manualNearMisses) {
+          if (miss.reason !== 'marker-conflict') continue
+          warnings.push(
+            `Manual fill ${miss.manual.fillId ?? ''} has confirmedDistinctFillId ${miss.upstream.fillId ?? ''} outside confirmedDistinctFillIds. Sync will not derive ${miss.manual.symbol}. Do not run confirm-distinct through prod until this release is on main.`,
+          )
+        }
         if (notFlat.length > 0 && manualNearMisses.length === 0) {
           return finish({
             ...base,

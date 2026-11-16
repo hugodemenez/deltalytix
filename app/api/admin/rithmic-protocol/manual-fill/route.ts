@@ -201,6 +201,14 @@ export async function POST(request: NextRequest) {
         )
         return NextResponse.json(marked)
       }
+      if (!marked.ok && marked.status === 'conflict') {
+        return jsonError({
+          code: 'conflict',
+          message: 'This manual fill changed while the confirm was running.',
+          hint: 'Re-read the row and send the confirm again. Nothing was written.',
+          details: marked.errors,
+        })
+      }
       if (marked.status === 'not_found') {
         const missingPlant = marked.errors?.some((error) => error.field === 'upstreamFillId')
         const missingRemoval = marked.errors?.some(

@@ -7,9 +7,11 @@ import {
   buildLedgerSeenIndex,
   canonicalLedgerFillIds,
   classifyStoredProtocolTrade,
+  distinctMarkerConflict,
   deriveTradesFromFillLedger,
   dropSeenLedgerFills,
   hasTradeJournalAnnotations,
+  listConfirmedDistinctFillIds,
   manualFillBookRelation,
   manualTradeReplacedByPlantTrade,
   mergeFillLedgers,
@@ -1077,7 +1079,8 @@ describe('manual fills', () => {
       ])
       expect(warn).not.toHaveBeenCalled()
 
-      const legacyAndList = prepareRithmicProtocolFills([
+      warn.mockClear()
+      const conflicted = prepareRithmicProtocolFills([
         {
           ...manual,
           confirmedDistinctFillId: '1402237',
@@ -1086,7 +1089,32 @@ describe('manual fills', () => {
         first,
         second,
       ])
-      expect(legacyAndList.nearMisses).toEqual([])
+      expect(conflicted.nearMisses.map((miss) => miss.reason)).toContain('marker-conflict')
+      expect(conflicted.nearMisses.some((miss) => miss.manual.fillId === 'manual-gap')).toBe(true)
+      expect(omitAmbiguousManualBooks(conflicted.fills, conflicted.nearMisses)).toEqual([])
+      expect(listConfirmedDistinctFillIds(conflicted.fills.find((row) => row.fillId === 'manual-gap')!)).toEqual([
+        '1403850',
+      ])
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('manual fillId=manual-gap'))
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('scalar=1402237'))
+      expect(
+        listConfirmedDistinctFillIds({
+          confirmedDistinctFillId: '88421',
+          confirmedDistinctFillIds: [],
+        }),
+      ).toEqual(['88421'])
+      expect(
+        distinctMarkerConflict({
+          confirmedDistinctFillId: '88421',
+          confirmedDistinctFillIds: [],
+        }),
+      ).toBeNull()
+      expect(
+        distinctMarkerConflict({
+          confirmedDistinctFillId: '1402237',
+          confirmedDistinctFillIds: ['1403850', '1402237'],
+        }),
+      ).toBeNull()
     } finally {
       warn.mockRestore()
     }

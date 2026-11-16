@@ -799,7 +799,7 @@ export type ManualFillDistinctResult =
     }
   | {
       ok: false
-      status: 'validation' | 'not_found' | 'acknowledgement_required'
+      status: 'validation' | 'not_found' | 'acknowledgement_required' | 'conflict'
       errors: ManualFillFieldError[]
       relation?: ManualFillDistinctRelation
       previousConfirmedDistinctFillId?: string | null
@@ -828,6 +828,7 @@ type DistinctRow = {
   sequenceNumber: string | null
   confirmedDistinctFillId: string | null
   confirmedDistinctFillIds?: string[] | null
+  confirmedDistinctAudit?: unknown
   confirmedDistinctAt: Date | null
   confirmedDistinctBy: string | null
   confirmDistinctReason: string | null
@@ -850,6 +851,7 @@ const DISTINCT_FILL_SELECT = {
   sequenceNumber: true,
   confirmedDistinctFillId: true,
   confirmedDistinctFillIds: true,
+  confirmedDistinctAudit: true,
   confirmedDistinctAt: true,
   confirmedDistinctBy: true,
   confirmDistinctReason: true,
@@ -928,6 +930,41 @@ function pickUpstreamFill(
   )
 }
 
+type DistinctAuditEntry = {
+  op: 'add' | 'remove'
+  fillId: string
+  at: string
+  by: string
+  reason: string
+}
+
+function readDistinctAudit(value: unknown): DistinctAuditEntry[] {
+  if (!Array.isArray(value)) return []
+  const entries: DistinctAuditEntry[] = []
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue
+    const record = item as Record<string, unknown>
+    const op = record.op === 'remove' ? 'remove' : record.op === 'add' ? 'add' : null
+    const fillId = typeof record.fillId === 'string' ? record.fillId : ''
+    const at = typeof record.at === 'string' ? record.at : ''
+    const by = typeof record.by === 'string' ? record.by : ''
+    const reason = typeof record.reason === 'string' ? record.reason : ''
+    if (!op || !fillId || !at) continue
+    entries.push({ op, fillId, at, by, reason })
+  }
+  return entries
+}
+
+function markerSnapshot(row: {
+  confirmedDistinctFillId?: string | null
+  confirmedDistinctFillIds?: readonly string[] | null
+}): { ids: string[]; scalar: string | null } {
+  return {
+    ids: [...(row.confirmedDistinctFillIds ?? [])],
+    scalar: row.confirmedDistinctFillId ?? null,
+  }
+}
+
 async function defaultMarkDistinct(params: {
   userId: string
   accountNumber: string
@@ -935,27 +972,49 @@ async function defaultMarkDistinct(params: {
   /** Id this call added or removed. The persisted list is `confirmedDistinctFillIds`. */
   upstreamFillId: string
   confirmedDistinctFillIds: string[]
+  /** List and scalar read before the gates. The write matches both or writes nothing. */
+  expectedConfirmedDistinctFillIds: string[]
+  expectedConfirmedDistinctFillId: string | null
+  confirmedDistinctAudit: DistinctAuditEntry[]
   confirmedDistinctAt: Date
   confirmedDistinctBy: string
   confirmDistinctReason: string
-}): Promise<void> {
+}): Promise<number> {
   const confirmedDistinctFillIds = params.confirmedDistinctFillIds
-  await prisma.rithmicProtocolFill.updateMany({
+  const written = await prisma.rithmicProtocolFill.updateMany({
     where: {
       userId: params.userId,
       accountNumber: params.accountNumber,
       fillId: params.fillId,
       source: 'manual',
+      confirmedDistinctFillIds: { equals: params.expectedConfirmedDistinctFillIds },
+      confirmedDistinctFillId: params.expectedConfirmedDistinctFillId,
     },
     data: {
       confirmedDistinctFillIds,
-      // Deprecated mirror of the latest id. Empty after the last id is removed.
+      // Latest id in the list, or null once the list is empty.
       confirmedDistinctFillId: confirmedDistinctFillIds.at(-1) ?? null,
+      confirmedDistinctAudit: params.confirmedDistinctAudit,
       confirmedDistinctAt: params.confirmedDistinctAt,
       confirmedDistinctBy: params.confirmedDistinctBy,
       confirmDistinctReason: params.confirmDistinctReason,
     },
   })
+  return written.count
+}
+
+function staleMarkerConflict(): Extract<ManualFillDistinctResult, { ok: false }> {
+  return {
+    ok: false,
+    status: 'conflict',
+    errors: [
+      {
+        field: 'confirmedDistinctFillIds',
+        message:
+          'This manual fill changed while the confirm was running. Nothing was written.',
+      },
+    ],
+  }
 }
 
 function fillsOnInstrument(
@@ -1348,16 +1407,29 @@ export async function confirmDistinctManualRithmicProtocolFill(
     }
     const confirmedDistinctAt = new Date()
     if (!dryRun) {
-      await markDistinct({
+      const written = await markDistinct({
         userId,
         accountNumber,
         fillId,
         upstreamFillId: removeId,
         confirmedDistinctFillIds: proposedIds,
+        expectedConfirmedDistinctFillIds: markerSnapshot(row).ids,
+        expectedConfirmedDistinctFillId: markerSnapshot(row).scalar,
+        confirmedDistinctAudit: [
+          ...readDistinctAudit(row.confirmedDistinctAudit),
+          {
+            op: 'remove',
+            fillId: removeId,
+            at: confirmedDistinctAt.toISOString(),
+            by: confirmedDistinctBy,
+            reason,
+          },
+        ],
         confirmedDistinctAt,
         confirmedDistinctBy,
         confirmDistinctReason: reason,
       })
+      if (written === 0) return staleMarkerConflict()
       console.info(
         `[RITHMIC-MANUAL-FILL] confirm-distinct remove userId=${userId} account=${accountNumber} fillId=${fillId} upstreamFillId=${removeId} by=${confirmedDistinctBy} reason=${JSON.stringify(reason)}`,
       )
@@ -1527,18 +1599,31 @@ export async function confirmDistinctManualRithmicProtocolFill(
   }
   const confirmedDistinctAt = new Date()
   if (!dryRun) {
-    await markDistinct({
+    const added = targets.filter((target) => !previousIds.includes(target.orderFillId))
+    const written = await markDistinct({
       userId,
       accountNumber,
       fillId,
       upstreamFillId: addedUpstreamFillIds.at(-1) ?? orderFillId,
       confirmedDistinctFillIds: proposedIds,
+      expectedConfirmedDistinctFillIds: markerSnapshot(row).ids,
+      expectedConfirmedDistinctFillId: markerSnapshot(row).scalar,
+      confirmedDistinctAudit: [
+        ...readDistinctAudit(row.confirmedDistinctAudit),
+        ...added.map((target) => ({
+          op: 'add' as const,
+          fillId: target.orderFillId,
+          at: confirmedDistinctAt.toISOString(),
+          by: confirmedDistinctBy,
+          reason,
+        })),
+      ],
       confirmedDistinctAt,
       confirmedDistinctBy,
       confirmDistinctReason: reason,
     })
-    for (const target of targets) {
-      if (previousIds.includes(target.orderFillId)) continue
+    if (written === 0) return staleMarkerConflict()
+    for (const target of added) {
       console.info(
         `[RITHMIC-MANUAL-FILL] confirm-distinct userId=${userId} account=${accountNumber} fillId=${fillId} upstreamFillId=${target.orderFillId} named=${target.namedFillId} by=${confirmedDistinctBy} reason=${JSON.stringify(reason)}`,
       )

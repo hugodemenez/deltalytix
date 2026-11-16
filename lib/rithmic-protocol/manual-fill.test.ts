@@ -1959,12 +1959,72 @@ describe('confirm-distinct where clause', () => {
         accountNumber: 'ACCT-B',
         fillId: 'manual-gap',
         source: 'manual',
+        confirmedDistinctFillId: null,
+        confirmedDistinctFillIds: { equals: [] },
       },
       data: expect.objectContaining({
         confirmedDistinctFillIds: ['88422'],
         confirmedDistinctFillId: '88422',
         confirmedDistinctBy: 'admin',
         confirmDistinctReason: 'this account only',
+        confirmedDistinctAudit: [
+          expect.objectContaining({ op: 'add', fillId: '88422', by: 'admin' }),
+        ],
+      }),
+    })
+  })
+
+  it('returns a conflict when the marker changed after it was read', async () => {
+    const manualRow = {
+      fillId: 'manual-gap',
+      source: 'manual',
+      accountNumber: 'ACCT-B',
+      symbol: 'MESZ6',
+      transactionType: 'BUY',
+      fillPrice: 5810.25,
+      fillSize: 2,
+      fillDate: '20260925',
+      fillTime: '15:07:00',
+      ssboe: 1_758_810_420,
+      confirmedDistinctFillId: '1403850',
+      confirmedDistinctFillIds: ['1403850'],
+      confirmedDistinctAt: new Date('2026-11-16T12:00:00Z'),
+      confirmedDistinctBy: 'admin',
+      confirmDistinctReason: 'first plant fill',
+      confirmedDistinctAudit: [],
+    }
+    findFirst.mockImplementation(async (args: { where?: { fillId?: string } }) => {
+      if (args?.where?.fillId === 'manual-gap') return manualRow
+      return null
+    })
+    findManyFills.mockResolvedValue([
+      manualRow,
+      { ...manualRow, fillId: '1402237', source: 'history', fillSize: 1 },
+    ])
+    updateMany.mockResolvedValue({ count: 0 })
+    const raced = await confirmDistinctManualRithmicProtocolFill({
+      userId: 'user-b',
+      accountNumber: 'ACCT-B',
+      fillId: 'manual-gap',
+      upstreamFillId: '1402237',
+      reason: 'second plant fill',
+      dryRun: false,
+    })
+    expect(raced.ok).toBe(false)
+    if (raced.ok) return
+    expect(raced.status).toBe('conflict')
+    expect(updateMany).toHaveBeenCalledWith({
+      where: {
+        userId: 'user-b',
+        accountNumber: 'ACCT-B',
+        fillId: 'manual-gap',
+        source: 'manual',
+        confirmedDistinctFillId: '1403850',
+        confirmedDistinctFillIds: { equals: ['1403850'] },
+      },
+      data: expect.objectContaining({
+        confirmedDistinctFillIds: ['1403850', '1402237'],
+        confirmedDistinctFillId: '1402237',
       }),
     })
   })

@@ -682,14 +682,17 @@ model RithmicProtocolFill {
   retiredAt       DateTime?
   retiredBy       String?
   retireReason    String?
-  /// @deprecated Latest plant fill id written by confirm-distinct.
-  /// Readers use `confirmedDistinctFillIds`. Kept so a rollback still sees
-  /// the most recent id, and so rows written before that list existed are
-  /// not dropped.
+  /// @deprecated Latest id in `confirmedDistinctFillIds`, or null when that
+  /// list is empty. New writes keep it equal to the last list id. A scalar
+  /// that is missing from a non-empty list blocks that symbol. An empty list
+  /// with a scalar is the pre-migration row and still counts as that one id.
   confirmedDistinctFillId  String?
   /// Plant fills this manual was confirmed distinct from. Reconcile will
   /// not match or near-miss any of these ids. A second confirm appends.
   confirmedDistinctFillIds String[] @default([])
+  /// Append-only confirm-distinct audit. Each item is
+  /// `{ op: "add" | "remove", fillId, at, by, reason }`.
+  confirmedDistinctAudit   Json     @default("[]")
   confirmedDistinctAt      DateTime?
   confirmedDistinctBy      String?
   confirmDistinctReason    String?
