@@ -506,10 +506,16 @@ export function consolidateOrderFills(
 
   const out: RithmicProtocolFill[] = []
   for (const groupFills of groups.values()) {
-    const history = groupFills.filter((fill) => fill.source !== 'replay')
+    // A manual patch is not a piece of a plant order. Leave it intact so a
+    // nearby same-price history fill cannot absorb its quantity.
+    const manual = groupFills.filter((fill) => fill.source === 'manual')
+    const history = groupFills.filter(
+      (fill) => fill.source !== 'replay' && fill.source !== 'manual',
+    )
     const replay = groupFills.filter((fill) => fill.source === 'replay')
     const historyClusters = clusterOneSource(history, pieceWindowMs)
     for (const cluster of historyClusters) out.push(mergeCluster(cluster))
+    for (const fill of manual) out.push(fill)
     for (const cluster of clusterOneSource(replay, pieceWindowMs)) {
       const coveredByHistory = historyClusters.some(
         (h) =>
@@ -523,6 +529,74 @@ export function consolidateOrderFills(
   // Keep the caller's order stable for FIFO tie-breaks.
   const rank = new Map(fills.map((fill, index) => [fill, index]))
   return out.sort((a, b) => (rank.get(a) ?? 0) - (rank.get(b) ?? 0))
+}
+
+function plantOrderClusters(
+  fills: RithmicProtocolFill[],
+  piece: RithmicProtocolFill,
+): OrderCluster[] {
+  const key = orderGroupKey(piece)
+  const sameGroup = fills.filter((fill) => {
+    if (fill.source === 'manual' || fill.source === 'manual-retired') return false
+    if (orderGroupKey(fill) !== key) return false
+    if (piece.source === 'replay') return fill.source === 'replay'
+    return fill.source !== 'replay'
+  })
+  return clusterOneSource(sameGroup, RITHMIC_PROTOCOL_ORDER_PIECE_WINDOW_MS)
+}
+
+/** The cluster that contains this row, not an earlier session that reused its fill id. */
+function clusterForNamedPiece(
+  fills: RithmicProtocolFill[],
+  piece: RithmicProtocolFill,
+): OrderCluster | null {
+  const pieceId = canonicalRithmicFillId(piece.fillId)
+  if (!pieceId) return null
+  const namedMs = sourceTimestampMs(piece)
+  for (const cluster of plantOrderClusters(fills, piece)) {
+    const hit = cluster.fills.some((fill) => {
+      if (canonicalRithmicFillId(fill.fillId) !== pieceId) return false
+      const fillMs = sourceTimestampMs(fill)
+      if (namedMs == null || fillMs == null) return namedMs == null && fillMs == null
+      return fillMs === namedMs
+    })
+    if (hit) return cluster
+  }
+  return null
+}
+
+/**
+ * Consolidated fill id of the order `piece` belongs to, using the same
+ * basket and ±2s clustering as `consolidateOrderFills`. A piece in a chain
+ * longer than 2s still maps to that order's id. A recycled fill id matches
+ * the row with the same timestamp, not the earliest session.
+ */
+export function consolidatedFillIdForPiece(
+  fills: RithmicProtocolFill[],
+  piece: RithmicProtocolFill,
+): string | null {
+  const cluster = clusterForNamedPiece(fills, piece)
+  if (!cluster) return null
+  return canonicalRithmicFillId(mergeCluster(cluster).fillId) ?? null
+}
+
+/** Piece ids of the named row's order, including the consolidated id. */
+export function orderMemberFillIds(
+  fills: RithmicProtocolFill[],
+  piece: RithmicProtocolFill,
+): string[] {
+  const cluster = clusterForNamedPiece(fills, piece)
+  const ids = new Set<string>()
+  const namedId = canonicalRithmicFillId(piece.fillId)
+  if (namedId) ids.add(namedId)
+  if (!cluster) return [...ids]
+  for (const fill of cluster.fills) {
+    const id = canonicalRithmicFillId(fill.fillId)
+    if (id) ids.add(id)
+  }
+  const consolidated = canonicalRithmicFillId(mergeCluster(cluster).fillId)
+  if (consolidated) ids.add(consolidated)
+  return [...ids]
 }
 
 export type RithmicProtocolStoredLegRow = RithmicProtocolFillPairIdentity & {
@@ -539,6 +613,7 @@ type Leg = {
   price: number
   timeMs: number
   remaining: number
+  fillId: string
 }
 
 function tradeLegs(row: RithmicProtocolStoredLegRow): [Leg, Leg] | null {
@@ -559,20 +634,51 @@ function tradeLegs(row: RithmicProtocolStoredLegRow): [Leg, Leg] | null {
   const isLong = String(row.side ?? '').trim().toLowerCase() === 'long'
   const key = `${row.accountNumber ?? ''}|${row.instrument ?? ''}`
   return [
-    { key, direction: isLong ? 'B' : 'S', price: entryPrice, timeMs: entryMs, remaining: quantity },
-    { key, direction: isLong ? 'S' : 'B', price: closePrice, timeMs: closeMs, remaining: quantity },
+    {
+      key,
+      direction: isLong ? 'B' : 'S',
+      price: entryPrice,
+      timeMs: entryMs,
+      remaining: quantity,
+      fillId: canonicalRithmicFillId(row.entryId) ?? '',
+    },
+    {
+      key,
+      direction: isLong ? 'S' : 'B',
+      price: closePrice,
+      timeMs: closeMs,
+      remaining: quantity,
+      fillId: canonicalRithmicFillId(row.closeId) ?? '',
+    },
   ]
 }
 
 function takeLeg(pool: Leg[], want: Leg, toleranceMs: number): Leg | undefined {
-  return pool.find(
-    (leg) =>
-      leg.remaining > 0 &&
-      leg.key === want.key &&
-      leg.direction === want.direction &&
-      leg.price === want.price &&
-      Math.abs(leg.timeMs - want.timeMs) <= toleranceMs,
-  )
+  return pool.find((leg) => {
+    if (
+      !(
+        leg.remaining > 0 &&
+        leg.key === want.key &&
+        leg.direction === want.direction &&
+        leg.price === want.price &&
+        Math.abs(leg.timeMs - want.timeMs) <= toleranceMs
+      )
+    ) {
+      return false
+    }
+    // A stored manual leg does not cover the plant fill that replaced it.
+    // Otherwise the replacement round-trip is skipped and phantom reap
+    // then deletes the only copy.
+    if (
+      leg.fillId.startsWith('manual-') &&
+      want.fillId &&
+      !want.fillId.startsWith('manual-') &&
+      leg.fillId !== want.fillId
+    ) {
+      return false
+    }
+    return true
+  })
 }
 
 /**

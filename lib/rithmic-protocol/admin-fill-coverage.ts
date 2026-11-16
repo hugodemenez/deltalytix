@@ -377,7 +377,12 @@ export function storedFillsMissingUpstream(
   storedWindow: RithmicProtocolFill[],
   upstreamRaw: RithmicProtocolFill[],
 ): RithmicProtocolFill[] {
-  const storedPrepared = prepareRithmicProtocolFills(storedWindow).fills
+  // Operator patches are not expected upstream. Skipping them keeps a
+  // rebuild from refusing with STORED_FILL_MISSING_UPSTREAM.
+  const comparable = storedWindow.filter(
+    (fill) => fill.source !== 'manual' && fill.source !== 'manual-retired',
+  )
+  const storedPrepared = prepareRithmicProtocolFills(comparable).fills
   const upstreamPrepared = prepareRithmicProtocolFills(upstreamRaw).fills
   const pool = makeFillQtyPool(upstreamPrepared)
   const identityConsumed = new Set<FillQtyPool>()

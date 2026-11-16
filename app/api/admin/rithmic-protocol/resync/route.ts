@@ -215,6 +215,12 @@ function errorMapping(error: string | undefined): {
         message: 'Annotated trades would not survive the rebuild.',
         hint: 'Inspect result.proposed.unmatchedAnnotatedTrades. Unmatched annotated rows must be resolved; the override is ignored.',
       }
+    case 'RETIRED_MANUAL_TRADES':
+      return {
+        code: 'conflict',
+        message: 'Stored trades still reference a retired manual fill.',
+        hint: 'Inspect result.proposed.retiredManualTrades. Move the annotation if you want to keep it, delete the stored row, then run a sync or rebuild. The rebuild keeps refusing while that row exists.',
+      }
     case 'UNCOVERED_TRADES':
       return {
         code: 'conflict',
@@ -247,6 +253,12 @@ function errorMapping(error: string | undefined): {
         code: 'unprocessable_entity',
         message: 'The stored Protocol credential is incomplete.',
         hint: 'Re-authenticate the connection, then retry.',
+      }
+    case 'MANUAL_FILL_AMBIGUOUS':
+      return {
+        code: 'conflict',
+        message: 'A manual fill is close to an upstream fill but does not match it.',
+        hint: 'Retire the blocking manual fill (POST /api/admin/rithmic-protocol/manual-fill with action "retire", or the insert script --retire). Preview first, then apply. A corrected re-entry does not clear the old row. Ordinary sync skips that symbol until the manual fill is retired or matches exactly.',
       }
     case 'OPENING_NOT_FLAT':
       return {

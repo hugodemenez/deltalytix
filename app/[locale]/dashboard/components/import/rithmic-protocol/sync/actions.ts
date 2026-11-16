@@ -26,7 +26,10 @@ import {
 import {
   buildLedgerSeenIndex,
   canonicalLedgerFillIds,
+  confirmedDistinctMarkers,
   deriveTradesFromFillLedger,
+  planManualFillSyncEffects,
+  retiredManualFillIds,
 } from '@/lib/rithmic-protocol/fill-ledger'
 import {
   deleteUnannotatedPhantomProtocolTrades,
@@ -849,6 +852,8 @@ export async function getRithmicProtocolTrades(
       connectionId,
     })
     const prepared = deriveTradesFromFillLedger(storedFills, rawFills)
+    const manualEffects = planManualFillSyncEffects(prepared)
+    const fifoFills = manualEffects.fifoFills
 
     syncStats.rawFills = fillStats.received
     syncStats.fillsAfterDedup = prepared.stats.afterDedup
@@ -857,6 +862,7 @@ export async function getRithmicProtocolTrades(
       already_in_ledger: fillStats.skippedAlreadySeen + ledgerWrite.skipped,
       ledger_inserted: ledgerWrite.inserted,
       ledger_updated: ledgerWrite.updated,
+      ...manualEffects.droppedByReason,
     }
 
     const tickDetails = await getTickDetails()
@@ -868,7 +874,7 @@ export async function getRithmicProtocolTrades(
     )
 
     const { trades, openSkipped, skipped } = buildTradesFromRithmicFills(
-      prepared.fills,
+      fifoFills,
       userId,
       tickBySymbol,
       commissionRates,
@@ -941,16 +947,31 @@ export async function getRithmicProtocolTrades(
     }
 
     guard.throwIfLost()
-    const phantomsRemoved = await deleteUnannotatedPhantomProtocolTrades({
+    const ledgerFills = [...storedFills, ...rawFills]
+    const phantoms = await deleteUnannotatedPhantomProtocolTrades({
       userId,
       accountNumbers: resolvedAccountIds,
       derivedTrades: trades,
-      ledgerFillIds: canonicalLedgerFillIds([...storedFills, ...rawFills]),
+      ledgerFillIds: canonicalLedgerFillIds(ledgerFills),
+      retiredFillIds: retiredManualFillIds(ledgerFills),
+      distinctPlantIdByManualFillId: confirmedDistinctMarkers(ledgerFills),
+      retainAccountNumbers: manualEffects.retainAccountNumbers,
     })
-    if (phantomsRemoved > 0) {
-      syncStats.droppedByReason.phantoms_removed = phantomsRemoved
+    if (phantoms.removed > 0) {
+      syncStats.droppedByReason.phantoms_removed = phantoms.removed
       logger.info(
-        `Removed ${phantomsRemoved} unannotated ${SERVICE} overnight phantom trade(s)`,
+        `Removed ${phantoms.removed} unannotated ${SERVICE} overnight phantom trade(s)`,
+      )
+    }
+    if (phantoms.retiredManualTradesKept > 0) {
+      syncStats.droppedByReason.retired_manual_trade_kept =
+        phantoms.retiredManualTradesKept
+    }
+    if (phantoms.distinctManualTradesKept > 0) {
+      syncStats.droppedByReason.distinct_manual_trade_kept =
+        phantoms.distinctManualTradesKept
+      logger.info(
+        `Kept ${phantoms.distinctManualTradesKept} annotated ${SERVICE} trade(s) beside a confirm-distinct plant fill`,
       )
     }
 

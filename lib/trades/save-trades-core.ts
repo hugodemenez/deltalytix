@@ -8,9 +8,11 @@ import {
   RITHMIC_PROTOCOL_TRADE_TAG,
 } from "@/lib/trade-id-utils"
 import {
+  canonicalRithmicFillId,
   filterRithmicProtocolTradesCoveredByStoredRows,
   resolveRithmicProtocolPersistedId,
 } from "@/lib/rithmic-protocol/dedupe-fills"
+import { manualTradeReplacedByPlantTrade } from "@/lib/rithmic-protocol/fill-ledger"
 import {
   isTradovatePersistedTrade,
   resolveTradovatePersistedId,
@@ -125,6 +127,36 @@ async function assignExistingTradovateIds(
   })
 }
 
+async function loadConfirmedDistinctMarkers(
+  userId: string,
+  trades: Array<{ entryId?: string | null; closeId?: string | null }>,
+): Promise<Map<string, string>> {
+  const manualIds = new Set<string>()
+  for (const trade of trades) {
+    for (const raw of [trade.entryId, trade.closeId]) {
+      const id = canonicalRithmicFillId(raw)
+      if (id?.startsWith("manual-")) manualIds.add(id)
+    }
+  }
+  if (manualIds.size === 0) return new Map()
+  const rows = await prisma.rithmicProtocolFill.findMany({
+    where: {
+      userId,
+      fillId: { in: [...manualIds] },
+      source: "manual",
+      confirmedDistinctFillId: { not: null },
+    },
+    select: { fillId: true, confirmedDistinctFillId: true },
+  })
+  const markers = new Map<string, string>()
+  for (const row of rows) {
+    const manualId = canonicalRithmicFillId(row.fillId)
+    const plantId = canonicalRithmicFillId(row.confirmedDistinctFillId)
+    if (manualId && plantId) markers.set(manualId, plantId)
+  }
+  return markers
+}
+
 function isRithmicProtocolPersistedTrade(trade: {
   tags?: string[] | null
 }): boolean {
@@ -174,10 +206,34 @@ async function assignExistingRithmicProtocolIds(
   })
   if (existing.length === 0) return trades
 
+  const distinctPlantIdByManualFillId = await loadConfirmedDistinctMarkers(
+    userId,
+    [...trades, ...existing],
+  )
+  const context = {
+    derivedBatch: trades,
+    distinctPlantIdByManualFillId,
+  }
+  const claimed = new Set<string>()
+  const directId = new Map<Trade, string>()
+  for (const trade of trades) {
+    if (!isRithmicProtocolPersistedTrade(trade)) continue
+    const id = resolveRithmicProtocolPersistedId(trade, existing)
+    if (!id || claimed.has(id)) continue
+    claimed.add(id)
+    directId.set(trade, id)
+  }
   const assigned = trades.map((trade) => {
     if (!isRithmicProtocolPersistedTrade(trade)) return trade
-    const existingId = resolveRithmicProtocolPersistedId(trade, existing)
-    return existingId ? { ...trade, id: existingId } : trade
+    const direct = directId.get(trade)
+    if (direct) return { ...trade, id: direct }
+    const pool = existing.filter((row) => !claimed.has(row.id))
+    const replaced = pool.find((row) =>
+      manualTradeReplacedByPlantTrade(row, trade, context),
+    )
+    if (!replaced) return trade
+    claimed.add(replaced.id)
+    return { ...trade, id: replaced.id }
   })
 
   // Stored rows can pair the same contracts differently (rebuilt from a

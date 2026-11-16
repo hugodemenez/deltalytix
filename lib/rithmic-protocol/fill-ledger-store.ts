@@ -5,6 +5,8 @@ import type { RithmicProtocolFill } from './types'
 import { canonicalRithmicFillId, fillIdentityKey } from './dedupe-fills'
 import {
   type AnnotatedProtocolTrade,
+  countDistinctManualTradesKept,
+  countRetiredManualTradesKept,
   partitionIncomingFills,
   phantomProtocolTradeIds,
 } from './fill-ledger'
@@ -29,12 +31,21 @@ type FillRow = {
   ssboe: number | null
   usecs: number | null
   source: string
+  confirmedDistinctFillId?: string | null
+}
+
+/** Persist and reload `manual` as itself. Anything else unknown stays history. */
+export function normalizePersistedFillSource(
+  value: string | null | undefined,
+): NonNullable<RithmicProtocolFill['source']> {
+  if (value === 'replay' || value === 'manual' || value === 'manual-retired') return value
+  return 'history'
 }
 
 function sourceOf(
   value: string | null | undefined,
 ): NonNullable<RithmicProtocolFill['source']> {
-  return value === 'replay' ? 'replay' : 'history'
+  return normalizePersistedFillSource(value)
 }
 
 export function rowToFill(row: FillRow): RithmicProtocolFill {
@@ -53,6 +64,7 @@ export function rowToFill(row: FillRow): RithmicProtocolFill {
     ssboe: row.ssboe ?? undefined,
     usecs: row.usecs ?? undefined,
     source: sourceOf(row.source),
+    confirmedDistinctFillId: row.confirmedDistinctFillId || undefined,
   }
 }
 
@@ -217,9 +229,21 @@ export async function deleteUnannotatedPhantomProtocolTrades(params: {
     closeId?: string | null
   }>
   ledgerFillIds: Set<string>
+  /** `manual-retired` fill ids still present on the ledger. Annotated trades that use them are counted, not deleted. */
+  retiredFillIds?: Set<string>
+  /** Manual fill id → plant fill id confirmed as a different execution. */
+  distinctPlantIdByManualFillId?: ReadonlyMap<string, string>
+  /** Accounts whose symbol was skipped as a manual near-miss. Do not reap those trades. */
+  retainAccountNumbers?: string[]
   db?: ProtocolStore
-}): Promise<number> {
-  if (params.accountNumbers.length === 0) return 0
+}): Promise<{
+  removed: number
+  retiredManualTradesKept: number
+  distinctManualTradesKept: number
+}> {
+  if (params.accountNumbers.length === 0) {
+    return { removed: 0, retiredManualTradesKept: 0, distinctManualTradesKept: 0 }
+  }
   const db = params.db ?? prismaBase
   const existing = (await db.trade.findMany({
     where: {
@@ -235,6 +259,10 @@ export async function deleteUnannotatedPhantomProtocolTrades(params: {
       closeDate: true,
       entryId: true,
       closeId: true,
+      side: true,
+      quantity: true,
+      entryPrice: true,
+      closePrice: true,
       comment: true,
       tags: true,
       imageBase64: true,
@@ -245,12 +273,28 @@ export async function deleteUnannotatedPhantomProtocolTrades(params: {
     },
   })) as AnnotatedProtocolTrade[]
 
-  const ids = phantomProtocolTradeIds({
-    existing,
+  const classification = {
     derived: params.derivedTrades,
     ledgerFillIds: params.ledgerFillIds,
+    distinctPlantIdByManualFillId: params.distinctPlantIdByManualFillId,
+  }
+  const retiredManualTradesKept = countRetiredManualTradesKept({
+    existing,
+    ...classification,
+    retiredFillIds: params.retiredFillIds ?? new Set(),
   })
-  if (ids.length === 0) return 0
+  const distinctManualTradesKept = countDistinctManualTradesKept({
+    existing,
+    ...classification,
+  })
+  const retainedAccounts = new Set(params.retainAccountNumbers ?? [])
+  const ids = phantomProtocolTradeIds({
+    existing: existing.filter((row) => !retainedAccounts.has(row.accountNumber ?? '')),
+    ...classification,
+  })
+  if (ids.length === 0) {
+    return { removed: 0, retiredManualTradesKept, distinctManualTradesKept }
+  }
 
   const result = await db.trade.deleteMany({
       where: {
@@ -259,5 +303,5 @@ export async function deleteUnannotatedPhantomProtocolTrades(params: {
         tags: { has: RITHMIC_PROTOCOL_TRADE_TAG },
       },
     })
-  return result.count
+  return { removed: result.count, retiredManualTradesKept, distinctManualTradesKept }
 }

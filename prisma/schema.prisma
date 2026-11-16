@@ -675,8 +675,18 @@ model RithmicProtocolFill {
   sequenceNumber  String?
   ssboe           Int?
   usecs           Int?
-  /// `history` (ShowFillHistory / order-history fallback) or `replay`.
+  /// `history`, `replay`, `manual`, or `manual-retired`. Plain string,
+  /// not a Postgres enum.
   source          String   @default("history")
+  /// Set together when an admin soft-retires a manual fill.
+  retiredAt       DateTime?
+  retiredBy       String?
+  retireReason    String?
+  /// Plant fill this manual was confirmed distinct from. Reconcile will not match or near-miss that fill id.
+  confirmedDistinctFillId String?
+  confirmedDistinctAt     DateTime?
+  confirmedDistinctBy     String?
+  confirmDistinctReason   String?
   connectionId    String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
