@@ -118,6 +118,9 @@ export async function POST(request: NextRequest) {
         const annotated = marked.errors?.some(
           (error) => error.field === 'acknowledgeAnnotatedTrades',
         )
+        const unchangedConflict = marked.errors?.some(
+          (error) => error.field === 'markerConflictUnchanged',
+        )
         const markerConflict = marked.errors?.some(
           (error) => error.field === 'acknowledgeMarkerConflict',
         )
@@ -181,7 +184,10 @@ export async function POST(request: NextRequest) {
         ]
         return jsonError({
           code: 'conflict',
-          message: markerConflict
+          message: unchangedConflict
+            ? (marked.errors?.find((error) => error.field === 'markerConflictUnchanged')?.message ??
+              'Confirm-distinct added no plant ids, so the marker conflict stays.')
+            : markerConflict
             ? 'Confirm-distinct refused because confirmedDistinctFillId is not the last id on this row.'
             : annotated
               ? 'Confirm-distinct refused while an annotated trade would lose its fill pair.'
@@ -190,7 +196,9 @@ export async function POST(request: NextRequest) {
               : unrelated
                 ? 'Confirm-distinct refused because that plant fill is unrelated to the manual.'
                 : 'Confirm-distinct refused because that plant fill matches the manual exactly.',
-          hint: markerConflict
+          hint: unchangedConflict
+            ? 'Add or remove a plant id to rewrite the marker. Acknowledging the conflict without changing the list leaves it in place.'
+            : markerConflict
             ? 'Re-send dryRun: false with acknowledgeMarkerConflict: true, or remove the conflicting scalar id.'
             : annotated
               ? 'Move the annotation if you want to keep it, delete the stored row, then run a sync or rebuild. Then re-send dryRun: false with acknowledgeAnnotatedTrades: true.'

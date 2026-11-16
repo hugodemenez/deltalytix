@@ -516,5 +516,105 @@ describe('POST /api/admin/rithmic-protocol/manual-fill', () => {
     expect(payload.error.code).toBe('conflict')
     expect(payload.error.message).toMatch(/changed while the confirm was running/)
     expect(payload.error.hint).toMatch(/Nothing was written/)
+    expect(payload.error.details[0].field).toBe('confirmedDistinctFillIds')
+  })
+
+  it('passes acknowledgeMarkerConflict through as 409', async () => {
+    authorizeAdminRequest.mockResolvedValue({ ok: true, via: 'cron' })
+    confirmDistinctManualRithmicProtocolFill.mockResolvedValue({
+      ok: false,
+      status: 'acknowledgement_required',
+      previousConfirmedDistinctFillId: '1403850',
+      previousConfirmedDistinctFillIds: ['1403850', '1402237'],
+      errors: [
+        {
+          field: 'acknowledgeMarkerConflict',
+          message:
+            'confirmedDistinctFillId (1403850) is not the last id in confirmedDistinctFillIds. Its relation to this manual is exact.',
+        },
+      ],
+    })
+    const response = await post({
+      action: 'confirm-distinct',
+      userId: body.userId,
+      accountNumber: body.accountNumber,
+      fillId: 'manual-gap',
+      upstreamFillId: '88422',
+      reason: 'another near-miss',
+      dryRun: false,
+    })
+    expect(response.status).toBe(409)
+    const payload = await response.json()
+    expect(payload.error.code).toBe('conflict')
+    expect(payload.error.message).toMatch(/not the last id/)
+    expect(payload.error.hint).toMatch(/acknowledgeMarkerConflict: true/)
+    expect(payload.error.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: 'acknowledgeMarkerConflict',
+          message: expect.stringMatching(/relation to this manual is exact/),
+        }),
+      ]),
+    )
+  })
+
+  it('returns 400 when confirm-distinct reports two exact matches', async () => {
+    authorizeAdminRequest.mockResolvedValue({ ok: true, via: 'cron' })
+    confirmDistinctManualRithmicProtocolFill.mockResolvedValue({
+      ok: false,
+      status: 'bad_request',
+      errors: [
+        {
+          field: 'confirmedDistinctFillIds',
+          message:
+            'Prod can protect only one exact-match confirmation. This row would keep 1403850 and 88421. Remove one before confirming another.',
+        },
+      ],
+    })
+    const response = await post({
+      action: 'confirm-distinct',
+      userId: body.userId,
+      accountNumber: body.accountNumber,
+      fillId: 'manual-gap',
+      upstreamFillId: '88421',
+      reason: 'another exact match',
+      dryRun: false,
+      acknowledgeExactMatch: true,
+    })
+    expect(response.status).toBe(400)
+    const payload = await response.json()
+    expect(payload.error.code).toBe('bad_request')
+    expect(payload.error.message).toMatch(/only one exact-match/)
+    expect(payload.error.hint).toMatch(/Remove one before confirming another/)
+  })
+
+  it('says when acknowledging a marker conflict would write nothing', async () => {
+    authorizeAdminRequest.mockResolvedValue({ ok: true, via: 'cron' })
+    confirmDistinctManualRithmicProtocolFill.mockResolvedValue({
+      ok: false,
+      status: 'acknowledgement_required',
+      errors: [
+        {
+          field: 'markerConflictUnchanged',
+          message:
+            'confirmedDistinctFillId (1403850) is not the last id in confirmedDistinctFillIds, and this request adds no plant ids. Nothing was written, so the conflict stays.',
+        },
+      ],
+    })
+    const response = await post({
+      action: 'confirm-distinct',
+      userId: body.userId,
+      accountNumber: body.accountNumber,
+      fillId: 'manual-gap',
+      upstreamFillId: '1402237',
+      reason: 'already on the row',
+      dryRun: false,
+      acknowledgeMarkerConflict: true,
+    })
+    expect(response.status).toBe(409)
+    const payload = await response.json()
+    expect(payload.error.code).toBe('conflict')
+    expect(payload.error.message).toMatch(/conflict stays/)
+    expect(payload.error.hint).toMatch(/without changing the list/)
   })
 })

@@ -260,6 +260,32 @@ export function distinctMarkerConflict(
   return { scalar: scalar ?? null }
 }
 
+/**
+ * Operator warning when prod and beta would disagree on a manual marker.
+ * A repoint (scalar is in the list, but not last) is not "outside" the list.
+ * An unset scalar is not printed as null.
+ */
+export function markerConflictSyncWarning(manual: {
+  fillId?: string | null
+  symbol?: string | null
+  confirmedDistinctFillId?: string | null
+  confirmedDistinctFillIds?: readonly (string | null | undefined)[] | null
+}): string {
+  const list = listConfirmedDistinctFillIds(manual)
+  const listed = list.length > 0 ? list.join(', ') : 'empty'
+  const scalar = canonicalRithmicFillId(manual.confirmedDistinctFillId)
+  const id = manual.fillId ?? ''
+  const symbol = manual.symbol ?? ''
+  const tail = `Sync will not derive ${symbol}. Do not run confirm-distinct through prod until this release is on main.`
+  if (!scalar) {
+    return `Manual fill ${id} has no confirmedDistinctFillId while confirmedDistinctFillIds is ${listed}. ${tail}`
+  }
+  if (list.includes(scalar)) {
+    return `Manual fill ${id} has confirmedDistinctFillId ${scalar}, which is not the last id in confirmedDistinctFillIds (${listed}). ${tail}`
+  }
+  return `Manual fill ${id} has confirmedDistinctFillId ${scalar}, which is outside confirmedDistinctFillIds (${listed}). ${tail}`
+}
+
 /** One plant id, or every plant id a manual fill was confirmed distinct from. */
 export type DistinctPlantMarker = string | ReadonlySet<string>
 

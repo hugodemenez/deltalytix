@@ -8,6 +8,7 @@ import {
   canonicalLedgerFillIds,
   classifyStoredProtocolTrade,
   distinctMarkerConflict,
+  markerConflictSyncWarning,
   deriveTradesFromFillLedger,
   dropSeenLedgerFills,
   hasTradeJournalAnnotations,
@@ -1146,6 +1147,30 @@ describe('manual fills', () => {
           confirmedDistinctFillId: null,
         }),
       ).toEqual({ scalar: null })
+      expect(
+        markerConflictSyncWarning({
+          fillId: 'manual-gap',
+          symbol: 'MESZ6',
+          confirmedDistinctFillId: '1403850',
+          confirmedDistinctFillIds: ['1403850', '1402237'],
+        }),
+      ).toMatch(/1403850, which is not the last id/)
+      expect(
+        markerConflictSyncWarning({
+          fillId: 'manual-gap',
+          symbol: 'MESZ6',
+          confirmedDistinctFillId: '1402237',
+          confirmedDistinctFillIds: ['1403850'],
+        }),
+      ).toMatch(/1402237, which is outside/)
+      const unset = markerConflictSyncWarning({
+        fillId: 'manual-gap',
+        symbol: 'MESZ6',
+        confirmedDistinctFillId: null,
+        confirmedDistinctFillIds: ['1403850', '1402237'],
+      })
+      expect(unset).toMatch(/has no confirmedDistinctFillId/)
+      expect(unset).not.toMatch(/null/)
     } finally {
       warn.mockRestore()
     }

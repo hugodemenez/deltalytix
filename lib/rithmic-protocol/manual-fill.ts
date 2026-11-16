@@ -303,7 +303,7 @@ function previewWarnings(
   for (const miss of book.nearMisses) {
     if (miss.manual.fillId !== fill.fillId) continue
     warnings.push(
-      `Near-miss with upstream fill ${miss.upstream.fillId ?? '(no id)'} (${miss.reason}). This symbol will not be derived until the patch matches exactly.`,
+      `Near-miss with upstream fill ${miss.upstream.fillId ?? '(no id)'} (${miss.reason}). This symbol will not be derived while this near-miss stands. Confirm the manual distinct from that plant fill, or change the patch so it is not a near-miss.`,
     )
   }
   return warnings
@@ -798,6 +798,8 @@ export type ManualFillDistinctResult =
       removedUpstreamFillId: string | null
       trades: ManualFillDerivedTrade[]
       tradeEffects: ManualFillTradeEffects
+      /** Dry-run notes. Names a scalar that is not the last id, when that is the case. */
+      warnings: string[]
     }
   | {
       ok: false
@@ -958,6 +960,49 @@ function exactAcknowledgedIds(
   return list.filter((id) => exact.has(id))
 }
 
+/**
+ * How one listed plant id relates to the manual on the current book.
+ * Markers are ignored inside `manualFillBookRelation`, so a legacy exact
+ * twin is still exact after it was confirmed.
+ */
+function relationToListedId(
+  accountFills: DistinctRow[],
+  manual: DistinctRow,
+  book: RithmicProtocolFill[],
+  fillId: string,
+): ManualFillBookRelation | null {
+  const upstream = pickUpstreamFill(accountFills, manual, fillId)
+  if (!upstream) return null
+  return manualFillBookRelation(book, manual.fillId, distinctRowToFill(upstream))
+}
+
+function relationLabel(relation: ManualFillBookRelation | null): string {
+  if (!relation) return 'unknown'
+  if (relation.kind === 'near-miss') return `near-miss (${relation.reason})`
+  return relation.kind
+}
+
+/**
+ * Ids prod can still supersede. An audit `add` of relation `exact` counts,
+ * and so does an exact twin on the current book that has no audit relation
+ * (a backfill or a confirm from before this list existed).
+ */
+function exactIdsOnProposedList(
+  audit: unknown,
+  ids: readonly string[],
+  reclassified: ReadonlyArray<{ id: string; exact: boolean }>,
+  accountFills: DistinctRow[],
+  manual: DistinctRow,
+  book: RithmicProtocolFill[],
+): string[] {
+  const exact = new Set(exactAcknowledgedIds(audit, ids, reclassified))
+  for (const id of ids) {
+    const relation = relationToListedId(accountFills, manual, book, id)
+    if (relation?.kind === 'exact') exact.add(id)
+  }
+  return ids.filter((id) => exact.has(id))
+}
+
 function orderExactLast(
   ids: readonly string[],
   exactIds: readonly string[],
@@ -984,9 +1029,38 @@ function twoExactRefusal(exactIds: readonly string[]): Extract<ManualFillDistinc
 
 function markerConflictRefusal(
   row: DistinctRow,
+  relationLabelText: string | null,
 ): Extract<ManualFillDistinctResult, { ok: false }> {
   const conflict = distinctMarkerConflict(row)
-  const scalar = conflict?.scalar ?? 'null'
+  const scalar = conflict?.scalar ?? 'unset'
+  const listed = listConfirmedDistinctFillIds(row)
+  const outside = Boolean(conflict?.scalar && !listed.includes(conflict.scalar))
+  const relationNote = conflict?.scalar
+    ? ` Its relation to this manual is ${relationLabelText ?? 'unknown'}.`
+    : ''
+  const exactNote =
+    outside && relationLabelText === 'exact'
+      ? ' Pass acknowledgeExactMatch: true as well, because dropping this exact id lets both apps supersede the manual.'
+      : ''
+  return {
+    ok: false,
+    status: 'acknowledgement_required',
+    previousConfirmedDistinctFillId: row.confirmedDistinctFillId,
+    previousConfirmedDistinctFillIds: listed,
+    errors: [
+      {
+        field: 'acknowledgeMarkerConflict',
+        message: `confirmedDistinctFillId (${scalar}) is not the last id in confirmedDistinctFillIds.${relationNote}${exactNote} Pass acknowledgeMarkerConflict: true to rewrite it, or remove that scalar id.`,
+      },
+    ],
+  }
+}
+
+function unchangedMarkerConflictRefusal(
+  row: DistinctRow,
+): Extract<ManualFillDistinctResult, { ok: false }> {
+  const conflict = distinctMarkerConflict(row)
+  const scalar = conflict?.scalar ?? 'unset'
   return {
     ok: false,
     status: 'acknowledgement_required',
@@ -994,11 +1068,79 @@ function markerConflictRefusal(
     previousConfirmedDistinctFillIds: listConfirmedDistinctFillIds(row),
     errors: [
       {
-        field: 'acknowledgeMarkerConflict',
-        message: `confirmedDistinctFillId (${scalar}) is not the last id in confirmedDistinctFillIds. Pass acknowledgeMarkerConflict: true to rewrite it, or remove that scalar id.`,
+        field: 'markerConflictUnchanged',
+        message: `confirmedDistinctFillId (${scalar}) is not the last id in confirmedDistinctFillIds, and this request adds no plant ids. Nothing was written, so the conflict stays.`,
       },
     ],
   }
+}
+
+function exactStrayScalarRefusal(
+  row: DistinctRow,
+  scalar: string,
+  relation: Extract<ManualFillBookRelation, { kind: 'exact' }>,
+  how: 'rewrite' | 'remove',
+): Extract<ManualFillDistinctResult, { ok: false }> {
+  const action =
+    how === 'remove'
+      ? 'Removing it drops that exact id'
+      : 'Rewriting the scalar drops that exact id'
+  return {
+    ok: false,
+    status: 'acknowledgement_required',
+    relation,
+    previousConfirmedDistinctFillId: row.confirmedDistinctFillId,
+    previousConfirmedDistinctFillIds: listConfirmedDistinctFillIds(row),
+    errors: [
+      {
+        field: 'acknowledgeExactMatch',
+        message: `confirmedDistinctFillId (${scalar}) is an exact match and is not in confirmedDistinctFillIds. ${action}, and both apps then supersede this manual. Pass acknowledgeExactMatch: true to continue.`,
+      },
+    ],
+  }
+}
+
+function markerConflictPreviewWarning(
+  row: DistinctRow,
+  relationLabelText: string | null,
+): string | null {
+  const conflict = distinctMarkerConflict(row)
+  if (!conflict) return null
+  const listed = listConfirmedDistinctFillIds(row)
+  const listLabel = listed.join(', ') || 'empty'
+  if (!conflict.scalar) {
+    return `confirmedDistinctFillId is unset and is not the last id in confirmedDistinctFillIds (${listLabel}). Apply refuses unless acknowledgeMarkerConflict is true.`
+  }
+  const outside = !listed.includes(conflict.scalar)
+  const exactNote =
+    outside && relationLabelText === 'exact'
+      ? ' Dropping it also requires acknowledgeExactMatch: true, because both apps would then supersede this manual.'
+      : ''
+  return `confirmedDistinctFillId (${conflict.scalar}) is ${relationLabelText ?? 'unknown'} relative to this manual and is not the last id in confirmedDistinctFillIds (${listLabel}).${exactNote} Apply refuses unless acknowledgeMarkerConflict is true.`
+}
+
+/** An out-of-list scalar that exactly matches the manual. Dropping it lets both apps supersede. */
+function exactScalarOutsideList(
+  row: DistinctRow,
+  accountFills: DistinctRow[],
+  book: RithmicProtocolFill[],
+): { scalar: string; relation: Extract<ManualFillBookRelation, { kind: 'exact' }> } | null {
+  const conflict = distinctMarkerConflict(row)
+  if (!conflict?.scalar) return null
+  if (listConfirmedDistinctFillIds(row).includes(conflict.scalar)) return null
+  const relation = relationToListedId(accountFills, row, book, conflict.scalar)
+  if (relation?.kind !== 'exact') return null
+  return { scalar: conflict.scalar, relation }
+}
+
+function scalarRelationLabel(
+  row: DistinctRow,
+  accountFills: DistinctRow[],
+  book: RithmicProtocolFill[],
+): string | null {
+  const conflict = distinctMarkerConflict(row)
+  if (!conflict?.scalar) return null
+  return relationLabel(relationToListedId(accountFills, row, book, conflict.scalar))
 }
 
 function markerSnapshot(row: {
@@ -1013,28 +1155,56 @@ function markerSnapshot(row: {
   }
 }
 
+function legacyProvenance(row: DistinctRow): { at: string | null; by: string; reason: string } {
+  const by = row.confirmedDistinctBy?.trim()
+  const reason = row.confirmDistinctReason?.trim()
+  return {
+    at: row.confirmedDistinctAt instanceof Date ? row.confirmedDistinctAt.toISOString() : null,
+    by: by ? row.confirmedDistinctBy ?? by : 'unknown',
+    reason: reason ? row.confirmDistinctReason ?? reason : 'unknown',
+  }
+}
+
+/** Ids already recorded as `add` or `legacy` are not seeded again. */
+function idsMissingLegacySeed(row: DistinctRow, previousIds: readonly string[]): string[] {
+  const covered = new Set<string>()
+  for (const item of auditSnapshot(row.confirmedDistinctAudit)) {
+    if (!item || typeof item !== 'object') continue
+    const record = item as Record<string, unknown>
+    if (record.op !== 'add' && record.op !== 'legacy') continue
+    const fillId = canonicalRithmicFillId(typeof record.fillId === 'string' ? record.fillId : '')
+    if (fillId) covered.add(fillId)
+  }
+  const consider: string[] = []
+  const scalar = canonicalRithmicFillId(row.confirmedDistinctFillId)
+  if (scalar && !previousIds.includes(scalar)) consider.push(scalar)
+  for (const id of previousIds) consider.push(id)
+  const ids: string[] = []
+  for (const id of consider) {
+    if (covered.has(id) || ids.includes(id)) continue
+    ids.push(id)
+  }
+  return ids
+}
+
 function composeAudit(
   row: DistinctRow,
-  at: string,
-  by: string,
+  previousIds: readonly string[],
+  relationKindFor: (fillId: string) => string,
   entries: Array<Record<string, unknown>>,
 ): unknown[] {
   const existing = auditSnapshot(row.confirmedDistinctAudit)
-  const seeded =
-    existing.length === 0 &&
-    (row.confirmedDistinctFillId || (row.confirmedDistinctFillIds?.length ?? 0) > 0)
-      ? [
-          {
-            op: 'legacy',
-            fillId: row.confirmedDistinctFillId ?? row.confirmedDistinctFillIds?.at(-1) ?? '',
-            at,
-            by,
-            reason: 'pre-existing marker',
-            scalar: row.confirmedDistinctFillId ?? null,
-          },
-        ]
-      : []
-  return [...seeded, ...existing, ...entries]
+  const provenance = legacyProvenance(row)
+  const seeded = idsMissingLegacySeed(row, previousIds).map((fillId) => ({
+    op: 'legacy' as const,
+    fillId,
+    at: provenance.at,
+    by: provenance.by,
+    reason: provenance.reason,
+    relation: relationKindFor(fillId),
+    scalar: row.confirmedDistinctFillId ?? null,
+  }))
+  return [...existing, ...seeded, ...entries]
 }
 
 async function defaultMarkDistinct(params: {
@@ -1132,40 +1302,18 @@ function withDistinctIds(
   }
 }
 
-/** Append plant ids. Ids already on the row stay, in their existing order. */
-function withProposedDistinctMarker(
+/** Replace the manual's marker with the list this call would write, exact id last. */
+function withConfirmedDistinctIds(
   fills: RithmicProtocolFill[],
   manualId: string,
-  orderFillIds: string | readonly string[],
+  ids: readonly string[],
 ): RithmicProtocolFill[] {
-  const adding = (typeof orderFillIds === 'string' ? [orderFillIds] : orderFillIds)
-    .map((id) => canonicalRithmicFillId(id))
-    .filter((id): id is string => Boolean(id))
+  const manual = canonicalRithmicFillId(manualId)
   return fills.map((fill) => {
-    if (!(fill.source === 'manual' && canonicalRithmicFillId(fill.fillId) === manualId)) {
+    if (!(fill.source === 'manual' && canonicalRithmicFillId(fill.fillId) === manual)) {
       return fill
     }
-    const ids = listConfirmedDistinctFillIds(fill)
-    for (const id of adding) {
-      if (!ids.includes(id)) ids.push(id)
-    }
-    return withDistinctIds(fill, ids)
-  })
-}
-
-/** Drop one plant id. The others stay. */
-function withoutProposedDistinctMarker(
-  fills: RithmicProtocolFill[],
-  manualId: string,
-  orderFillId: string,
-): RithmicProtocolFill[] {
-  const removing = canonicalRithmicFillId(orderFillId)
-  return fills.map((fill) => {
-    if (!(fill.source === 'manual' && canonicalRithmicFillId(fill.fillId) === manualId)) {
-      return fill
-    }
-    const ids = listConfirmedDistinctFillIds(fill).filter((id) => id !== removing)
-    return withDistinctIds(fill, ids)
+    return withDistinctIds(fill, [...ids])
   })
 }
 
@@ -1445,16 +1593,26 @@ export async function confirmDistinctManualRithmicProtocolFill(
     const unorderedIds = previousIds.filter((id) => id !== removeId)
     const ordered = orderExactLast(
       unorderedIds,
-      exactAcknowledgedIds(row.confirmedDistinctAudit, unorderedIds, []),
+      exactIdsOnProposedList(row.confirmedDistinctAudit, unorderedIds, [], accountFills, row, book),
     )
     if (!ordered.ok) return twoExactRefusal(ordered.exactIds)
     const proposedIds = ordered.ids
     const removesConflictScalar = conflict != null && conflict.scalar === removeId
+    const relationLabelText = scalarRelationLabel(row, accountFills, book)
+    const strayExact = exactScalarOutsideList(row, accountFills, book)
     if (!dryRun && conflict && !acknowledgeMarkerConflict && !removesConflictScalar) {
-      return markerConflictRefusal(row)
+      return markerConflictRefusal(row, relationLabelText)
     }
-    const proposedSymbol = withoutProposedDistinctMarker(symbolBook, fillId, removeId)
-    const proposedAccount = withoutProposedDistinctMarker(book, fillId, removeId)
+    if (!dryRun && strayExact && !acknowledgeExactMatch) {
+      return exactStrayScalarRefusal(
+        row,
+        strayExact.scalar,
+        strayExact.relation,
+        dropsStrayScalar ? 'remove' : 'rewrite',
+      )
+    }
+    const proposedSymbol = withConfirmedDistinctIds(symbolBook, fillId, proposedIds)
+    const proposedAccount = withConfirmedDistinctIds(book, fillId, proposedIds)
     const { trades, tradeEffects } = effectsFor(proposedSymbol, proposedAccount)
     const removedUpstream = pickUpstreamFill(accountFills, row, removeUpstreamFillId)
     const relation: ManualFillDistinctRelation = removedUpstream
@@ -1512,32 +1670,37 @@ export async function confirmDistinctManualRithmicProtocolFill(
         expectedConfirmedDistinctFillIds: markerSnapshot(row).ids,
         expectedConfirmedDistinctFillId: markerSnapshot(row).scalar,
         expectedConfirmedDistinctAudit: markerSnapshot(row).audit,
-        confirmedDistinctAudit: composeAudit(row, confirmedDistinctAt.toISOString(), confirmedDistinctBy, [
-          ...(conflict
-            ? [
-                {
-                  op: 'marker-conflict',
-                  fillId: conflict.scalar ?? '',
-                  scalar: conflict.scalar,
-                  kept: proposedIds.at(-1) ?? null,
-                  at: confirmedDistinctAt.toISOString(),
-                  by: confirmedDistinctBy,
-                  reason,
-                },
-              ]
-            : []),
-          ...(dropsStrayScalar
-            ? []
-            : [
-                {
-                  op: 'remove',
-                  fillId: removeId,
-                  at: confirmedDistinctAt.toISOString(),
-                  by: confirmedDistinctBy,
-                  reason,
-                },
-              ]),
-        ]),
+        confirmedDistinctAudit: composeAudit(
+          row,
+          previousIds,
+          (id) => relationToListedId(accountFills, row, book, id)?.kind ?? 'unknown',
+          [
+            ...(conflict
+              ? [
+                  {
+                    op: 'marker-conflict',
+                    fillId: conflict.scalar ?? '',
+                    scalar: conflict.scalar,
+                    kept: proposedIds.at(-1) ?? null,
+                    at: confirmedDistinctAt.toISOString(),
+                    by: confirmedDistinctBy,
+                    reason,
+                  },
+                ]
+              : []),
+            ...(dropsStrayScalar
+              ? []
+              : [
+                  {
+                    op: 'remove',
+                    fillId: removeId,
+                    at: confirmedDistinctAt.toISOString(),
+                    by: confirmedDistinctBy,
+                    reason,
+                  },
+                ]),
+          ],
+        ),
         confirmedDistinctAt,
         confirmedDistinctBy,
         confirmDistinctReason: reason,
@@ -1547,6 +1710,7 @@ export async function confirmDistinctManualRithmicProtocolFill(
         `[RITHMIC-MANUAL-FILL] confirm-distinct remove userId=${userId} account=${accountNumber} fillId=${fillId} upstreamFillId=${removeId} by=${confirmedDistinctBy} reason=${JSON.stringify(reason)}`,
       )
     }
+    const previewWarning = dryRun ? markerConflictPreviewWarning(row, relationLabelText) : null
     return {
       ok: true,
       dryRun,
@@ -1564,6 +1728,7 @@ export async function confirmDistinctManualRithmicProtocolFill(
       removedUpstreamFillId: removeId,
       trades,
       tradeEffects,
+      warnings: previewWarning ? [previewWarning] : [],
     }
   }
   const targets: DistinctTarget[] = []
@@ -1603,26 +1768,34 @@ export async function confirmDistinctManualRithmicProtocolFill(
   }
   const ordered = orderExactLast(
     unorderedIds,
-    exactAcknowledgedIds(
+    exactIdsOnProposedList(
       row.confirmedDistinctAudit,
       unorderedIds,
       targets.map((target) => ({
         id: target.orderFillId,
         exact: target.relation.kind === 'exact',
       })),
+      accountFills,
+      row,
+      book,
     ),
   )
   if (!ordered.ok) return twoExactRefusal(ordered.exactIds)
   const proposedIds = ordered.ids
   const conflict = distinctMarkerConflict(row)
+  const relationLabelText = scalarRelationLabel(row, accountFills, book)
   if (!dryRun && conflict && !acknowledgeMarkerConflict) {
-    return markerConflictRefusal(row)
+    return markerConflictRefusal(row, relationLabelText)
+  }
+  const strayExact = exactScalarOutsideList(row, accountFills, book)
+  if (!dryRun && strayExact && !acknowledgeExactMatch) {
+    return exactStrayScalarRefusal(row, strayExact.scalar, strayExact.relation, 'rewrite')
   }
   const relation = targets[0].relation
   const orderFillId = targets[0].orderFillId
   const { trades, tradeEffects } = effectsFor(
-    withProposedDistinctMarker(symbolBook, fillId, orderIds),
-    withProposedDistinctMarker(book, fillId, orderIds),
+    withConfirmedDistinctIds(symbolBook, fillId, proposedIds),
+    withConfirmedDistinctIds(book, fillId, proposedIds),
   )
   const annotated = trades.some((trade) => trade.annotated)
   const exactTarget = targets.find((target) => target.relation.kind === 'exact')
@@ -1708,6 +1881,7 @@ export async function confirmDistinctManualRithmicProtocolFill(
     }
   }
   if (addedUpstreamFillIds.length === 0 && row.confirmedDistinctAt) {
+    if (conflict) return unchangedMarkerConflictRefusal(row)
     return {
       ok: true,
       dryRun,
@@ -1725,6 +1899,7 @@ export async function confirmDistinctManualRithmicProtocolFill(
       removedUpstreamFillId: null,
       trades,
       tradeEffects,
+      warnings: [],
     }
   }
   const confirmedDistinctAt = new Date()
@@ -1739,29 +1914,34 @@ export async function confirmDistinctManualRithmicProtocolFill(
       expectedConfirmedDistinctFillIds: markerSnapshot(row).ids,
       expectedConfirmedDistinctFillId: markerSnapshot(row).scalar,
       expectedConfirmedDistinctAudit: markerSnapshot(row).audit,
-      confirmedDistinctAudit: composeAudit(row, confirmedDistinctAt.toISOString(), confirmedDistinctBy, [
-        ...(conflict
-          ? [
-              {
-                op: 'marker-conflict',
-                fillId: conflict.scalar ?? '',
-                scalar: conflict.scalar,
-                kept: proposedIds.at(-1) ?? null,
-                at: confirmedDistinctAt.toISOString(),
-                by: confirmedDistinctBy,
-                reason,
-              },
-            ]
-          : []),
-        ...added.map((target) => ({
-          op: 'add' as const,
-          fillId: target.orderFillId,
-          relation: target.relation.kind,
-          at: confirmedDistinctAt.toISOString(),
-          by: confirmedDistinctBy,
-          reason,
-        })),
-      ]),
+      confirmedDistinctAudit: composeAudit(
+        row,
+        previousIds,
+        (id) => relationToListedId(accountFills, row, book, id)?.kind ?? 'unknown',
+        [
+          ...(conflict
+            ? [
+                {
+                  op: 'marker-conflict',
+                  fillId: conflict.scalar ?? '',
+                  scalar: conflict.scalar,
+                  kept: proposedIds.at(-1) ?? null,
+                  at: confirmedDistinctAt.toISOString(),
+                  by: confirmedDistinctBy,
+                  reason,
+                },
+              ]
+            : []),
+          ...added.map((target) => ({
+            op: 'add' as const,
+            fillId: target.orderFillId,
+            relation: target.relation.kind,
+            at: confirmedDistinctAt.toISOString(),
+            by: confirmedDistinctBy,
+            reason,
+          })),
+        ],
+      ),
       confirmedDistinctAt,
       confirmedDistinctBy,
       confirmDistinctReason: reason,
@@ -1773,6 +1953,7 @@ export async function confirmDistinctManualRithmicProtocolFill(
       )
     }
   }
+  const previewWarning = dryRun ? markerConflictPreviewWarning(row, relationLabelText) : null
   return {
     ok: true,
     dryRun,
@@ -1790,6 +1971,7 @@ export async function confirmDistinctManualRithmicProtocolFill(
     removedUpstreamFillId: null,
     trades,
     tradeEffects,
+    warnings: previewWarning ? [previewWarning] : [],
   }
 }
 

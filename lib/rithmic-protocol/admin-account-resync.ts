@@ -83,6 +83,7 @@ import {
   mergeFillLedgers,
   partitionIncomingFills,
   phantomProtocolTradeIds,
+  markerConflictSyncWarning,
   prepareRithmicProtocolFills,
   protocolTradeSetsMatch,
   reattachProtocolTradeAnnotations,
@@ -1278,9 +1279,7 @@ export async function resyncRithmicProtocolAccount(params: {
         }
         for (const miss of manualNearMisses) {
           if (miss.reason !== 'marker-conflict') continue
-          warnings.push(
-            `Manual fill ${miss.manual.fillId ?? ''} has confirmedDistinctFillId ${miss.upstream.fillId ?? ''} outside confirmedDistinctFillIds. Sync will not derive ${miss.manual.symbol}. Do not run confirm-distinct through prod until this release is on main.`,
-          )
+          warnings.push(markerConflictSyncWarning(miss.manual))
         }
         if (notFlat.length > 0 && manualNearMisses.length === 0) {
           return finish({
