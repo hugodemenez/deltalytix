@@ -1232,6 +1232,9 @@ export type $TradePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     side: string | null
     commission: number
     createdAt: Date
+    /**
+     * User-authored trade note. Encrypted at rest (`jrn:v1:` AES-256-GCM).
+     */
     comment: string | null
     tags: string[]
     imageBase64: string | null

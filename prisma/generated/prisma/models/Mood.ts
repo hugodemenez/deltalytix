@@ -745,11 +745,17 @@ export type $MoodPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     userId: string
     day: Date
     mood: string
+    /**
+     * AI coach transcript. Encrypted at rest (`jrn:v1:` AES-256-GCM).
+     */
     conversation: runtime.JsonValue | null
     createdAt: Date
     updatedAt: Date
     emotionValue: number
     hasTradingExperience: boolean | null
+    /**
+     * Daily journal HTML. Encrypted at rest (`jrn:v1:` AES-256-GCM).
+     */
     journalContent: string | null
     selectedNews: string[]
   }, ExtArgs["result"]["mood"]>
