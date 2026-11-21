@@ -5,6 +5,9 @@ on:
   pull_request:
     paths:
       - "lib/rithmic-protocol/**"
+      - "lib/trades/save-trades-core.ts"
+      - "app/api/admin/rithmic-protocol/**"
+      - "app/[locale]/dashboard/components/import/rithmic-protocol/sync/**"
       - ".github/workflows/rithmic-protocol-e2e.yml"
       - "vitest.e2e.config.ts"
       - "package.json"
@@ -13,6 +16,9 @@ on:
       - beta
     paths:
       - "lib/rithmic-protocol/**"
+      - "lib/trades/save-trades-core.ts"
+      - "app/api/admin/rithmic-protocol/**"
+      - "app/[locale]/dashboard/components/import/rithmic-protocol/sync/**"
       - ".github/workflows/rithmic-protocol-e2e.yml"
       - "vitest.e2e.config.ts"
       - "package.json"
@@ -41,7 +47,25 @@ jobs:
         run: bun install --frozen-lockfile --ignore-scripts
 
       - name: Product RMS proto (no credentials)
-        run: bunx vitest run lib/rithmic-protocol/product-rms-proto.test.ts lib/rithmic-protocol/commission-rates.test.ts lib/rithmic-protocol/fills-to-trades.test.ts lib/rithmic-protocol/silent-login-timeout.test.ts lib/trade-id-utils.test.ts
+        run: >-
+          bunx vitest run
+          lib/rithmic-protocol/product-rms-proto.test.ts
+          lib/rithmic-protocol/commission-rates.test.ts
+          lib/rithmic-protocol/fills-to-trades.test.ts
+          lib/rithmic-protocol/silent-login-timeout.test.ts
+          lib/trade-id-utils.test.ts
+          lib/rithmic-protocol/fill-ledger.test.ts
+          lib/rithmic-protocol/manual-fill.test.ts
+          lib/rithmic-protocol/admin-account-resync.test.ts
+          lib/rithmic-protocol/admin-fill-coverage.test.ts
+          lib/rithmic-protocol/dedupe-fills.test.ts
+          lib/rithmic-protocol/fill-ledger-store.test.ts
+          lib/rithmic-protocol/opening-position.test.ts
+          lib/trades/save-trades-core.rithmic-coverage.test.ts
+          lib/trades/save-trades-core.chunks.test.ts
+          lib/trades/save-trades-core.dates.test.ts
+          app/api/admin/rithmic-protocol/manual-fill/route.test.ts
+          app/api/admin/rithmic-protocol/resync/route.test.ts
 
       - name: Live Product RMS e2e
         env:

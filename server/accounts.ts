@@ -1,23 +1,11 @@
 'use server'
 
 import { getUserId } from '@/server/auth'
-import { PrismaClient, Trade, Payout } from '@/prisma/generated/prisma/client'
-import { PrismaPg } from '@prisma/adapter-pg'
+import { Trade, Payout } from '@/prisma/generated/prisma/client'
 import { computeAccountMetrics, computeMetricsForAccounts } from '@/lib/account-metrics'
 import { Account } from '@/context/data-provider'
 import { revalidateTag, updateTag } from 'next/cache'
-
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
-}
-
-const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL,
-})
-
-const prisma = globalForPrisma.prisma ?? new PrismaClient({ adapter })
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+import { prisma } from '@/lib/prisma'
 
 export async function removeAccountsFromTradesAction(accountNumbers: string[]): Promise<void> {
   const userId = await getUserId()

@@ -40,7 +40,11 @@ export function JournalAI({
     },
     onError: (error) => {
       console.error("Completion error:", error)
-      toast.error(t("editor.ai.minCharsError"))
+      const message = error instanceof Error ? error.message : String(error)
+      const status = (error as { status?: number; statusCode?: number }).status
+        ?? (error as { statusCode?: number }).statusCode
+      const unavailable = status === 503 || message.includes("AI_UNAVAILABLE")
+      toast.error(unavailable ? t("editor.ai.unavailable") : t("editor.ai.error"))
       lastCompletionRef.current = ""
     },
     experimental_throttle: 50,

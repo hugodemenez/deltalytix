@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest"
+import { aiTask } from "@/lib/ai/tasks"
 import {
-  WEEKLY_ANALYSIS_MODEL,
-  WEEKLY_ANALYSIS_REASONING_EFFORT,
   buildWeeklyAnalysisPrompt,
   formatDailyPnLForPrompt,
   formatWeekShapeForPrompt,
@@ -12,10 +11,14 @@ const monday = new Date("2026-08-31T00:00:00.000Z")
 const tuesday = new Date("2026-09-01T00:00:00.000Z")
 const wednesday = new Date("2026-09-02T00:00:00.000Z")
 
-describe("WEEKLY_ANALYSIS_MODEL", () => {
-  it("defaults to GPT-5.6 Luna on the AI Gateway (Luna High)", () => {
-    expect(WEEKLY_ANALYSIS_MODEL).toBe("openai/gpt-5.6-luna")
-    expect(WEEKLY_ANALYSIS_REASONING_EFFORT).toBe("high")
+describe("weekly-recap task", () => {
+  it("uses gpt-6-luna at effort high so a one-day week is not answered without reasoning", () => {
+    const task = aiTask("weekly-recap")
+    expect(task.modelId).toBe("gpt-6-luna")
+    expect(task.reasoning).toBe("high")
+    expect(task.reasoningSummary).toBeNull()
+    expect(task.maxOutputTokens).toBeGreaterThanOrEqual(4000)
+    expect(task.temperature).toBeUndefined()
   })
 })
 

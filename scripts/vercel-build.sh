@@ -22,6 +22,7 @@ if [[ "${1:-}" == "--plan" ]]; then
   else
     printf 'skip prisma migrate deploy\n'
   fi
+  printf 'support corpus snapshot\n'
   printf 'next build\n'
   exit 0
 fi
@@ -43,7 +44,11 @@ else
   echo "[vercel-build] skip prisma migrate deploy (branch '${git_ref:-unset}' is not beta or main)"
 fi
 
-# Keep local `bun run build` unchanged. vercel-build does not trigger `prebuild`,
-# so invoke the existing build script (generate-routes + prisma generate + next build).
+# `vercel-build` is not the `build` script, so npm/bun `prebuild` does not run
+# for this command itself. Generate the snapshot here, from the repo root,
+# before `bun run build` (which also runs `prebuild`).
+echo "[vercel-build] support corpus snapshot"
+bun scripts/build-support-corpus.ts
+
 echo "[vercel-build] bun run build"
 bun run build

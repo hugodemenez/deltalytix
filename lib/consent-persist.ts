@@ -147,11 +147,19 @@ export function resetConsentDecision() {
   window.dispatchEvent(new Event(CONSENT_RESET_EVENT));
 }
 
-/** CCPA-style persistent opt-out. Writes the shared cookie so reload keeps it. */
+/**
+ * Persistent opt-out of product analytics and Google ads measurement.
+ * Writes the shared cookie so reload keeps it, and denies ad_storage /
+ * ad_user_data / ad_personalization so Consent Mode stops ads cookies and
+ * enhanced-conversion user data — not only PostHog.
+ */
 export function persistAnalyticsOptOut() {
   const stored = readStoredConsentSettings() ?? DEFAULT_CONSENT_SETTINGS;
   persistConsentSettings({
     ...stored,
     analytics_storage: false,
+    ad_storage: false,
+    ad_user_data: false,
+    ad_personalization: false,
   });
 }

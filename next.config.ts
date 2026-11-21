@@ -130,9 +130,8 @@ const nextConfig: NextConfig = {
   // `read-excel-file/node` pulls in `unzipper`, whose optional S3 support
   // requires '@aws-sdk/client-s3' at runtime; keep it external so Turbopack
   // does not try to resolve that optional dependency at build time.
-  // `docx` (and `sharp`, already on Next's default list) must stay external so
-  // journal Word export does not land in a shared server chunk that every
-  // API route, including `/api/ai/support/translate-label`, would ship.
+  // `docx` and `sharp` must stay external so journal Word export does not
+  // land in a shared server chunk that every API route would ship.
   serverExternalPackages: [
     'read-excel-file',
     'unzipper',
@@ -170,7 +169,10 @@ const nextConfig: NextConfig = {
     '/app/api/**': [
       './prisma/generated/prisma/**',
     ],
-    // Runtime fs search in /api/ai/support — keep docs in the serverless bundle.
+    // Support search reads a JSON snapshot, not the repo. Including `app/**`
+    // or `lib/**` makes Turbopack trace those modules' imports (TypeScript,
+    // pdf-lib, Playwright, every next-server build) into this function and
+    // into `/api/ai/support/translate-label`.
     '/api/ai/support': [...SUPPORT_SEARCH_TRACE_INCLUDES],
     // /.well-known/agent-skills/index.json is dynamic and reads the shared
     // skill markdown at request time to compute its digests.
@@ -183,8 +185,9 @@ const nextConfig: NextConfig = {
   outputFileTracingExcludes: {
     // See SUPPORT_SEARCH_TRACE_NESTED_EXCLUDE_ROUTE. Also drop `docx` if a
     // shared chunk ever traces it into these title-translation lambdas.
-    // Turbopack often ignores these excludes (it leaves fileHashes in place);
-    // `scripts/prune-function-traces.mjs` is the production backstop.
+    // Turbopack often ignores these excludes. The snapshot include above is
+    // what keeps the trace small; prune runs after the Vercel adapter copies
+    // NFT files, so it cannot shrink the deployed function.
     [SUPPORT_SEARCH_TRACE_NESTED_EXCLUDE_ROUTE]: [
       ...SUPPORT_SEARCH_TRACE_INCLUDES,
       'node_modules/docx/**',

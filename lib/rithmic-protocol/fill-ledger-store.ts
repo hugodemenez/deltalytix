@@ -1,10 +1,13 @@
 import { randomUUID } from 'node:crypto'
-import { prisma } from '@/lib/prisma'
+import { prisma, prismaBase } from '@/lib/prisma'
 import { RITHMIC_PROTOCOL_TRADE_TAG } from '@/lib/trade-id-utils'
 import type { RithmicProtocolFill } from './types'
 import { canonicalRithmicFillId, fillIdentityKey } from './dedupe-fills'
 import {
   type AnnotatedProtocolTrade,
+  type DistinctPlantIdByManualFillId,
+  countDistinctManualTradesKept,
+  countRetiredManualTradesKept,
   partitionIncomingFills,
   phantomProtocolTradeIds,
 } from './fill-ledger'
@@ -29,12 +32,22 @@ type FillRow = {
   ssboe: number | null
   usecs: number | null
   source: string
+  confirmedDistinctFillId?: string | null
+  confirmedDistinctFillIds?: string[]
+}
+
+/** Persist and reload `manual` as itself. Anything else unknown stays history. */
+export function normalizePersistedFillSource(
+  value: string | null | undefined,
+): NonNullable<RithmicProtocolFill['source']> {
+  if (value === 'replay' || value === 'manual' || value === 'manual-retired') return value
+  return 'history'
 }
 
 function sourceOf(
   value: string | null | undefined,
 ): NonNullable<RithmicProtocolFill['source']> {
-  return value === 'replay' ? 'replay' : 'history'
+  return normalizePersistedFillSource(value)
 }
 
 export function rowToFill(row: FillRow): RithmicProtocolFill {
@@ -53,6 +66,10 @@ export function rowToFill(row: FillRow): RithmicProtocolFill {
     ssboe: row.ssboe ?? undefined,
     usecs: row.usecs ?? undefined,
     source: sourceOf(row.source),
+    confirmedDistinctFillId: row.confirmedDistinctFillId || undefined,
+    confirmedDistinctFillIds: row.confirmedDistinctFillIds?.filter(
+      (id): id is string => Boolean(id),
+    ),
   }
 }
 
@@ -100,12 +117,26 @@ function fillToRow(
   }
 }
 
+type ProtocolStore = {
+  rithmicProtocolFill: {
+    findMany: typeof prisma.rithmicProtocolFill.findMany
+    createMany: typeof prisma.rithmicProtocolFill.createMany
+    updateMany: typeof prisma.rithmicProtocolFill.updateMany
+  }
+  trade: {
+    findMany: typeof prisma.trade.findMany
+    deleteMany: typeof prisma.trade.deleteMany
+  }
+}
+
 export async function loadRithmicProtocolFills(params: {
   userId: string
   accountNumbers: string[]
+  db?: ProtocolStore
 }): Promise<RithmicProtocolFill[]> {
   if (params.accountNumbers.length === 0) return []
-  const rows = await prisma.rithmicProtocolFill.findMany({
+  const db = params.db ?? prisma
+  const rows = await db.rithmicProtocolFill.findMany({
     where: {
       userId: params.userId,
       accountNumber: { in: params.accountNumbers },
@@ -120,11 +151,13 @@ export async function upsertRithmicProtocolFills(params: {
   stored: RithmicProtocolFill[]
   accountIdByNumber: Map<string, string>
   connectionId?: string | null
+  db?: ProtocolStore
 }): Promise<{ inserted: number; updated: number; skipped: number }> {
   const { inserts, updates, skipped } = partitionIncomingFills(
     params.fills,
     params.stored,
   )
+  const db = params.db ?? prisma
   const toRow = (fill: RithmicProtocolFill) =>
     fillToRow(fill, {
       userId: params.userId,
@@ -134,44 +167,55 @@ export async function upsertRithmicProtocolFills(params: {
 
   for (let offset = 0; offset < inserts.length; offset += UPSERT_CHUNK) {
     const chunk = inserts.slice(offset, offset + UPSERT_CHUNK).map(toRow)
-    await prisma.rithmicProtocolFill.createMany({
+    await db.rithmicProtocolFill.createMany({
       data: chunk,
       skipDuplicates: true,
     })
   }
 
+  const applyUpdates = async (store: ProtocolStore, chunk: RithmicProtocolFill[]) => {
+    for (const fill of chunk) {
+      const row = toRow(fill)
+      await store.rithmicProtocolFill.updateMany({
+        where: {
+          userId: params.userId,
+          identityKey: row.identityKey,
+        },
+        data: {
+          fillId: row.fillId,
+          rawFillId: row.rawFillId,
+          symbol: row.symbol,
+          exchange: row.exchange,
+          transactionType: row.transactionType,
+          fillPrice: row.fillPrice,
+          fillSize: row.fillSize,
+          fillDate: row.fillDate,
+          fillTime: row.fillTime,
+          basketId: row.basketId,
+          sequenceNumber: row.sequenceNumber,
+          ssboe: row.ssboe,
+          usecs: row.usecs,
+          source: row.source,
+          accountId: row.accountId,
+          connectionId: row.connectionId,
+          updatedAt: row.updatedAt,
+        },
+      })
+    }
+  }
+
   for (let offset = 0; offset < updates.length; offset += UPSERT_CHUNK) {
     const chunk = updates.slice(offset, offset + UPSERT_CHUNK)
-    await prisma.$transaction(
-      chunk.map((fill) => {
-        const row = toRow(fill)
-        return prisma.rithmicProtocolFill.updateMany({
-          where: {
-            userId: params.userId,
-            identityKey: row.identityKey,
-          },
-          data: {
-            fillId: row.fillId,
-            rawFillId: row.rawFillId,
-            symbol: row.symbol,
-            exchange: row.exchange,
-            transactionType: row.transactionType,
-            fillPrice: row.fillPrice,
-            fillSize: row.fillSize,
-            fillDate: row.fillDate,
-            fillTime: row.fillTime,
-            basketId: row.basketId,
-            sequenceNumber: row.sequenceNumber,
-            ssboe: row.ssboe,
-            usecs: row.usecs,
-            source: row.source,
-            accountId: row.accountId,
-            connectionId: row.connectionId,
-            updatedAt: row.updatedAt,
-          },
-        })
-      }),
-    )
+    if (params.db) {
+      await applyUpdates(db, chunk)
+    } else {
+      await prisma.$transaction(
+        async (tx) => {
+          await applyUpdates(tx as unknown as ProtocolStore, chunk)
+        },
+        { timeout: 60_000, maxWait: 15_000 },
+      )
+    }
   }
 
   return { inserted: inserts.length, updated: updates.length, skipped }
@@ -190,9 +234,23 @@ export async function deleteUnannotatedPhantomProtocolTrades(params: {
     closeId?: string | null
   }>
   ledgerFillIds: Set<string>
-}): Promise<number> {
-  if (params.accountNumbers.length === 0) return 0
-  const existing = (await prisma.trade.findMany({
+  /** `manual-retired` fill ids still present on the ledger. Annotated trades that use them are counted, not deleted. */
+  retiredFillIds?: Set<string>
+  /** Manual fill id → plant fill ids confirmed as different executions. */
+  distinctPlantIdByManualFillId?: DistinctPlantIdByManualFillId
+  /** Accounts whose symbol was skipped as a manual near-miss. Do not reap those trades. */
+  retainAccountNumbers?: string[]
+  db?: ProtocolStore
+}): Promise<{
+  removed: number
+  retiredManualTradesKept: number
+  distinctManualTradesKept: number
+}> {
+  if (params.accountNumbers.length === 0) {
+    return { removed: 0, retiredManualTradesKept: 0, distinctManualTradesKept: 0 }
+  }
+  const db = params.db ?? prismaBase
+  const existing = (await db.trade.findMany({
     where: {
       userId: params.userId,
       accountNumber: { in: params.accountNumbers },
@@ -206,6 +264,10 @@ export async function deleteUnannotatedPhantomProtocolTrades(params: {
       closeDate: true,
       entryId: true,
       closeId: true,
+      side: true,
+      quantity: true,
+      entryPrice: true,
+      closePrice: true,
       comment: true,
       tags: true,
       imageBase64: true,
@@ -216,19 +278,35 @@ export async function deleteUnannotatedPhantomProtocolTrades(params: {
     },
   })) as AnnotatedProtocolTrade[]
 
-  const ids = phantomProtocolTradeIds({
-    existing,
+  const classification = {
     derived: params.derivedTrades,
     ledgerFillIds: params.ledgerFillIds,
+    distinctPlantIdByManualFillId: params.distinctPlantIdByManualFillId,
+  }
+  const retiredManualTradesKept = countRetiredManualTradesKept({
+    existing,
+    ...classification,
+    retiredFillIds: params.retiredFillIds ?? new Set(),
   })
-  if (ids.length === 0) return 0
+  const distinctManualTradesKept = countDistinctManualTradesKept({
+    existing,
+    ...classification,
+  })
+  const retainedAccounts = new Set(params.retainAccountNumbers ?? [])
+  const ids = phantomProtocolTradeIds({
+    existing: existing.filter((row) => !retainedAccounts.has(row.accountNumber ?? '')),
+    ...classification,
+  })
+  if (ids.length === 0) {
+    return { removed: 0, retiredManualTradesKept, distinctManualTradesKept }
+  }
 
-  const result = await prisma.trade.deleteMany({
-    where: {
-      userId: params.userId,
-      id: { in: ids },
-      tags: { has: RITHMIC_PROTOCOL_TRADE_TAG },
-    },
-  })
-  return result.count
+  const result = await db.trade.deleteMany({
+      where: {
+        userId: params.userId,
+        id: { in: ids },
+        tags: { has: RITHMIC_PROTOCOL_TRADE_TAG },
+      },
+    })
+  return { removed: result.count, retiredManualTradesKept, distinctManualTradesKept }
 }

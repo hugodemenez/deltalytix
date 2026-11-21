@@ -47,4 +47,15 @@ describe('mapShowFillHistoryRow', () => {
       mapShowFillHistoryRow({ symbol: 'ESH6', fillPrice: 1, fillSize: 0 }, 'acct'),
     ).toBeNull()
   })
+
+  it('an additive observer does not change mapped output', () => {
+    const seen: unknown[] = []
+    const fill = mapShowFillHistoryRow(
+      { symbol: 'ESH6', fillPrice: 1, fillSize: 1, transactionType: 'BUY' },
+      'acct',
+      (info) => seen.push(info.mapped?.fillPrice),
+    )
+    expect(fill?.fillPrice).toBe(1)
+    expect(seen).toEqual([1])
+  })
 })

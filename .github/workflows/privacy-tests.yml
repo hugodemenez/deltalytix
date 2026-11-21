@@ -1,0 +1,36 @@
+name: Privacy tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - beta
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  privacy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile --ignore-scripts
+
+      - name: Run privacy and related unit tests
+        run: |
+          bunx vitest run \
+            'app/[locale]/(landing)/privacy/privacy-copy.test.ts' \
+            'lib/consent-persist.test.ts' \
+            'components/google-tag.test.ts' \
+            'server/account-deletion/trade-rows.test.ts' \
+            'server/account-deletion/storage.test.ts'

@@ -7,6 +7,10 @@
  * function. That is what pushed `api/ai/support/translate-label` over Vercel's
  * 250MB uncompressed limit.
  *
+ * Vercel copies NFT files inside `next build`, before this script runs, so
+ * this pass cannot shrink the deployed function. Keep heavy files out of the
+ * trace Turbopack emits (see the support corpus snapshot).
+ *
  * This pass rewrites `.next/server/` NFT traces after `next build`:
  * - drop toolchain / browser / unused native packages from every function
  * - keep `docx` / `sharp` only on the Word export route

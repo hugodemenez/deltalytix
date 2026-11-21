@@ -1,4 +1,7 @@
-import { streamText, stepCountIs, convertToModelMessages } from "ai";
+import { streamText, isStepCount, convertToModelMessages } from "ai";
+import { omitSystemMessages } from "@/lib/ai/client-messages";
+import { aiUiStreamResponse } from "@/lib/ai/http-stream";
+import { aiTaskUnavailableResponse, resolveAiTask } from "@/lib/ai/resolve-ai-task";
 import { NextRequest } from "next/server";
 import { z } from 'zod/v3';
 import { getFinancialNews } from "./tools/get-financial-news";
@@ -19,9 +22,12 @@ export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
+      const availabilityError = aiTaskUnavailableResponse("chat");
+      if (availabilityError) {
+        return Response.json(availabilityError, { status: 503 });
+      }
       const { messages, username, locale, timezone } = await req.json();
-      console.log('[Chat Route] Received messages:', JSON.stringify(messages, null, 2));
-      
+
       // Check if messages is valid
       if (!messages || !Array.isArray(messages) || messages.length === 0) {
         console.error('[Chat Route] Invalid messages array:', messages);
@@ -42,7 +48,9 @@ export async function POST(req: NextRequest) {
     const userMessages = messages.filter((msg: any) => msg.role === 'user');
     const isFirstMessage = userMessages.length === 1;
 
-    const convertedMessages = await convertToModelMessages(messages);
+    const convertedMessages = await convertToModelMessages(
+      omitSystemMessages(Array.isArray(messages) ? messages : []),
+    );
     const systemPrompt = buildSystemPrompt({
       locale,
       username,
@@ -55,13 +63,13 @@ export async function POST(req: NextRequest) {
     });
 
     const result = streamText({
-      model: 'openai/gpt-5-mini',
+      ...resolveAiTask("chat"),
       messages: convertedMessages,
-      system: systemPrompt,
+      instructions: systemPrompt,
 
-      stopWhen: stepCountIs(10),
+      stopWhen: isStepCount(10),
       
-      onStepFinish: (step) => {
+      onStepEnd: (step) => {
         console.log('[Chat Route] Step finished:', JSON.stringify({
           finishReason: step.finishReason,
           hasText: !!step.text,
@@ -93,7 +101,7 @@ export async function POST(req: NextRequest) {
         console.error('[Chat Route] Stream error:', error);
       },
       
-      onFinish: (result) => {
+      onEnd: (result) => {
         console.log('[Chat Route] Stream finished:', JSON.stringify({
           finishReason: result.finishReason,
           hasText: !!result.text,
@@ -103,7 +111,7 @@ export async function POST(req: NextRequest) {
         }, null, 2));
       }
     });
-    return result.toUIMessageStreamResponse({
+    return aiUiStreamResponse(result, {
       onError: (error) => {
         console.error('[Chat Route] UI Stream error:', error);
         return 'An error occurred during the chat response';

@@ -1,7 +1,7 @@
-import { generateObject } from "ai";
+import { generateText, Output } from "ai";
+import { aiTaskUnavailableResponse, resolveAiTask } from "@/lib/ai/resolve-ai-task";
 import { NextRequest } from "next/server";
 import { z } from "zod/v3";
-import { getOpenAiAvailabilityError } from "@/lib/ai/openai-availability";
 import { importParsePlanSchema } from "./schema";
 
 export const maxDuration = 30;
@@ -13,7 +13,7 @@ const requestSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const availabilityError = getOpenAiAvailabilityError();
+    const availabilityError = aiTaskUnavailableResponse("import-parse-plan");
     if (availabilityError) {
       return new Response(JSON.stringify(availabilityError), {
         status: 503,
@@ -24,10 +24,9 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { headers, rows } = requestSchema.parse(body);
 
-    const result = await generateObject({
-      model: "openai/gpt-5-mini",
-      schema: importParsePlanSchema,
-      temperature: 0,
+    const { output } = await generateText({
+      ...resolveAiTask("import-parse-plan"),
+      output: Output.object({ schema: importParsePlanSchema }),
       prompt: `You write a parse plan for a trading CSV. Map each database field to an exact header name from the file, or null if it is not present.
 
 Decide kind:
@@ -46,7 +45,7 @@ ${rows
 Use the header text exactly as given. Do not invent headers.`,
     });
 
-    return Response.json(result.object);
+    return Response.json(output);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return new Response(JSON.stringify({ error: error.errors }), {

@@ -1,10 +1,19 @@
 'use server'
 import { UIMessage } from "ai"
-import { prisma } from "@/lib/prisma"
-import { addDays, format } from "date-fns"
+import { prisma, prismaBase } from "@/lib/prisma"
+import { addDays } from "date-fns"
 import { Mood } from "@/prisma/generated/prisma/client"
 import { revalidateTag } from "next/cache"
 import { getUserId } from "@/server/auth"
+import {
+  decryptJournalConversation,
+  encryptJournalConversation,
+} from "@/lib/journal-field-crypto"
+import {
+  conversationWrite,
+  storedConversationIsUnread,
+  storedJsonEquals,
+} from "@/lib/journal-field-write-guard"
 
 export async function saveChat(messages: UIMessage[]): Promise<Mood | null> {
   const userId = await getUserId()
@@ -43,9 +52,7 @@ export async function saveChat(messages: UIMessage[]): Promise<Mood | null> {
     return msg
   })
 
-  console.log('Messages', JSON.stringify(textOnlyMessages))
-  // Try to find existing mood entry for today
-  const existingMood = await prisma.mood.findFirst({
+  const existingMood = await prismaBase.mood.findFirst({
     where: {
       userId,
       day: {
@@ -53,22 +60,34 @@ export async function saveChat(messages: UIMessage[]): Promise<Mood | null> {
         lt: addDays(todayUTC, 1),
       },
     },
+    select: { id: true, conversation: true },
   })
 
   // Expire immediately so next time we load the user data, we get the latest data
   revalidateTag(`user-data-${userId}`, { expire: 0 })
 
   if (existingMood) {
-    // Update existing mood entry
-    const updatedMood = await prisma.mood.update({
+    conversationWrite({
+      existingUndecryptable: storedConversationIsUnread(existingMood.conversation),
+      incoming: textOnlyMessages,
+    })
+    const result = await prismaBase.mood.updateMany({
       where: {
         id: existingMood.id,
+        conversation: storedJsonEquals(existingMood.conversation),
       },
       data: {
-        conversation: JSON.stringify(textOnlyMessages),
+        conversation: encryptJournalConversation(
+          JSON.stringify(textOnlyMessages),
+        ),
       },
     })
-    return updatedMood
+    if (result.count === 0) {
+      throw new Error(
+        "Refusing to overwrite mood.conversation: stored value changed concurrently.",
+      )
+    }
+    return prisma.mood.findUnique({ where: { id: existingMood.id } })
   } else {
     // Create new mood entry
     const newMood = await prisma.mood.create({
@@ -76,7 +95,9 @@ export async function saveChat(messages: UIMessage[]): Promise<Mood | null> {
         userId,
         day: todayUTC,
         mood: "NEUTRAL", // Default mood
-        conversation: JSON.stringify(textOnlyMessages),
+        conversation: encryptJournalConversation(
+          JSON.stringify(textOnlyMessages),
+        ),
       },
     })
     return newMood
@@ -84,7 +105,6 @@ export async function saveChat(messages: UIMessage[]): Promise<Mood | null> {
 }
 
 export async function loadChat(): Promise<UIMessage[]> {
-  console.log('Loading chat')
   const userId = await getUserId()
   
   // Check if user exists before proceeding
@@ -106,8 +126,7 @@ export async function loadChat(): Promise<UIMessage[]> {
   const today = new Date()
   const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate(), 12))
 
-  // Find mood entry for today
-  const mood = await prisma.mood.findFirst({
+  const mood = await prismaBase.mood.findFirst({
     where: {
       userId,
       day: {
@@ -115,8 +134,19 @@ export async function loadChat(): Promise<UIMessage[]> {
         lt: addDays(todayUTC, 1),
       },
     },
+    select: { conversation: true },
   })
 
-  // Return conversation if it exists, otherwise empty array
-  return mood?.conversation ? JSON.parse(mood.conversation as string) : []
+  if (mood && storedConversationIsUnread(mood.conversation)) {
+    throw new Error(
+      "Refusing to load unread mood.conversation. The stored transcript could not be decrypted; it was not empty.",
+    )
+  }
+  const conversation = decryptJournalConversation(mood?.conversation)
+  if (!conversation) return []
+  if (Array.isArray(conversation)) return conversation as UIMessage[]
+  if (typeof conversation === "string") {
+    return JSON.parse(conversation) as UIMessage[]
+  }
+  return []
 } 

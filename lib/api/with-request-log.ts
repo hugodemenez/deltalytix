@@ -113,7 +113,9 @@ export function withPublicApiRequestLog<C extends RouteContext = RouteContext>(
             : pathname === "/api/mcp"
               ? "mcp"
               : "api/v1"
-          console.error(`[${label}]`, error)
+          const message =
+            error instanceof Error ? error.message : "Unhandled request error"
+          console.error(`[${label}]`, message)
           const response = errorResponseForPath(pathname)
           return finalizeAndLog(request, startedAt, response)
         }

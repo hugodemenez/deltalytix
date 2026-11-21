@@ -5,7 +5,7 @@ import { Widget, Layouts } from '@/app/[locale]/dashboard/types/dashboard'
 import { createClient, getUserId } from './auth'
 import { startOfDay } from 'date-fns'
 import { getSubscriptionDetails } from './subscription'
-import { prisma } from '@/lib/prisma'
+import { prisma, prismaBase } from '@/lib/prisma'
 import { unstable_cache } from 'next/cache'
 import { defaultLayouts } from '@/lib/default-layouts'
 import { formatTimestamp } from '@/lib/date-utils'
@@ -15,6 +15,12 @@ import {
   type TradeSaveResult as TradeResponse,
 } from '@/lib/trades/save-trades-core'
 import { trustedUserId, type TrustedActor } from '@/lib/api/server-actor'
+import { encryptJournalField, withDecryptedTradeComment } from '@/lib/journal-field-crypto'
+import {
+  JournalFieldUndecryptableError,
+  storedCommentIsUnread,
+  tradeCommentWrite,
+} from '@/lib/journal-field-write-guard'
 
 export async function revalidateCache(tags: string[]) {
   console.log(`[revalidateCache] Starting cache invalidation for tags:`, tags)
@@ -105,7 +111,7 @@ export async function getTradesAction(forceRefresh: boolean = false): Promise<Tr
     console.log(`[getTrades] Force refresh - Found ${trades.length} trades`)
 
     return trades.map(trade => ({
-      ...trade,
+      ...withDecryptedTradeComment(trade),
       entryDate: new Date(trade.entryDate).toISOString(),
       exitDate: trade.closeDate ? new Date(trade.closeDate).toISOString() : null
     }))
@@ -137,7 +143,7 @@ export async function getTradesAction(forceRefresh: boolean = false): Promise<Tr
   // Tell the server that the trades have changed
   // Next page reload will fetch the new trades instead of using the cached data
   return trades.map(trade => ({
-    ...trade,
+    ...withDecryptedTradeComment(trade),
     entryDate: new Date(trade.entryDate).toISOString(),
     exitDate: trade.closeDate ? new Date(trade.closeDate).toISOString() : null
   }))
@@ -238,16 +244,47 @@ export async function updateTradesAction(tradesIds: string[], update: Partial<Tr
 
     let result = { count: 0 }
     if (Object.keys(normalUpdate).length > 0) {
-      result = await prisma.trade.updateMany({
-        where: { id: { in: tradesIds }, userId },
-        data: normalUpdate
-      })
+      if ('comment' in normalUpdate) {
+        const existing = await prismaBase.trade.findMany({
+          where: { id: { in: tradesIds }, userId },
+          select: { id: true, comment: true },
+        })
+        for (const row of existing) {
+          tradeCommentWrite({
+            existingUndecryptable: storedCommentIsUnread(row.comment),
+            incoming: normalUpdate.comment ?? null,
+          })
+        }
+        if (typeof normalUpdate.comment === 'string') {
+          normalUpdate.comment = encryptJournalField(normalUpdate.comment)
+        }
+        let matched = 0
+        for (const row of existing) {
+          const written = await prismaBase.trade.updateMany({
+            where: { id: row.id, userId, comment: row.comment },
+            data: normalUpdate,
+          })
+          matched += written.count
+        }
+        if (existing.length > 0 && matched !== existing.length) {
+          throw new Error(
+            'Refusing to overwrite trade.comment: stored value changed concurrently.',
+          )
+        }
+        result = { count: matched }
+      } else {
+        result = await prisma.trade.updateMany({
+          where: { id: { in: tradesIds }, userId },
+          data: normalUpdate
+        })
+      }
     }
 
     updateTag(`trades-${userId}`)
 
     return tradesIds.length // Return the number of trades processed
   } catch (error) {
+    if (error instanceof JournalFieldUndecryptableError) throw error
     console.error('[updateTrades] Database error:', error)
     return 0
   }
@@ -260,10 +297,26 @@ export async function updateTradeCommentAction(tradeId: string, comment: string 
   }
 
   try {
-    await prisma.trade.update({
-      where: { id: tradeId, userId },
-      data: { comment }
+    const existing = await prismaBase.trade.findUnique({
+      where: { id: tradeId },
+      select: { comment: true, userId: true },
     })
+    if (!existing || existing.userId !== userId) {
+      throw new Error('Trade not found')
+    }
+    const nextComment = tradeCommentWrite({
+      existingUndecryptable: storedCommentIsUnread(existing.comment),
+      incoming: comment,
+    })
+    const result = await prismaBase.trade.updateMany({
+      where: { id: tradeId, userId, comment: existing.comment },
+      data: { comment: nextComment == null ? nextComment : encryptJournalField(nextComment) },
+    })
+    if (result.count === 0) {
+      throw new Error(
+        'Refusing to overwrite trade.comment: stored value changed concurrently.',
+      )
+    }
     revalidatePath('/')
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
