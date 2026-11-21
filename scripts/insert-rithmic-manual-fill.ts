@@ -49,6 +49,23 @@
  *     --reason "next-session fill, not this patch" \
  *     --apply
  *
+ * Run it again with another `--upstream-fill-id` to confirm the same manual
+ * row distinct from a second plant fill. The ids accumulate. Repeating an
+ * id already on the row does not replace the others.
+ * `confirmedDistinctFillIds` is that list. `confirmedDistinctFillId` remains
+ * only as the latest id, for a rollback of this change.
+ *
+ * Drop one id and leave the rest:
+ *   bun scripts/insert-rithmic-manual-fill.ts \
+ *     --confirm-distinct \
+ *     --remove \
+ *     --user-id USER_ID \
+ *     --account ACCOUNT_NUMBER \
+ *     --fill-id manual-FILL_ID \
+ *     --upstream-fill-id PLANT_FILL_ID \
+ *     --reason "that plant fill was the same execution" \
+ *     --apply
+ *
  * `--apply` is refused when the plant fill is an exact match or unrelated.
  * Re-send with `--acknowledge-exact-match` or `--acknowledge-unrelated`.
  * A split piece is stored as the consolidated order id.

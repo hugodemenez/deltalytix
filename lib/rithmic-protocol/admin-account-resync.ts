@@ -83,6 +83,7 @@ import {
   mergeFillLedgers,
   partitionIncomingFills,
   phantomProtocolTradeIds,
+  markerConflictSyncWarning,
   prepareRithmicProtocolFills,
   protocolTradeSetsMatch,
   reattachProtocolTradeAnnotations,
@@ -1275,6 +1276,10 @@ export async function resyncRithmicProtocolAccount(params: {
           warnings.push(
             'A manual fill is close to an upstream fill but does not match it. Live apply refuses with MANUAL_FILL_AMBIGUOUS. Ordinary sync will not derive that symbol.',
           )
+        }
+        for (const miss of manualNearMisses) {
+          if (miss.reason !== 'marker-conflict') continue
+          warnings.push(markerConflictSyncWarning(miss.manual))
         }
         if (notFlat.length > 0 && manualNearMisses.length === 0) {
           return finish({

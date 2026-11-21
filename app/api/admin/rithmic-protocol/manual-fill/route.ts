@@ -118,6 +118,12 @@ export async function POST(request: NextRequest) {
         const annotated = marked.errors?.some(
           (error) => error.field === 'acknowledgeAnnotatedTrades',
         )
+        const unchangedConflict = marked.errors?.some(
+          (error) => error.field === 'markerConflictUnchanged',
+        )
+        const markerConflict = marked.errors?.some(
+          (error) => error.field === 'acknowledgeMarkerConflict',
+        )
         const reapDeferred = marked.errors?.some(
           (error) => error.field === 'acknowledgeReapDeferred',
         )
@@ -140,6 +146,12 @@ export async function POST(request: NextRequest) {
           {
             field: 'previousConfirmedDistinctFillId',
             message: marked.previousConfirmedDistinctFillId ?? '',
+          },
+          {
+            field: 'confirmedDistinctFillIds',
+            message: (marked.confirmedDistinctFillIds ?? marked.previousConfirmedDistinctFillIds ?? []).join(
+              ',',
+            ),
           },
           ...(marked.trades ?? []).map((trade) => ({
             field: 'trades',
@@ -172,16 +184,25 @@ export async function POST(request: NextRequest) {
         ]
         return jsonError({
           code: 'conflict',
-          message: annotated
-            ? 'Confirm-distinct refused while an annotated trade would lose its fill pair.'
-            : reapDeferred
+          message: unchangedConflict
+            ? (marked.errors?.find((error) => error.field === 'markerConflictUnchanged')?.message ??
+              'Confirm-distinct added no plant ids, so the marker conflict stays.')
+            : markerConflict
+            ? 'Confirm-distinct refused because confirmedDistinctFillId is not the last id on this row.'
+            : annotated
+              ? 'Confirm-distinct refused while an annotated trade would lose its fill pair.'
+              : reapDeferred
               ? 'Confirm-distinct refused because another near-miss on this account keeps the displaced rows.'
               : unrelated
                 ? 'Confirm-distinct refused because that plant fill is unrelated to the manual.'
                 : 'Confirm-distinct refused because that plant fill matches the manual exactly.',
-          hint: annotated
-            ? 'Move the annotation if you want to keep it, delete the stored row, then run a sync or rebuild. Then re-send dryRun: false with acknowledgeAnnotatedTrades: true.'
-            : reapDeferred
+          hint: unchangedConflict
+            ? 'Add or remove a plant id to rewrite the marker. Acknowledging the conflict without changing the list leaves it in place.'
+            : markerConflict
+            ? 'Re-send dryRun: false with acknowledgeMarkerConflict: true, or remove the conflicting scalar id.'
+            : annotated
+              ? 'Move the annotation if you want to keep it, delete the stored row, then run a sync or rebuild. Then re-send dryRun: false with acknowledgeAnnotatedTrades: true.'
+              : reapDeferred
               ? 'Re-send dryRun: false with acknowledgeReapDeferred: true only if the next sync may leave the displaced rows until every near-miss on this account is resolved.'
               : unrelated
                 ? 'Re-send dryRun: false with acknowledgeUnrelated: true only if this plant fill should stay distinct from the manual.'
@@ -191,25 +212,48 @@ export async function POST(request: NextRequest) {
       }
       if (marked.ok) {
         console.info(
-          `[RITHMIC-MANUAL-FILL] route confirm-distinct actor=${actor} dryRun=${marked.dryRun} fillId=${marked.fillId} upstreamFillId=${marked.upstreamFillId}`,
+          `[RITHMIC-MANUAL-FILL] route confirm-distinct actor=${actor} dryRun=${marked.dryRun} fillId=${marked.fillId} upstreamFillId=${marked.upstreamFillId} confirmedDistinctFillIds=${(marked.confirmedDistinctFillIds ?? []).join(',')} removed=${marked.removedUpstreamFillId ?? ''}`,
         )
         return NextResponse.json(marked)
       }
+      if (marked.status === 'bad_request') {
+        return jsonError({
+          code: 'bad_request',
+          message: marked.errors?.[0]?.message ?? 'Confirm-distinct was refused.',
+          hint: 'Prod can protect only one exact-match confirmation. Remove one before confirming another.',
+          details: marked.errors,
+        })
+      }
+      if (!marked.ok && marked.status === 'conflict') {
+        return jsonError({
+          code: 'conflict',
+          message: 'This manual fill changed while the confirm was running.',
+          hint: 'Re-read the row and send the confirm again. Nothing was written.',
+          details: marked.errors,
+        })
+      }
       if (marked.status === 'not_found') {
         const missingPlant = marked.errors?.some((error) => error.field === 'upstreamFillId')
+        const missingRemoval = marked.errors?.some(
+          (error) => error.field === 'removeUpstreamFillId',
+        )
         return jsonError({
           code: 'not_found',
-          message: missingPlant
-            ? 'No plant fill with that id, symbol, and side belongs to this account.'
-            : 'No manual fill with that id belongs to this account.',
-          hint: 'Pass the manual- fill id, the plant fill id, userId, and accountNumber.',
+          message: missingRemoval
+            ? 'That plant fill id is not on this manual row.'
+            : missingPlant
+              ? 'No plant fill with that id, symbol, and side belongs to this account.'
+              : 'No manual fill with that id belongs to this account.',
+          hint: missingRemoval
+            ? 'Pass a plant fill id already listed on this manual row.'
+            : 'Pass the manual- fill id, the plant fill id, userId, and accountNumber.',
           details: marked.errors,
         })
       }
       return jsonError({
         code: 'bad_request',
         message: 'Confirm-distinct input is invalid.',
-        hint: 'Send { action: "confirm-distinct", userId, accountNumber, fillId, upstreamFillId, reason, dryRun?: boolean }.',
+        hint: 'Send { action: "confirm-distinct", userId, accountNumber, fillId, upstreamFillId, reason, dryRun?: boolean }. upstreamFillIds appends several ids. removeUpstreamFillId drops one. A single upstreamFillId is added, not overwritten.',
         details: marked.errors,
       })
     }

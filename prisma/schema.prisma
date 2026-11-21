@@ -682,11 +682,19 @@ model RithmicProtocolFill {
   retiredAt       DateTime?
   retiredBy       String?
   retireReason    String?
-  /// Plant fill this manual was confirmed distinct from. Reconcile will not match or near-miss that fill id.
-  confirmedDistinctFillId String?
-  confirmedDistinctAt     DateTime?
-  confirmedDistinctBy     String?
-  confirmDistinctReason   String?
+  /// @deprecated Must equal the last id in `confirmedDistinctFillIds`, or null
+  /// when that list is empty. Any other scalar on a non-empty list blocks
+  /// the symbol. An empty list with a scalar is the pre-migration row.
+  confirmedDistinctFillId  String?
+  /// Plant fills this manual was confirmed distinct from. Reconcile will
+  /// not match or near-miss any of these ids. A second confirm appends.
+  confirmedDistinctFillIds String[] @default([])
+  /// Append-only confirm-distinct audit. Each item is
+  /// `{ op: "add" | "remove", fillId, at, by, reason }`.
+  confirmedDistinctAudit   Json     @default("[]")
+  confirmedDistinctAt      DateTime?
+  confirmedDistinctBy      String?
+  confirmDistinctReason    String?
   connectionId    String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

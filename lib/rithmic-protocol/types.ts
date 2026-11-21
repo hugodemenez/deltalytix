@@ -48,8 +48,14 @@ export interface RithmicProtocolFill {
    * reconcile, coverage, and sync ignore it.
    */
   source?: 'history' | 'replay' | 'manual' | 'manual-retired'
-  /** Plant fill id an admin confirmed is a different execution. Reconcile skips that id. */
+  /**
+   * @deprecated Latest id in `confirmedDistinctFillIds`, or unset when that list
+   * is empty. A scalar missing from a non-empty list blocks the symbol.
+   * An empty list with this set is the pre-migration row.
+   */
   confirmedDistinctFillId?: string
+  /** Plant fill ids an admin confirmed are different executions. Reconcile skips each id. */
+  confirmedDistinctFillIds?: string[]
 }
 
 export interface RithmicProtocolCredentials {
