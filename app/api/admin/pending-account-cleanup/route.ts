@@ -6,9 +6,9 @@ export const maxDuration = 60
 
 /**
  * Admin-only retry for PendingAccountCleanup rows.
- * Auth: admin session or `Authorization: Bearer $CRON_SECRET`.
+ * Auth: `authorizeAdminRequest` (lib/admin/auth.ts); sign in as an allowlisted admin.
  * There is no Bun CLI for this path (server-only modules); operators use this
- * route. Who runs it and when is an ops decision (Hugo). Dry-run reports
+ * route. It is run only by the owner, on user demand (no schedule). Dry-run reports
  * candidates without deleting queue rows or touching storage/Stripe.
  *
  * Body (optional JSON): `{ "id"?: string, "dryRun"?: boolean }`
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
           : 'Admin access required.',
       hint:
         auth.status === 401
-          ? 'Sign in as an admin or send Authorization: Bearer $CRON_SECRET.'
+          ? 'Sign in as an admin.'
           : 'Use an allowlisted admin user id.',
       request,
     })

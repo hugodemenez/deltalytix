@@ -69,7 +69,7 @@ export default {
         "Supabase: authentication, database hosting, and file storage for trade screenshots and journal images.",
       stripe: "Stripe: payment processing and subscription billing.",
       posthog:
-        "PostHog: product analytics and measurement, hosted in the European Union. Requests go through deltalytix.app. Events may include page views, product events, and (with consent) session replay. Analytics events are kept for up to the retention configured in our PostHog Cloud EU project (currently up to 7 years).",
+        "PostHog: product analytics and measurement, hosted in the European Union. Requests go through deltalytix.app. Events may include page views, product events, and (with consent) session replay. Analytics events are kept for up to the retention configured in our PostHog Cloud EU project (currently 12 months; session replays are kept for 30 days).",
       resend:
         "Resend: transactional email such as welcome messages, weekly recaps, support replies, and the marketing newsletter.",
       vercel:
@@ -107,7 +107,7 @@ export default {
       billing:
         "In our app we delete Subscription rows on account deletion. Stripe keeps invoices and related billing records as legally required. We do not retain a separate long-term billing archive beyond what Stripe holds.",
       analytics:
-        "PostHog product analytics: kept for up to the retention configured in our PostHog Cloud EU project (currently up to 7 years). Google Analytics 4 / Ads: up to Google’s product defaults (GA4 user-level data typically up to 14 months). Vercel Web Analytics is aggregated and cookieless, with Vercel’s documented reporting window (up to 12 months on Pro, up to 24 months with Web Analytics Plus / Enterprise). You can opt out of optional browser analytics and ads measurement as described in Analytics and measurement.",
+        "PostHog product analytics: kept for up to the retention configured in our PostHog Cloud EU project (currently 12 months; session replays are kept for 30 days). Google Analytics 4 / Ads: up to Google’s product defaults (GA4 user-level data typically up to 14 months). Vercel Web Analytics is aggregated and cookieless, with Vercel’s documented reporting window (up to 12 months on Pro, up to 24 months with Web Analytics Plus / Enterprise). You can opt out of optional browser analytics and ads measurement as described in Analytics and measurement.",
       aiChat:
         "Dashboard AI chat is auto-saved with that day's journal/mood entry and kept until you delete that day's journal/mood entry or delete your account. Resetting the chat UI does not delete the saved conversation. Support chat messages are processed to answer you and are not kept as a separate long-term archive beyond ordinary server logs.",
       logs:

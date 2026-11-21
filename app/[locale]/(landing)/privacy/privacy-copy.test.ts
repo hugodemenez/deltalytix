@@ -86,7 +86,7 @@ describe("privacy OpenAI / Apps checklist copy", () => {
     expect(en.privacy.retention.tokens).toMatch(/revoke/i);
     expect(en.privacy.retention.billing).toMatch(/Stripe/);
     expect(en.privacy.retention.logs).toMatch(/do not keep MCP tool arguments/i);
-    expect(en.privacy.retention.analytics).toMatch(/up to 7 years/i);
+    expect(en.privacy.retention.analytics).toMatch(/12 months/i);
     expect(en.privacy.retention.analytics).not.toMatch(/1–2 years|1-2 years/);
     expect(en.privacy.retention.aiChat).toMatch(/Reset/i);
     expect(en.privacy.processors.supabase).toMatch(/Supabase/);
@@ -94,7 +94,7 @@ describe("privacy OpenAI / Apps checklist copy", () => {
     expect(en.privacy.processors.supabase).not.toMatch(/trade-images bucket/);
     expect(en.privacy.processors.stripe).toMatch(/Stripe/);
     expect(en.privacy.processors.posthog).toMatch(/PostHog/);
-    expect(en.privacy.processors.posthog).toMatch(/up to 7 years/);
+    expect(en.privacy.processors.posthog).toMatch(/12 months/);
     expect(en.privacy.processors.resend).toMatch(/Resend/);
     expect(en.privacy.processors.vercel).toMatch(/Vercel/);
     expect(en.privacy.processors.vercel).toMatch(/cookieless/i);
@@ -139,7 +139,7 @@ describe("privacy OpenAI / Apps checklist copy", () => {
     expect(fr.privacy.retention.tokens).toMatch(/révocation|révoqu/i);
     expect(fr.privacy.retention.billing).toMatch(/Stripe/);
     expect(fr.privacy.retention.logs).toMatch(/ne conservons pas/i);
-    expect(fr.privacy.retention.analytics).toMatch(/7 ans/);
+    expect(fr.privacy.retention.analytics).toMatch(/12 mois/);
     expect(fr.privacy.legal.basis).toMatch(/registres fiscaux et comptables/);
     expect(fr.privacy.legal.basis).toMatch(/Stripe, et non Deltalytix/);
     expect(fr.privacy.processors.supabase).toMatch(/Supabase/);

@@ -70,7 +70,7 @@ export default {
         "Supabase : authentification, hébergement de la base de données et stockage de fichiers pour les captures d'écran de trades et images de journal.",
       stripe: "Stripe : traitement des paiements et facturation des abonnements.",
       posthog:
-        "PostHog : mesure d'audience et d'usage produit, hébergé dans l'Union européenne. Les requêtes passent par deltalytix.app. Les événements peuvent inclure pages vues, événements produit et (avec consentement) replay de session. Les événements d'analytics sont conservés jusqu'à la rétention configurée dans notre projet PostHog Cloud EU (actuellement jusqu'à 7 ans).",
+        "PostHog : mesure d'audience et d'usage produit, hébergé dans l'Union européenne. Les requêtes passent par deltalytix.app. Les événements peuvent inclure pages vues, événements produit et (avec consentement) replay de session. Les événements d'analytics sont conservés jusqu'à la rétention configurée dans notre projet PostHog Cloud EU (actuellement 12 mois ; les replays de session sont conservés 30 jours).",
       resend:
         "Resend : e-mails transactionnels (bienvenue, récapitulatif hebdomadaire, réponses support) et newsletter marketing.",
       vercel:
@@ -108,7 +108,7 @@ export default {
       billing:
         "Dans notre application, nous supprimons les lignes Subscription lors de la suppression du compte. Stripe conserve les factures et enregistrements de facturation associés autant que la loi l'exige. Nous ne constituons pas une archive de facturation séparée à long terme au-delà de ce que Stripe conserve.",
       analytics:
-        "Analytics produit PostHog : conservés jusqu'à la rétention configurée dans notre projet PostHog Cloud EU (actuellement jusqu'à 7 ans). Google Analytics 4 / Ads : jusqu'aux défauts des produits Google (données utilisateur GA4 en général jusqu'à 14 mois). Vercel Web Analytics est agrégé et sans cookie, avec la fenêtre de reporting documentée par Vercel (jusqu'à 12 mois sur Pro, jusqu'à 24 mois avec Web Analytics Plus / Enterprise). Vous pouvez refuser la mesure d'audience navigateur et la publicité facultatives comme indiqué dans Mesure d'audience.",
+        "Analytics produit PostHog : conservés jusqu'à la rétention configurée dans notre projet PostHog Cloud EU (actuellement 12 mois ; les replays de session sont conservés 30 jours). Google Analytics 4 / Ads : jusqu'aux défauts des produits Google (données utilisateur GA4 en général jusqu'à 14 mois). Vercel Web Analytics est agrégé et sans cookie, avec la fenêtre de reporting documentée par Vercel (jusqu'à 12 mois sur Pro, jusqu'à 24 mois avec Web Analytics Plus / Enterprise). Vous pouvez refuser la mesure d'audience navigateur et la publicité facultatives comme indiqué dans Mesure d'audience.",
       aiChat:
         "Le chat d'IA du tableau de bord est enregistré automatiquement avec l'entrée journal/humeur du jour et conservé jusqu'à ce que vous supprimiez cette entrée du jour ou votre compte. Réinitialiser l'interface du chat ne supprime pas la conversation enregistrée. Les messages du chat support sont traités pour vous répondre et ne sont pas conservés comme archive séparée à long terme au-delà des journaux serveur ordinaires.",
       logs:
