@@ -1,7 +1,7 @@
 export default {
   privacy: {
     title: "Politique de confidentialité",
-    lastUpdated: "Dernière mise à jour : 13 novembre 2026",
+    lastUpdated: "Dernière mise à jour : 21 novembre 2026",
     intro: {
       title: "1. Introduction",
       content:

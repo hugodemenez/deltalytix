@@ -1,7 +1,7 @@
 export default {
   privacy: {
     title: "Privacy Policy",
-    lastUpdated: "Last updated: 13 November 2026",
+    lastUpdated: "Last updated: 21 November 2026",
     intro: {
       title: "1. Introduction",
       content:

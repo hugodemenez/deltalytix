@@ -69,7 +69,7 @@ describe("privacy OpenAI / Apps checklist copy", () => {
   });
 
   it("names retention, processors, contact, and user controls (EN)", () => {
-    expect(en.privacy.lastUpdated).toMatch(/13 November 2026/);
+    expect(en.privacy.lastUpdated).toMatch(/21 November 2026/);
     expect(en.privacy.contact.email).toBe("contact@deltalytix.app");
     expect(en.privacy.intro.controller).toMatch(/Hugo Demenez/);
     expect(en.privacy.intro.controller).not.toMatch(/to be confirmed/i);
@@ -123,7 +123,7 @@ describe("privacy OpenAI / Apps checklist copy", () => {
   });
 
   it("names the same facts in French, including tokens and billing", () => {
-    expect(fr.privacy.lastUpdated).toMatch(/13 novembre 2026/);
+    expect(fr.privacy.lastUpdated).toMatch(/21 novembre 2026/);
     expect(fr.privacy.contact.email).toBe("contact@deltalytix.app");
     expect(fr.privacy.intro.controller).toMatch(/Hugo Demenez/);
     expect(fr.privacy.intro.controller).not.toMatch(/à confirmer/i);
