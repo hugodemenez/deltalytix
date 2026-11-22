@@ -2,6 +2,7 @@
 
 import { generateText, Output } from "ai"
 import { z } from 'zod';
+import { resolveAiTask } from "@/lib/ai/resolve-ai-task"
 
 const newsletterSchema = z.object({
   subject: z.string().describe("Un titre accrocheur en français de maximum 4 mots"),
@@ -19,7 +20,7 @@ interface GenerateNewsletterProps {
 export async function generateNewsletterContent({ youtubeUrl, description }: GenerateNewsletterProps) {
   try {
     const { output } = await generateText({
-      model: 'openai/gpt-5-mini',
+      ...resolveAiTask("newsletter"),
       output: Output.object({ schema: newsletterSchema }),
       prompt: `Bonjour, tu vas écrire la newsletter technique pour Deltalytix sur notre dernière mise à jour : ${description}.
 
@@ -48,7 +49,6 @@ Instructions générales :
 - Terminologie spécifique au trading de futures.
 
 Merci de respecter ces consignes.`,
-      temperature: 0.7,
     })
 
 

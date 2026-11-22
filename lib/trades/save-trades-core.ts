@@ -8,9 +8,14 @@ import {
   RITHMIC_PROTOCOL_TRADE_TAG,
 } from "@/lib/trade-id-utils"
 import {
+  canonicalRithmicFillId,
   filterRithmicProtocolTradesCoveredByStoredRows,
   resolveRithmicProtocolPersistedId,
 } from "@/lib/rithmic-protocol/dedupe-fills"
+import {
+  listConfirmedDistinctFillIds,
+  manualTradeReplacedByPlantTrade,
+} from "@/lib/rithmic-protocol/fill-ledger"
 import {
   isTradovatePersistedTrade,
   resolveTradovatePersistedId,
@@ -18,6 +23,11 @@ import {
 } from "@/lib/tradovate/identity"
 import { isDuplicateTradesOnlySave } from "@/lib/trades/save-trades-outcome"
 import { normalizeTradeDates } from "@/lib/trades/normalize-trade-date"
+import {
+  createManyTradesInChunks,
+  TRADE_CREATE_MANY_CHUNK_SIZE,
+} from "@/lib/trades/create-many-trades"
+import { encryptJournalField } from "@/lib/journal-field-crypto"
 
 export type TradeError =
   | "DUPLICATE_TRADES"
@@ -120,6 +130,39 @@ async function assignExistingTradovateIds(
   })
 }
 
+async function loadConfirmedDistinctMarkers(
+  userId: string,
+  trades: Array<{ entryId?: string | null; closeId?: string | null }>,
+): Promise<Map<string, ReadonlySet<string>>> {
+  const manualIds = new Set<string>()
+  for (const trade of trades) {
+    for (const raw of [trade.entryId, trade.closeId]) {
+      const id = canonicalRithmicFillId(raw)
+      if (id?.startsWith("manual-")) manualIds.add(id)
+    }
+  }
+  if (manualIds.size === 0) return new Map()
+  const rows = await prisma.rithmicProtocolFill.findMany({
+    where: {
+      userId,
+      fillId: { in: [...manualIds] },
+      source: "manual",
+    },
+    select: {
+      fillId: true,
+      confirmedDistinctFillId: true,
+      confirmedDistinctFillIds: true,
+    },
+  })
+  const markers = new Map<string, ReadonlySet<string>>()
+  for (const row of rows) {
+    const manualId = canonicalRithmicFillId(row.fillId)
+    const plantIds = listConfirmedDistinctFillIds(row)
+    if (manualId && plantIds.length > 0) markers.set(manualId, new Set(plantIds))
+  }
+  return markers
+}
+
 function isRithmicProtocolPersistedTrade(trade: {
   tags?: string[] | null
 }): boolean {
@@ -169,10 +212,34 @@ async function assignExistingRithmicProtocolIds(
   })
   if (existing.length === 0) return trades
 
+  const distinctPlantIdByManualFillId = await loadConfirmedDistinctMarkers(
+    userId,
+    [...trades, ...existing],
+  )
+  const context = {
+    derivedBatch: trades,
+    distinctPlantIdByManualFillId,
+  }
+  const claimed = new Set<string>()
+  const directId = new Map<Trade, string>()
+  for (const trade of trades) {
+    if (!isRithmicProtocolPersistedTrade(trade)) continue
+    const id = resolveRithmicProtocolPersistedId(trade, existing)
+    if (!id || claimed.has(id)) continue
+    claimed.add(id)
+    directId.set(trade, id)
+  }
   const assigned = trades.map((trade) => {
     if (!isRithmicProtocolPersistedTrade(trade)) return trade
-    const existingId = resolveRithmicProtocolPersistedId(trade, existing)
-    return existingId ? { ...trade, id: existingId } : trade
+    const direct = directId.get(trade)
+    if (direct) return { ...trade, id: direct }
+    const pool = existing.filter((row) => !claimed.has(row.id))
+    const replaced = pool.find((row) =>
+      manualTradeReplacedByPlantTrade(row, trade, context),
+    )
+    if (!replaced) return trade
+    claimed.add(replaced.id)
+    return { ...trade, id: replaced.id }
   })
 
   // Stored rows can pair the same contracts differently (rebuilt from a
@@ -222,6 +289,10 @@ export async function saveTradesCore(
   }
   const normalizedDates = dateCheck.trades
 
+  // Declared outside the try so a throw after createMany (commission backfill,
+  // cache tags, analytics) still reports the rows that already committed and
+  // clears the user cache.
+  let committed = 0
   try {
     const hadExistingTrades = Boolean(
       await prisma.trade.findFirst({
@@ -270,10 +341,32 @@ export async function saveTradesCore(
       tradovateAssignedTrades,
     )
 
-    const result = await prisma.trade.createMany({
-      data: userAssignedTrades,
-      skipDuplicates: true,
-    })
+    // Ids are deterministic and skipDuplicates is ON CONFLICT DO NOTHING, so
+    // each chunk is safe to retry. A single statement needs no interactive
+    // transaction. Larger imports commit per chunk: one 120s transaction would
+    // fail the whole import on timeout and hold row locks for the duration.
+    // A later chunk can fail after earlier chunks are committed. That count
+    // has to come back so the cache is dropped and the UI shows the rows.
+    const insert = {
+      data: userAssignedTrades.map((trade) => ({
+        ...trade,
+        comment: encryptJournalField(trade.comment),
+      })),
+      skipDuplicates: true as const,
+    }
+    const result =
+      insert.data.length <= TRADE_CREATE_MANY_CHUNK_SIZE
+        ? await prisma.trade.createMany(insert)
+        : await createManyTradesInChunks(async (chunk) => {
+            try {
+              const chunkResult = await prisma.trade.createMany(chunk)
+              committed += chunkResult.count
+              return chunkResult
+            } catch (error) {
+              throw new TradeInsertPartialError(committed, error)
+            }
+          }, insert)
+    committed = result.count
 
     const commissionsUpdated = await backfillRithmicProtocolCommissions(
       userId,
@@ -336,12 +429,31 @@ export async function saveTradesCore(
       trades: result.count > 0 ? userAssignedTrades : undefined,
     }
   } catch (error) {
+    const inserted =
+      error instanceof TradeInsertPartialError ? error.committed : committed
     console.error("[saveTradesCore] Database error:", error)
+    if (inserted > 0) {
+      try {
+        await invalidateTradeCaches(userId)
+      } catch (cacheError) {
+        console.error("[saveTradesCore] Cache invalidation after partial insert failed:", cacheError)
+      }
+    }
     return {
       error: "DATABASE_ERROR",
-      numberOfTradesAdded: 0,
+      numberOfTradesAdded: inserted,
       details: error instanceof Error ? error.message : String(error),
     }
+  }
+}
+
+class TradeInsertPartialError extends Error {
+  readonly committed: number
+
+  constructor(committed: number, cause: unknown) {
+    super(cause instanceof Error ? cause.message : String(cause))
+    this.name = "TradeInsertPartialError"
+    this.committed = committed
   }
 }
 

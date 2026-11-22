@@ -26,6 +26,7 @@ model Trade {
   side              String?  @default("")
   commission        Float    @default(0)
   createdAt         DateTime @default(now())
+  /// User-authored trade note. Encrypted at rest (`jrn:v1:` AES-256-GCM).
   comment           String?
   tags              String[] @default([])
   imageBase64       String?
@@ -39,6 +40,7 @@ model Trade {
   @@index([accountId])
   @@index([groupId])
   @@index([userId, entryDate(sort: Desc)])
+  @@index([userId, accountNumber, entryDate(sort: Desc)], map: "Trade_userId_accountNumber_entryDate_idx")
   @@index([entryDate])
   @@schema("public")
 }
@@ -495,11 +497,13 @@ model Mood {
   userId               String
   day                  DateTime
   mood                 String
+  /// AI coach transcript. Encrypted at rest (`jrn:v1:` AES-256-GCM).
   conversation         Json?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
   emotionValue         Int      @default(50)
   hasTradingExperience Boolean?
+  /// Daily journal HTML. Encrypted at rest (`jrn:v1:` AES-256-GCM).
   journalContent       String?
   selectedNews         String[] @default([])
   user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -560,6 +564,7 @@ model FinancialEvent {
 
   @@unique([title, date, lang, timezone])
   @@index([date])
+  @@index([lang, date], map: "FinancialEvent_lang_date_idx")
   @@schema("public")
 }
 
@@ -670,8 +675,26 @@ model RithmicProtocolFill {
   sequenceNumber  String?
   ssboe           Int?
   usecs           Int?
-  /// `history` (ShowFillHistory / order-history fallback) or `replay`.
+  /// `history`, `replay`, `manual`, or `manual-retired`. Plain string,
+  /// not a Postgres enum.
   source          String   @default("history")
+  /// Set together when an admin soft-retires a manual fill.
+  retiredAt       DateTime?
+  retiredBy       String?
+  retireReason    String?
+  /// @deprecated Must equal the last id in `confirmedDistinctFillIds`, or null
+  /// when that list is empty. Any other scalar on a non-empty list blocks
+  /// the symbol. An empty list with a scalar is the pre-migration row.
+  confirmedDistinctFillId  String?
+  /// Plant fills this manual was confirmed distinct from. Reconcile will
+  /// not match or near-miss any of these ids. A second confirm appends.
+  confirmedDistinctFillIds String[] @default([])
+  /// Append-only confirm-distinct audit. Each item is
+  /// `{ op: "add" | "remove", fillId, at, by, reason }`.
+  confirmedDistinctAudit   Json     @default("[]")
+  confirmedDistinctAt      DateTime?
+  confirmedDistinctBy      String?
+  confirmDistinctReason    String?
   connectionId    String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

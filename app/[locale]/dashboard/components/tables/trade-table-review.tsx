@@ -1157,6 +1157,18 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                     ? trade.trades[0].comment
                     : trade.comment
                 }
+                commentUndecryptable={
+                  trade.trades.length > 0
+                    ? trade.trades.some(
+                        (item) =>
+                          (item as { commentUndecryptable?: boolean })
+                            .commentUndecryptable,
+                      )
+                    : Boolean(
+                        (trade as { commentUndecryptable?: boolean })
+                          .commentUndecryptable,
+                      )
+                }
               />
             </div>
           );

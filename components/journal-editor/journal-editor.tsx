@@ -37,6 +37,7 @@ export interface JournalEditorProps {
   onNewsSelection?: (newsIds: string[]) => void
   onEmbedNews?: (newsIds: string[], action: "add" | "remove") => void
   date?: Date
+  readOnly?: boolean
 }
 
 function currentBlock(): JournalBlock | "p" | null {
@@ -71,6 +72,7 @@ export function JournalEditor({
   onNewsSelection,
   onEmbedNews,
   date,
+  readOnly = false,
 }: JournalEditorProps) {
   const t = useI18n()
   const locale = useCurrentLocale()
@@ -188,6 +190,9 @@ export function JournalEditor({
 
   const insertImageFile = useCallback(
     async (file: File) => {
+      if (readOnly) {
+        return
+      }
       try {
         const src = await handleImageUpload(file)
         insertHtml(
@@ -198,7 +203,7 @@ export function JournalEditor({
         toast.error(t("trade-table.imageUploadError", { error: "Upload failed" }))
       }
     },
-    [handleImageUpload, insertHtml, t],
+    [handleImageUpload, insertHtml, readOnly, t],
   )
 
   const handleEmbedNews = useCallback(
@@ -273,7 +278,12 @@ export function JournalEditor({
         type="file"
         accept="image/*"
         className="hidden"
+        disabled={readOnly}
         onChange={(event) => {
+          if (readOnly) {
+            event.target.value = ""
+            return
+          }
           const file = event.target.files?.[0]
           if (file) {
             void insertImageFile(file)
@@ -289,10 +299,13 @@ export function JournalEditor({
         onNewsSelection={onNewsSelection}
         onEmbedNews={onEmbedNews || handleEmbedNews}
         date={date}
+        disabled={readOnly}
         onToggleBlock={handleToggleBlock}
-        onInsertImage={() => fileInputRef.current?.click()}
+        onInsertImage={() => {
+          if (!readOnly) fileInputRef.current?.click()
+        }}
         aiMenu={
-          aiReady ? (
+          readOnly ? undefined : aiReady ? (
             <JournalAI
               getTargetText={() => {
                 const selection = window.getSelection()?.toString().trim() ?? ""
@@ -330,8 +343,9 @@ export function JournalEditor({
           ref={editorRef}
           role="textbox"
           aria-multiline="true"
+          aria-readonly={readOnly}
           aria-label={placeholder}
-          contentEditable
+          contentEditable={!readOnly}
           suppressContentEditableWarning
           className={cn(
             "h-full overflow-y-auto p-2 text-lg leading-relaxed outline-none sm:text-sm",
@@ -344,6 +358,10 @@ export function JournalEditor({
           )}
           onInput={emitChange}
           onPaste={(event) => {
+            if (readOnly) {
+              event.preventDefault()
+              return
+            }
             const image = [...(event.clipboardData?.items ?? [])].find((item) =>
               item.type.startsWith("image/"),
             )
@@ -362,6 +380,10 @@ export function JournalEditor({
             }
           }}
           onDrop={(event) => {
+            if (readOnly) {
+              event.preventDefault()
+              return
+            }
             const file = [...event.dataTransfer.files].find((item) =>
               item.type.startsWith("image/"),
             )

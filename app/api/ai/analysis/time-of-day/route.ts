@@ -1,7 +1,8 @@
 import { streamText } from "ai";
 import { NextRequest } from "next/server";
 import { z } from 'zod/v3';
-import { openai } from "@ai-sdk/openai";
+import { aiTextStreamResponse } from "@/lib/ai/http-stream";
+import { aiTaskUnavailableResponse, resolveAiTask } from "@/lib/ai/resolve-ai-task";
 
 // Analysis Tools
 import { generateAnalysisComponent } from "../accounts/generate-analysis-component";
@@ -76,6 +77,10 @@ You are analyzing performance based on time patterns and trading sessions in the
 
 export async function POST(req: NextRequest) {
   try {
+    const availabilityError = aiTaskUnavailableResponse("analysis-time-of-day");
+    if (availabilityError) {
+      return Response.json(availabilityError, { status: 503 });
+    }
     const { username, locale, timezone } = await req.json();
     
     // Add debugging to see what locale is being received
@@ -86,8 +91,8 @@ export async function POST(req: NextRequest) {
     console.log('Validated data:', validatedData);
 
     const result = streamText({
-      model: openai("gpt-4o-mini"),
-      system: getTimeOfDayAnalysisPrompt(validatedData.locale, validatedData.timezone),
+      ...resolveAiTask("analysis-time-of-day"),
+      instructions: getTimeOfDayAnalysisPrompt(validatedData.locale, validatedData.timezone),
       tools: {
         generateAnalysisComponent,
         getTimeOfDayPerformance,
@@ -104,7 +109,7 @@ export async function POST(req: NextRequest) {
       ]
     });
 
-    return result.toTextStreamResponse();
+    return aiTextStreamResponse(result);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return new Response(JSON.stringify({ error: error.errors }), {

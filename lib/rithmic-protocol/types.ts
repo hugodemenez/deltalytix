@@ -41,9 +41,21 @@ export interface RithmicProtocolFill {
   /**
    * Where the fill came from. ShowFillHistory (and its order-history
    * fallback) is the settled record; ReplayExecutions only tops up the
-   * latest fills history has not published yet.
+   * latest fills history has not published yet. `manual` is an operator
+   * patch for a fill the plant's order history omitted. Resync keeps the
+   * row. While an upstream fill matches it exactly, FIFO counts the
+   * upstream fill only. `manual-retired` is an audited soft-retire:
+   * reconcile, coverage, and sync ignore it.
    */
-  source?: 'history' | 'replay'
+  source?: 'history' | 'replay' | 'manual' | 'manual-retired'
+  /**
+   * @deprecated Latest id in `confirmedDistinctFillIds`, or unset when that list
+   * is empty. A scalar missing from a non-empty list blocks the symbol.
+   * An empty list with this set is the pre-migration row.
+   */
+  confirmedDistinctFillId?: string
+  /** Plant fill ids an admin confirmed are different executions. Reconcile skips each id. */
+  confirmedDistinctFillIds?: string[]
 }
 
 export interface RithmicProtocolCredentials {

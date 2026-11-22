@@ -1,5 +1,3 @@
-import { openai } from "@ai-sdk/openai"
-import { streamObject } from "ai"
 import { tradeSchema, orderSchema } from './schema'
 import { type FinancialInstrument } from '../extract-orders/schema'
 import { z } from 'zod/v3';

@@ -1,10 +1,9 @@
 'use server'
 
-import { streamObject } from "ai"
+import { generateText, Output } from "ai"
+import { resolveAiTask } from "@/lib/ai/resolve-ai-task"
 import { z } from 'zod/v3';
 import {
-  WEEKLY_ANALYSIS_MODEL,
-  WEEKLY_ANALYSIS_REASONING_EFFORT,
   buildWeeklyAnalysisPrompt,
   type DailyPnL,
 } from "@/lib/weekly-recap-analysis"
@@ -17,6 +16,14 @@ const analysisSchema = z.object({
 interface AnalysisResult {
   resultAnalysisIntro: string
   tipsForNextWeek: string
+}
+
+function logWeeklyFallback(details: {
+  finishReason?: unknown
+  usage?: unknown
+  error?: unknown
+}) {
+  console.error("Weekly recap fell back to the default blurb", details)
 }
 
 export async function generateTradingAnalysis(
@@ -38,33 +45,28 @@ export async function generateTradingAnalysis(
       return defaultAnalysis
     }
 
-    const { partialObjectStream } = streamObject({
-      model: WEEKLY_ANALYSIS_MODEL,
-      schema: analysisSchema,
+    const { output, finishReason, usage } = await generateText({
+      ...resolveAiTask("weekly-recap"),
+      output: Output.object({ schema: analysisSchema }),
       prompt: buildWeeklyAnalysisPrompt(sortedTrades, language),
-      providerOptions: {
-        openai: {
-          reasoningEffort: WEEKLY_ANALYSIS_REASONING_EFFORT,
-        },
-      },
     })
 
-    const content = { intro: "", tips: "" }
-    for await (const partialObject of partialObjectStream) {
-      if (partialObject.intro) content.intro = partialObject.intro
-      if (partialObject.tips) content.tips = partialObject.tips
-    }
-
-    if (content.intro && content.tips) {
+    if (output?.intro && output?.tips) {
       return {
-        resultAnalysisIntro: content.intro,
-        tipsForNextWeek: content.tips
+        resultAnalysisIntro: output.intro,
+        tipsForNextWeek: output.tips
       }
     }
 
+    logWeeklyFallback({ finishReason, usage })
     return defaultAnalysis
   } catch (error) {
-    console.error('Error generating analysis:', error)
+    const details = error as { finishReason?: unknown; usage?: unknown } | null
+    logWeeklyFallback({
+      finishReason: details?.finishReason,
+      usage: details?.usage,
+      error,
+    })
     return defaultAnalysis
   }
 }

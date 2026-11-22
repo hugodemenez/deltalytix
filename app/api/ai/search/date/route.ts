@@ -1,5 +1,5 @@
-import { openai } from "@ai-sdk/openai";
 import { generateText, Output } from "ai";
+import { aiTaskUnavailableResponse, resolveAiTask } from "@/lib/ai/resolve-ai-task";
 import { NextRequest } from "next/server";
 import { z } from 'zod/v3';
 
@@ -19,6 +19,10 @@ const requestSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    const availabilityError = aiTaskUnavailableResponse("date-search");
+    if (availabilityError) {
+      return Response.json(availabilityError, { status: 503 });
+    }
     const body = await req.json();
     const { query, locale = "en", timezone } = requestSchema.parse(body);
 
@@ -41,7 +45,7 @@ export async function POST(req: NextRequest) {
     });
 
     const { output } = await generateText({
-      model: 'openai/gpt-5-mini',
+      ...resolveAiTask("date-search"),
       output: Output.object({ schema: dateRangeSchema }),
       prompt: `You are an expert at parsing natural language date queries into date ranges or weekday filters.
 
@@ -104,7 +108,6 @@ EXAMPLES:
 QUERY TO PARSE: "${query}"
 
 Return the appropriate filter type (date range OR weekday).`,
-      temperature: 0.1,
     });
 
     return new Response(JSON.stringify(output), {

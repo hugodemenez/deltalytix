@@ -20,6 +20,7 @@ export default defineConfig({
     ],
   },
   test: {
+    setupFiles: ["test/setup-journal-encryption.ts"],
     // `app/**` and `components/**` colocate tests next to the source they cover.
     include: ["**/*.{test,spec}.{ts,tsx}"],
     exclude: [
