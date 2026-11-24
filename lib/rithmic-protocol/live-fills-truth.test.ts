@@ -382,10 +382,128 @@ describe('review fixes: one version per order, history never removes unrestated 
         r({ fillId: 'r1', fillPrice: 100.25, fillDate: '20261117', ssboe: t('2026-11-17T16:00:01Z') }),
       ]
       const { fills: kept, decisions } = preferHistoryFillsWithDecisions(fills)
-      expect(tags(kept)).toEqual(['history:h1x2@100', 'replay:r1x1@100.25'])
+      // The leftover joins the live version, so it is tagged replay.
+      expect(tags(kept)).toEqual(['replay:h1x2@100', 'replay:r1x1@100.25'])
       expect(decisions).toEqual([expect.objectContaining({ kept: 'live', historyBackfilled: 1 })])
       // The input row is not mutated.
       expect(fills[0].fillSize).toBe(3)
+      expect(fills[0].source).toBe('history')
+    })
+  })
+
+  describe('round 2: a backfilled history leftover cannot drop a live fill', () => {
+    const t0 = t('2026-11-17T16:00:00Z')
+
+    it('scenario A: no basket ids', () => {
+      const fills = [
+        h({ fillId: '12', fillPrice: 100, fillSize: 3, fillDate: '20261117', ssboe: t0 }),
+        r({ fillId: '10', fillPrice: 100, fillDate: '20261117', ssboe: t0 }),
+        // Not restated by history, so live wins the date.
+        r({ fillId: '11', fillPrice: 101, fillDate: '20261117', ssboe: t0 + 30 }),
+      ]
+      const { decisions } = preferHistoryFillsWithDecisions(fills)
+      expect(decisions).toEqual([expect.objectContaining({ kept: 'live', historyBackfilled: 1 })])
+      const prepared = prepareRithmicProtocolFills(fills).fills
+      expect(bought(prepared)).toBe(3)
+      // The leftover ×1 sums with live 10 ×1 at 100 instead of replacing it.
+      expect(tags(prepared)).toEqual(['replay:12x2@100', 'replay:11x1@101'])
+    })
+
+    it('scenario B: shared basket routed per date by an unbasketed row', () => {
+      const fills = [
+        h({ fillId: '12', fillPrice: 100, fillSize: 2, basketId: 'x', fillDate: '20261117', ssboe: t0 }),
+        r({ fillId: '10', fillPrice: 100, basketId: 'x', fillDate: '20261117', ssboe: t0 }),
+        r({ fillId: '30', transactionType: '2', fillPrice: 105, fillDate: '20261117', ssboe: t0 + 600 }),
+      ]
+      const prepared = prepareRithmicProtocolFills(fills).fills
+      expect(bought(prepared)).toBe(2)
+      expect(prepared.filter((fill) => fill.source === 'history')).toEqual([])
+    })
+  })
+
+  describe('round 2: the per-date path collapses each source first', () => {
+    const at = t('2026-11-17T15:00:00Z')
+    const rollup11 = { fillId: '11', fillPrice: 100.5, fillSize: 2, fillDate: '20261117', ssboe: at }
+    const piece11 = { fillId: '11', fillPrice: 100.5, fillDate: '20261117', ssboe: at }
+    const piece10 = { fillId: '10', fillPrice: 100.75, fillDate: '20261117', ssboe: at }
+
+    it('scenario A: an unbasketed live rollup next to its pieces, no history', () => {
+      const fills = [r(rollup11), r(piece11), r(piece10)]
+      expect(tags(preferHistoryFills(fills))).toEqual(['replay:11x1@100.5', 'replay:10x1@100.75'])
+      expect(bought(prepareRithmicProtocolFills(fills).fills)).toBe(2)
+    })
+
+    it('scenario B: a history rollup delivered twice next to the live pieces', () => {
+      const fills = [h(rollup11), h(rollup11), r(piece10), r(piece11)]
+      const { fills: kept, decisions } = preferHistoryFillsWithDecisions(fills)
+      expect(tags(kept)).toEqual(['replay:10x1@100.75', 'replay:11x1@100.5'])
+      expect(decisions).toEqual([expect.objectContaining({ kept: 'live', historyBackfilled: 0 })])
+      expect(bought(prepareRithmicProtocolFills(fills).fills)).toBe(2)
+    })
+
+    it('does not take another order that day for a rollup piece', () => {
+      // 11 ×2 at 15:00 restates 10 + 11; the 5 ×1 at 14:00 is its own order.
+      const fills = [
+        r({ fillId: '5', fillPrice: 99, fillDate: '20261117', ssboe: at - 3600 }),
+        r(rollup11),
+        r(piece11),
+      ]
+      expect(bought(prepareRithmicProtocolFills(fills).fills)).toBe(3)
+    })
+  })
+
+  describe('round 2: a rollup next to only part of its pieces (nit 3)', () => {
+    const at = t('2026-11-17T15:00:00Z')
+    const rollup11 = { fillId: '11', fillPrice: 100, fillSize: 2, basketId: 'a', fillDate: '20261117', ssboe: at }
+    const piece11 = { fillId: '11', fillPrice: 100, basketId: 'a', fillDate: '20261117', ssboe: at }
+    const piece10 = { fillId: '10', fillPrice: 100.25, basketId: 'a', fillDate: '20261117', ssboe: at }
+
+    it('keeps the fuller rollup and drops the partial piece in one source', () => {
+      const fills = [r(rollup11), r(piece11)]
+      expect(tags(preferHistoryFills(fills))).toEqual(['replay:11x2@100'])
+      expect(bought(prepareRithmicProtocolFills(fills).fills)).toBe(2)
+    })
+
+    it('the collapsed live version no longer outsizes history', () => {
+      const fills = [h(piece10), h(piece11), r(rollup11), r(piece11)]
+      const { fills: kept, decisions } = preferHistoryFillsWithDecisions(fills)
+      expect(tags(kept)).toEqual(['history:10x1@100.25', 'history:11x1@100'])
+      expect(decisions).toEqual([expect.objectContaining({ basketId: 'a', kept: 'history' })])
+      expect(bought(prepareRithmicProtocolFills(fills).fills)).toBe(2)
+    })
+  })
+
+  describe('round 2: different basket ids for one order across sources (nit 4)', () => {
+    const at = t('2026-11-17T15:00:00Z')
+
+    it('links the baskets through a shared fill id and keeps one version', () => {
+      const fills = [
+        h({ fillId: '10', fillPrice: 100.25, basketId: 'a', fillDate: '20261117', ssboe: at }),
+        h({ fillId: '11', fillPrice: 100, basketId: 'a', fillDate: '20261117', ssboe: at }),
+        r({ fillId: '11', fillPrice: 100, fillSize: 2, basketId: 'b', fillDate: '20261117', ssboe: at + 5 }),
+      ]
+      const { fills: kept, decisions } = preferHistoryFillsWithDecisions(fills)
+      expect(tags(kept)).toEqual(['history:10x1@100.25', 'history:11x1@100'])
+      expect(decisions).toEqual([expect.objectContaining({ basketId: 'a,b', kept: 'history' })])
+      expect(bought(prepareRithmicProtocolFills(fills).fills)).toBe(2)
+    })
+
+    it('does not link a fill id recycled outside the tolerance', () => {
+      const fills = [
+        h({ fillId: '11', fillPrice: 100, basketId: 'a', fillDate: '20261117', ssboe: at }),
+        r({ fillId: '11', fillPrice: 100, basketId: 'b', fillDate: '20261118', ssboe: at + 86400 }),
+      ]
+      const { fills: kept, decisions } = preferHistoryFillsWithDecisions(fills)
+      expect(kept).toHaveLength(2)
+      expect(decisions).toEqual([])
+    })
+
+    it('does not link baskets on opposite sides', () => {
+      const fills = [
+        h({ fillId: '11', fillPrice: 100, basketId: 'a', fillDate: '20261117', ssboe: at }),
+        r({ fillId: '11', transactionType: '2', fillPrice: 100, basketId: 'b', fillDate: '20261117', ssboe: at }),
+      ]
+      expect(preferHistoryFillsWithDecisions(fills).decisions).toEqual([])
     })
   })
 })

@@ -855,10 +855,11 @@ export async function getRithmicProtocolTrades(
     const prepared = deriveTradesFromFillLedger(storedFills, rawFills)
     const manualEffects = planManualFillSyncEffects(prepared)
     const fifoFills = manualEffects.fifoFills
-    // Per-order collapses (one source rolled up an order the other split) are
-    // routine and only counted. A per-date disagreement means rows without a
-    // basketId where history did not restate live — worth a warning.
-    const orderRollupsCollapsed = prepared.historyDecisions.filter(
+    // Orders both sources reported, reconciled to one version per basket
+    // (whether or not the versions differed), are routine and only counted. A
+    // per-date disagreement means rows without a basketId where history did
+    // not restate live — worth a warning.
+    const ordersReconciled = prepared.historyDecisions.filter(
       (decision) => decision.basketId,
     ).length
     const historySuperseded = prepared.historyDecisions.filter(
@@ -893,7 +894,7 @@ export async function getRithmicProtocolTrades(
       ledger_inserted: ledgerWrite.inserted,
       ledger_updated: ledgerWrite.updated,
       ...manualEffects.droppedByReason,
-      ...(orderRollupsCollapsed > 0 ? { order_rollups_collapsed: orderRollupsCollapsed } : {}),
+      ...(ordersReconciled > 0 ? { orders_reconciled: ordersReconciled } : {}),
       ...(historySuperseded.length > 0
         ? { history_superseded_by_live: historySuperseded.length }
         : {}),
