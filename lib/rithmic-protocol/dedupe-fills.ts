@@ -485,7 +485,12 @@ function basketIdOf(fill: RithmicProtocolFill): string {
  * "the other rows" are only those within that window of the candidate (the
  * order piece window: pieces of one order in one source land within 2s), and
  * the larger-rollup branch only drops rows sharing the candidate's fill id,
- * so another order filled in the same second is not taken for a piece.
+ * so another order filled in the same second is not taken for a piece. The
+ * equal-sum branch also needs the other rows' fill ids to be one unbroken
+ * run ending at the candidate's (pieces 10 + 11 for rollup 11, not 9 + 11):
+ * otherwise an unrelated order that happens to make up the difference would
+ * pass for the missing piece. Failing that (or with non-numeric ids), the
+ * rollup is kept and only rows sharing its fill id are dropped.
  */
 function findSourceRestatement(
   rows: RithmicProtocolFill[],
@@ -506,10 +511,13 @@ function findSourceRestatement(
     if (id !== Math.max(...others.map(numericFillId))) continue
     const size = fillQuantity(candidate)
     const othersSize = totalSize(others)
-    if (Math.abs(size - othersSize) <= 1e-9) {
+    const equalSum = Math.abs(size - othersSize) <= 1e-9
+    if (equalSum && others.length < 2) {
       // A rollup of one piece is that piece; leave it to identity dedupe.
-      if (others.length >= 2) return [candidate]
       continue
+    }
+    if (equalSum && (neighborhoodMs == null || isFillIdRunEndingAt(others, id))) {
+      return [candidate]
     }
     if (neighborhoodMs == null) {
       if (size > othersSize) return others
@@ -519,6 +527,21 @@ function findSourceRestatement(
     if (size > totalSize(sameId)) return sameId
   }
   return null
+}
+
+/**
+ * True when the rows' fill ids, taken once each, are consecutive integers
+ * ending at `lastId` ({10, 11} for 11; not {9, 11}). Any non-numeric id fails.
+ */
+function isFillIdRunEndingAt(rows: RithmicProtocolFill[], lastId: number): boolean {
+  const ids = new Set<number>()
+  for (const row of rows) {
+    const id = numericFillId(row)
+    if (!Number.isSafeInteger(id)) return false
+    ids.add(id)
+  }
+  if (ids.size === 0 || Math.max(...ids) !== lastId) return false
+  return lastId - Math.min(...ids) + 1 === ids.size
 }
 
 /**

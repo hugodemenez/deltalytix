@@ -572,6 +572,50 @@ describe('review fixes: one version per order, history never removes unrestated 
       expect(tags(preferHistoryFills(fills))).toEqual(['replay:9x1@99', 'replay:11x3@100'])
     })
   })
+
+  describe('round 4: an unbasketed equal-sum rollup needs a consecutive fill-id run', () => {
+    const at = t('2026-11-17T15:00:00Z')
+    const rollup11 = { fillId: '11', fillPrice: 100, fillSize: 2, fillDate: '20261117', ssboe: at }
+    const piece11 = { fillId: '11', fillPrice: 100, fillDate: '20261117', ssboe: at }
+
+    it('does not let another order in the same second fill the gap ({9, 11})', () => {
+      const fills = [
+        r({ fillId: '9', fillPrice: 99, fillDate: '20261117', ssboe: at }),
+        r(rollup11),
+        r(piece11),
+      ]
+      expect(tags(preferHistoryFills(fills))).toEqual(['replay:9x1@99', 'replay:11x2@100'])
+      expect(bought(prepareRithmicProtocolFills(fills).fills)).toBe(3)
+    })
+
+    it('still collapses a rollup next to an unbroken run of its pieces ({10, 11})', () => {
+      const fills = [
+        r({ fillId: '10', fillPrice: 100.25, fillDate: '20261117', ssboe: at }),
+        r(rollup11),
+        r(piece11),
+      ]
+      expect(tags(preferHistoryFills(fills))).toEqual(['replay:10x1@100.25', 'replay:11x1@100'])
+      expect(bought(prepareRithmicProtocolFills(fills).fills)).toBe(2)
+    })
+
+    it('keeps the rollup when another row has a non-numeric fill id', () => {
+      const fills = [
+        r({ fillId: 'abc', fillPrice: 99, fillDate: '20261117', ssboe: at }),
+        r(rollup11),
+        r(piece11),
+      ]
+      expect(tags(preferHistoryFills(fills))).toEqual(['replay:abcx1@99', 'replay:11x2@100'])
+    })
+
+    it('basketed rows still collapse on the equal sum alone', () => {
+      const fills = [
+        r({ fillId: '9', fillPrice: 99, basketId: 'a', fillDate: '20261117', ssboe: at }),
+        r({ ...rollup11, basketId: 'a' }),
+        r({ ...piece11, basketId: 'a' }),
+      ]
+      expect(tags(preferHistoryFills(fills))).toEqual(['replay:9x1@99', 'replay:11x1@100'])
+    })
+  })
 })
 
 describe('cmeTradeDateFromMs', () => {
