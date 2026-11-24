@@ -506,6 +506,72 @@ describe('review fixes: one version per order, history never removes unrestated 
       expect(preferHistoryFillsWithDecisions(fills).decisions).toEqual([])
     })
   })
+
+  describe('round 3: a resized leftover survives identity dedupe (finding 1)', () => {
+    const t0 = t('2026-11-17T16:00:00Z')
+
+    it('adds the leftover to the live piece it shares an identity with', () => {
+      const fills = [
+        h({ fillId: '11', fillPrice: 100, fillSize: 2, fillDate: '20261117', ssboe: t0 }),
+        r({ fillId: '11', fillPrice: 100, fillDate: '20261117', ssboe: t0 }),
+        // Not restated by history, so live wins the date.
+        r({ fillId: '30', fillPrice: 101, fillDate: '20261117', ssboe: t0 + 300 }),
+      ]
+      const { decisions } = preferHistoryFillsWithDecisions(fills)
+      expect(decisions).toEqual([expect.objectContaining({ kept: 'live', historyBackfilled: 1 })])
+      const prepared = prepareRithmicProtocolFills(fills)
+      expect(bought(prepared.fills)).toBe(3)
+      expect(tags(prepared.fills)).toEqual(['replay:11x2@100', 'replay:30x1@101'])
+      expect(prepared.stats.dropped).toEqual({})
+      // Inputs are not mutated.
+      expect(fills.map((fill) => `${fill.source}:${fill.fillSize}`)).toEqual([
+        'history:2',
+        'replay:1',
+        'replay:1',
+      ])
+    })
+
+    it('still drops a re-delivery of the live piece', () => {
+      const fills = [
+        h({ fillId: '11', fillPrice: 100, fillSize: 2, fillDate: '20261117', ssboe: t0 }),
+        r({ fillId: '11', fillPrice: 100, fillDate: '20261117', ssboe: t0 }),
+        r({ fillId: '11', fillPrice: 100, fillDate: '20261117', ssboe: t0 }),
+        r({ fillId: '30', fillPrice: 101, fillDate: '20261117', ssboe: t0 + 300 }),
+      ]
+      const prepared = prepareRithmicProtocolFills(fills)
+      expect(bought(prepared.fills)).toBe(3)
+      expect(prepared.stats.dropped).toEqual({ duplicate_id: 1 })
+    })
+  })
+
+  describe('round 3: the unbasketed collapse only looks at one order (finding 2)', () => {
+    const at = t('2026-11-17T15:00:00Z')
+    const other = { fillId: '8', fillPrice: 99, fillDate: '20261117', ssboe: at - 60 }
+    const piece11 = { fillId: '11', fillPrice: 100, fillDate: '20261117', ssboe: at }
+
+    it('keeps another order a minute earlier next to a larger rollup', () => {
+      const fills = [r(other), r({ ...piece11, fillSize: 3 }), r(piece11)]
+      const prepared = prepareRithmicProtocolFills(fills).fills
+      expect(bought(prepared)).toBe(4)
+      expect(tags(prepared)).toEqual(['replay:8x1@99', 'replay:11x3@100'])
+    })
+
+    it('does not let another order make a rollup look like the sum of its pieces', () => {
+      const fills = [r(other), r({ ...piece11, fillSize: 2 }), r(piece11)]
+      const prepared = prepareRithmicProtocolFills(fills).fills
+      expect(bought(prepared)).toBe(3)
+      expect(tags(prepared)).toEqual(['replay:8x1@99', 'replay:11x2@100'])
+    })
+
+    it('within the piece window, only drops rows sharing the rollup fill id', () => {
+      const fills = [
+        r({ fillId: '9', fillPrice: 99, fillDate: '20261117', ssboe: at }),
+        r({ ...piece11, fillSize: 3 }),
+        r(piece11),
+      ]
+      expect(tags(preferHistoryFills(fills))).toEqual(['replay:9x1@99', 'replay:11x3@100'])
+    })
+  })
 })
 
 describe('cmeTradeDateFromMs', () => {

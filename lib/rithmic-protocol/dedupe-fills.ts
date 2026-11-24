@@ -87,6 +87,9 @@ export function rithmicProtocolFillPairKey(
  */
 export const RITHMIC_PROTOCOL_TIMESTAMP_TOLERANCE_MS = 2 * 60 * 1000
 
+/** Pieces of one order land within this window of each other in one source. */
+export const RITHMIC_PROTOCOL_ORDER_PIECE_WINDOW_MS = 2 * 1000
+
 function parseIdentityTime(value: string | null | undefined): number | null {
   if (!value) return null
   const ms = Date.parse(value)
@@ -477,9 +480,12 @@ function basketIdOf(fill: RithmicProtocolFill): string {
  *   report and the rows next to it are only part of the order (live 11 ×2
  *   next to the single piece 11 ×1). Drop those partial pieces.
  *
- * `neighborhoodMs` limits "the other rows" to rows within that window of the
- * candidate. It is set when the rows are a whole book-date rather than one
- * basket, so other orders that day are not taken for this order's pieces.
+ * `neighborhoodMs` is set when the rows are a whole book-date rather than one
+ * basket (unbasketed rows). Nothing then ties the rows to one order, so:
+ * "the other rows" are only those within that window of the candidate (the
+ * order piece window: pieces of one order in one source land within 2s), and
+ * the larger-rollup branch only drops rows sharing the candidate's fill id,
+ * so another order filled in the same second is not taken for a piece.
  */
 function findSourceRestatement(
   rows: RithmicProtocolFill[],
@@ -505,7 +511,12 @@ function findSourceRestatement(
       if (others.length >= 2) return [candidate]
       continue
     }
-    if (size > othersSize) return others
+    if (neighborhoodMs == null) {
+      if (size > othersSize) return others
+      continue
+    }
+    const sameId = others.filter((row) => numericFillId(row) === id)
+    if (size > totalSize(sameId)) return sameId
   }
   return null
 }
@@ -551,12 +562,13 @@ function collapseSourceOrder(
 /**
  * Collapse one source's rows of a per-date group. Basketed rows collapse per
  * basket and side, as in the per-order path. Unbasketed rows collapse per
- * side over the book-date, comparing each row only with rows within
- * `toleranceMs`, since nothing else ties them to one order.
+ * side over the book-date, comparing each row only with rows within the
+ * order piece window (`RITHMIC_PROTOCOL_ORDER_PIECE_WINDOW_MS`), since
+ * nothing else ties them to one order. The cross-source tolerance is for
+ * clock skew between sources and would take other orders for pieces.
  */
 function collapseSourceDate(
   fills: RithmicProtocolFill[],
-  toleranceMs: number,
 ): { unique: RithmicProtocolFill[]; redundant: RithmicProtocolFill[] } {
   const parts = new Map<string, RithmicProtocolFill[]>()
   for (const fill of fills) {
@@ -569,7 +581,10 @@ function collapseSourceDate(
   const redundant: RithmicProtocolFill[] = []
   for (const [key, part] of parts) {
     const unbasketed = key.endsWith('|')
-    const version = collapseSourceOrder(part, unbasketed ? toleranceMs : undefined)
+    const version = collapseSourceOrder(
+      part,
+      unbasketed ? RITHMIC_PROTOCOL_ORDER_PIECE_WINDOW_MS : undefined,
+    )
     for (const fill of version.unique) unique.add(fill)
     redundant.push(...version.redundant)
   }
@@ -732,6 +747,8 @@ function linkBasketsAcrossSources(
  *    the tolerance, quantity pooled); otherwise keep live, plus the history
  *    quantity live does not account for (`historyQuantityLiveMissed`),
  *    re-tagged `replay` so consolidation cannot use it to drop live fills.
+ *    A resized leftover with the same identity as a kept row is added to
+ *    that row (`foldResizedLeftovers`) so identity dedupe cannot drop it.
  *
  * There is no ±1-day "coverage" any more: the old rule let one rollup row
  * mark Nov 16–18 as covered and dropped 28 live fills, leaving a phantom −2
@@ -745,6 +762,7 @@ export function preferHistoryFillsWithDecisions(
 ): { fills: RithmicProtocolFill[]; decisions: HistoryPreferenceDecision[] } {
   const dropped = new Set<RithmicProtocolFill>()
   const replaced = new Map<RithmicProtocolFill, RithmicProtocolFill>()
+  const resizedLeftovers = new Set<RithmicProtocolFill>()
   const decisions: HistoryPreferenceDecision[] = []
 
   const plant = fills.filter(
@@ -809,8 +827,8 @@ export function preferHistoryFillsWithDecisions(
   for (const group of dateGroups.values()) {
     // Undated rows cannot be compared per trade date; keep both.
     if (!group.tradeDate) continue
-    const historyVersion = collapseSourceDate(group.history, toleranceMs)
-    const liveVersion = collapseSourceDate(group.live, toleranceMs)
+    const historyVersion = collapseSourceDate(group.history)
+    const liveVersion = collapseSourceDate(group.live)
     for (const fill of historyVersion.redundant) dropped.add(fill)
     for (const fill of liveVersion.redundant) dropped.add(fill)
     if (group.history.length === 0 || group.live.length === 0) continue
@@ -835,11 +853,14 @@ export function preferHistoryFillsWithDecisions(
         // The backfill joins the live version. Tag it `replay` so
         // consolidation sums it with the live pieces at its price instead of
         // letting it "cover" (drop) live fills it was found not to restate.
-        replaced.set(fill, {
+        const resize = left < fillQuantity(fill) - 1e-9
+        const backfill: RithmicProtocolFill = {
           ...fill,
           source: 'replay',
-          ...(left < fillQuantity(fill) - 1e-9 ? { fillSize: left } : {}),
-        })
+          ...(resize ? { fillSize: left } : {}),
+        }
+        replaced.set(fill, backfill)
+        if (resize) resizedLeftovers.add(backfill)
       }
     }
     const first = group.history[0]
@@ -853,12 +874,50 @@ export function preferHistoryFillsWithDecisions(
       historyBackfilled: backfilled,
     })
   }
-  return {
-    fills: fills
-      .filter((fill) => !dropped.has(fill))
-      .map((fill) => replaced.get(fill) ?? fill),
-    decisions,
+  const kept = fills
+    .filter((fill) => !dropped.has(fill))
+    .map((fill) => replaced.get(fill) ?? fill)
+  return { fills: foldResizedLeftovers(kept, resizedLeftovers), decisions }
+}
+
+/**
+ * A resized leftover (history quantity live never saw) can take the exact
+ * identity of a kept row: a rollup carries the order's last fill id, live
+ * usually has that last piece, and the leftover can come out at the same
+ * size. `dedupeFills` would then keep only one of them and lose the
+ * leftover. Add the leftover's quantity to the kept row instead (on a copy).
+ * Every kept row with that identity gets the same enlarged copy, so a
+ * re-delivery of it is still dropped by `dedupeFills` and counted there.
+ */
+function foldResizedLeftovers(
+  fills: RithmicProtocolFill[],
+  leftovers: Set<RithmicProtocolFill>,
+): RithmicProtocolFill[] {
+  if (leftovers.size === 0) return fills
+  const byKey = new Map<string, RithmicProtocolFill[]>()
+  for (const fill of fills) {
+    const key = fillIdentityKey(fill)
+    const list = byKey.get(key) ?? []
+    list.push(fill)
+    byKey.set(key, list)
   }
+  const gone = new Set<RithmicProtocolFill>()
+  const enlarged = new Map<RithmicProtocolFill, RithmicProtocolFill>()
+  for (const rows of byKey.values()) {
+    const guests = rows.filter((fill) => leftovers.has(fill))
+    if (guests.length === 0) continue
+    let hosts = rows.filter((fill) => !leftovers.has(fill))
+    if (hosts.length === 0) {
+      if (guests.length === 1) continue
+      hosts = [guests.shift()!]
+    }
+    const fillSize = fillQuantity(hosts[0]) + totalSize(guests)
+    for (const fill of guests) gone.add(fill)
+    for (const fill of hosts) enlarged.set(fill, { ...fill, fillSize })
+  }
+  return fills
+    .filter((fill) => !gone.has(fill))
+    .map((fill) => enlarged.get(fill) ?? fill)
 }
 
 export function preferHistoryFills(
@@ -924,9 +983,6 @@ export function sessionCarryOvers(fills: RithmicProtocolFill[]): SessionCarry[] 
   }
   return carries
 }
-
-/** Pieces of one order land within this window of each other in one source. */
-export const RITHMIC_PROTOCOL_ORDER_PIECE_WINDOW_MS = 2 * 1000
 
 function orderGroupKey(fill: RithmicProtocolFill): string {
   const symbol = (fill.symbol ?? '').trim().toUpperCase()
