@@ -87,6 +87,9 @@ export function rithmicProtocolFillPairKey(
  */
 export const RITHMIC_PROTOCOL_TIMESTAMP_TOLERANCE_MS = 2 * 60 * 1000
 
+/** Pieces of one order land within this window of each other in one source. */
+export const RITHMIC_PROTOCOL_ORDER_PIECE_WINDOW_MS = 2 * 1000
+
 function parseIdentityTime(value: string | null | undefined): number | null {
   if (!value) return null
   const ms = Date.parse(value)
@@ -252,11 +255,6 @@ export function markFillSource(
   return fills.map((fill) => ({ ...fill, source }))
 }
 
-function utcDayFromSsboe(ssboe: number): string {
-  const at = new Date(ssboe * 1000)
-  return `${at.getUTCFullYear()}${String(at.getUTCMonth() + 1).padStart(2, '0')}${String(at.getUTCDate()).padStart(2, '0')}`
-}
-
 function fillClockMs(fill: RithmicProtocolFill): number | null {
   const day = fillDayKey(fill)
   if (!/^\d{8}$/.test(day)) return null
@@ -290,136 +288,741 @@ function sourceTimestampMs(fill: RithmicProtocolFill): number | null {
   return fillClockMs(fill)
 }
 
-function historyCoverageDays(fill: RithmicProtocolFill): string[] {
-  const days = new Set<string>()
-  if (fill.fillDate) {
-    const date = fill.fillDate.replace(/-/g, '')
-    if (/^\d{8}$/.test(date)) days.add(date)
-  }
-  if (typeof fill.ssboe === 'number' && fill.ssboe > 0) {
-    days.add(utcDayFromSsboe(fill.ssboe))
-  }
-  const fallback = fillDayKey(fill)
-  if (fallback) days.add(fallback)
-  return [...days]
-}
-
-function neighborDays(day: string): string[] {
-  if (!/^\d{8}$/.test(day)) return day ? [day] : []
-  const year = Number(day.slice(0, 4))
-  const month = Number(day.slice(4, 6))
-  const date = Number(day.slice(6, 8))
-  const center = Date.UTC(year, month - 1, date)
-  const out: string[] = []
-  for (const offset of [-1, 0, 1]) {
-    const at = new Date(center + offset * DAY_MS)
-    out.push(
-      `${at.getUTCFullYear()}${String(at.getUTCMonth() + 1).padStart(2, '0')}${String(at.getUTCDate()).padStart(2, '0')}`,
-    )
-  }
-  return out
-}
-
-const DAY_MS = 24 * 60 * 60 * 1000
+const CHICAGO_PARTS = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/Chicago',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  hourCycle: 'h23',
+})
 
 /**
- * ShowFillHistory is the settled record; ReplayExecutions (and order-history
- * marked as replay) only fill days history did not cover, plus the tail after
- * that day's newest history fill. Mixing both for the same period
- * double-counted executions on Lucid: Replay can split one history fill into
- * partials under different fill ids (history 1163441 ×5 vs replay 1163440 ×2
- * + 1163441 ×3), omit `fill_date`, and stamp a different time — so the
- * fingerprint dedupe kept both, FIFO saw extra contracts, and an open lot
- * carried into the next session as a phantom overnight trade.
+ * CME Globex trade date for an instant: the Chicago calendar day, rolled to
+ * the next day at 17:00 CT, and weekend sessions (Fri 17:00 CT onward,
+ * Sunday evening open) rolled to Monday. Matches the plant's `fill_date` on
+ * ordinary sessions.
  *
- * Per account, a replay fill is dropped when:
- * - history has the same canonical fill id + symbol within a day of it, or
- * - it falls on a day history already covers and is at or before that day's
- *   newest history fill (+ jitter tolerance).
- * Replay (and order-history marked as replay) on days history did not cover
- * is kept, even when it is earlier than the global newest history fill —
- * otherwise an empty later ShowFillHistory window can never be filled from
- * order-history once an earlier window returned rows.
- * Accounts with no history fills keep every replay fill.
+ * Limitation: there is no exchange holiday calendar (`cme-session.ts` only
+ * knows the weekly close), so a holiday session (e.g. Thanksgiving) is dated
+ * the holiday instead of the next business day it clears on, and non-CME
+ * venues (Eurex) roll at the wrong hour. Only the unbasketed per-date rule
+ * and session-carry logging depend on this date; basketed orders are matched
+ * by basket, not trade date.
  */
+export function cmeTradeDateFromMs(ms: number): string {
+  const parts = Object.fromEntries(
+    CHICAGO_PARTS.formatToParts(new Date(ms)).map((part) => [part.type, part.value]),
+  ) as Record<string, string>
+  const day = new Date(
+    Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day)),
+  )
+  if (Number(parts.hour) >= 17) day.setUTCDate(day.getUTCDate() + 1)
+  const weekday = day.getUTCDay()
+  if (weekday === 6) day.setUTCDate(day.getUTCDate() + 2)
+  else if (weekday === 0) day.setUTCDate(day.getUTCDate() + 1)
+  return `${day.getUTCFullYear()}${String(day.getUTCMonth() + 1).padStart(2, '0')}${String(day.getUTCDate()).padStart(2, '0')}`
+}
+
+/**
+ * Trade date used to compare history with live fills. Prefer the plant's
+ * `fill_date` (already the exchange trade date). Replay rows can omit it, so
+ * fall back to the CME session of `ssboe` rather than a UTC calendar day —
+ * that is what kept history and replay on the same key without the old ±1
+ * day widening.
+ */
+export function fillTradeDateKey(fill: RithmicProtocolFill): string {
+  if (fill.fillDate) {
+    const date = fill.fillDate.replace(/-/g, '')
+    if (/^\d{8}$/.test(date)) return date
+  }
+  if (typeof fill.ssboe === 'number' && fill.ssboe > 0) {
+    const usecs = typeof fill.usecs === 'number' ? fill.usecs : 0
+    return cmeTradeDateFromMs(fill.ssboe * 1000 + Math.floor(usecs / 1000))
+  }
+  return ''
+}
+
+function bookDateKey(fill: RithmicProtocolFill, tradeDate: string): string {
+  const symbol = (fill.symbol ?? '').trim().toUpperCase()
+  return `${fill.accountId || 'unknown'}|${symbol}|${tradeDate}`
+}
+
+function sidePriceKey(fill: RithmicProtocolFill): string {
+  const price = Number(fill.fillPrice || fill.avgFillPrice || 0)
+  return `${identitySide(fill.transactionType)}|${price}`
+}
+
+/**
+ * True when every live fill is restated by history on the same side and price
+ * within `toleranceMs` (or when either side lacks a clock). Quantity is pooled
+ * across history rows in that window, so an aggregated history row equals
+ * split live pieces and split history pieces equal one aggregated live row —
+ * but only at the same price, so a rollup priced at one leg never hides the
+ * other leg.
+ */
+function historyRestatesLive(
+  history: RithmicProtocolFill[],
+  live: RithmicProtocolFill[],
+  toleranceMs: number,
+): boolean {
+  const capacity = history.map((fill) => ({
+    key: sidePriceKey(fill),
+    ms: sourceTimestampMs(fill),
+    left: Math.abs(Number(fill.fillSize) || 0),
+  }))
+  const ordered = [...live].sort(
+    (a, b) => (sourceTimestampMs(a) ?? 0) - (sourceTimestampMs(b) ?? 0),
+  )
+  for (const fill of ordered) {
+    const key = sidePriceKey(fill)
+    const ms = sourceTimestampMs(fill)
+    let needed = Math.abs(Number(fill.fillSize) || 0)
+    const candidates = capacity
+      .map((slot) => ({
+        slot,
+        delta: ms == null || slot.ms == null ? 0 : Math.abs(ms - slot.ms),
+      }))
+      .filter(({ slot, delta }) => slot.key === key && slot.left > 1e-9 && delta <= toleranceMs)
+      .sort((left, right) => left.delta - right.delta)
+    for (const { slot } of candidates) {
+      if (needed <= 1e-9) break
+      const take = Math.min(slot.left, needed)
+      slot.left -= take
+      needed -= take
+    }
+    if (needed > 1e-9) return false
+  }
+  return true
+}
+
+function fillQuantity(fill: RithmicProtocolFill): number {
+  return Math.abs(Number(fill.fillSize) || 0)
+}
+
+/**
+ * Live won a trade date: how much of each history fill live does not account
+ * for. History and live are matched on side and time (within `toleranceMs`,
+ * or when either side lacks a clock) with quantities pooled and price
+ * ignored, so a rollup priced at one leg still matches both live legs. Pairs
+ * are taken closest in time first. Only the matched quantity is redundant;
+ * the rest is an execution live never saw.
+ */
+function historyQuantityLiveMissed(
+  history: RithmicProtocolFill[],
+  live: RithmicProtocolFill[],
+  toleranceMs: number,
+): number[] {
+  const historyLeft = history.map(fillQuantity)
+  const liveLeft = live.map(fillQuantity)
+  const pairs: Array<{ h: number; l: number; delta: number }> = []
+  history.forEach((historyFill, h) => {
+    const side = identitySide(historyFill.transactionType)
+    const historyMs = sourceTimestampMs(historyFill)
+    live.forEach((liveFill, l) => {
+      if (identitySide(liveFill.transactionType) !== side) return
+      const liveMs = sourceTimestampMs(liveFill)
+      const delta =
+        historyMs == null || liveMs == null ? 0 : Math.abs(historyMs - liveMs)
+      if (delta <= toleranceMs) pairs.push({ h, l, delta })
+    })
+  })
+  pairs.sort((a, b) => a.delta - b.delta || a.h - b.h || a.l - b.l)
+  for (const { h, l } of pairs) {
+    const take = Math.min(historyLeft[h], liveLeft[l])
+    if (take <= 1e-9) continue
+    historyLeft[h] -= take
+    liveLeft[l] -= take
+  }
+  return historyLeft
+}
+
+export type HistoryPreferenceDecision = {
+  accountId: string
+  symbol: string
+  tradeDate: string
+  /**
+   * Set when the decision was made per order (shared `basketId`). Baskets
+   * the two sources reported for one order (linked by a shared fill id) are
+   * joined with `,`.
+   */
+  basketId?: string
+  historyFills: number
+  liveFills: number
+  /** Which source's rows were kept. */
+  kept: 'history' | 'live'
+  /**
+   * Date fallback, live won: history fills kept (whole or as the leftover
+   * quantity) because live does not account for them. They are returned
+   * tagged `replay`, as part of the live version.
+   */
+  historyBackfilled: number
+}
+
+function totalSize(fills: RithmicProtocolFill[]): number {
+  return fills.reduce((sum, fill) => sum + fillQuantity(fill), 0)
+}
+
+function basketIdOf(fill: RithmicProtocolFill): string {
+  return (fill.basketId ?? '').trim()
+}
+
+/**
+ * Rows of one source that restate each other, or null. A candidate must carry
+ * the order's last fill id and share it with another row of the same source:
+ * fill ids are unique per execution, so two rows with one fill id and
+ * different sizes can only be a restatement (a rollup next to its pieces).
+ *
+ * - Size equals the other rows' sum (and there are at least two): the
+ *   candidate is a rollup of pieces this source also has. Drop the rollup;
+ *   the pieces carry the real prices.
+ * - Size is larger than the other rows' sum: the candidate is the fuller
+ *   report and the rows next to it are only part of the order (live 11 ×2
+ *   next to the single piece 11 ×1). Drop those partial pieces.
+ *
+ * `neighborhoodMs` is set when the rows are a whole book-date rather than one
+ * basket (unbasketed rows). Nothing then ties the rows to one order, so
+ * "the other rows" are only the unbroken fill-id run ending at the
+ * candidate's id among rows within that window of it (the order piece
+ * window: pieces of one order in one source land within 2s). Pieces 10 + 11
+ * for rollup 11 collapse; 9 + 11 do not, and an unrelated order next to the
+ * run (8, or a later 12) neither makes up nor hides the sum
+ * (`findUnbasketedRestatement`). Failing the equal sum, the rollup is kept
+ * and only rows sharing its fill id are dropped.
+ */
+function findSourceRestatement(
+  rows: RithmicProtocolFill[],
+  neighborhoodMs?: number,
+): RithmicProtocolFill[] | null {
+  for (const candidate of rows) {
+    const id = numericFillId(candidate)
+    if (!Number.isFinite(id)) continue
+    if (neighborhoodMs != null) {
+      const restated = findUnbasketedRestatement(rows, candidate, id, neighborhoodMs)
+      if (restated) return restated
+      continue
+    }
+    const others = rows.filter((row) => row !== candidate)
+    if (others.length === 0) continue
+    // Equal to the largest other id means another row shares this fill id.
+    if (id !== Math.max(...others.map(numericFillId))) continue
+    const size = fillQuantity(candidate)
+    const othersSize = totalSize(others)
+    const equalSum = Math.abs(size - othersSize) <= 1e-9
+    if (equalSum && others.length < 2) {
+      // A rollup of one piece is that piece; leave it to identity dedupe.
+      continue
+    }
+    if (equalSum) return [candidate]
+    if (size > othersSize) return others
+  }
+  return null
+}
+
+/**
+ * Unbasketed restatement of `candidate` (fill id `id`), or null. The
+ * comparison set is the unbroken fill-id run ending at `id` among the other
+ * rows within `neighborhoodMs` of the candidate ({10, 11} for rollup 11):
+ * rows outside that run (a lower id past a gap, any higher id, a non-numeric
+ * id) are another order and neither block nor stand in for a piece.
+ *
+ * - The run must hold another row with the candidate's fill id.
+ * - At least two run rows summing to the candidate's size: drop the rollup.
+ * - Otherwise keep the rollup and drop only the rows sharing its fill id,
+ *   when it is larger than they are.
+ */
+function findUnbasketedRestatement(
+  rows: RithmicProtocolFill[],
+  candidate: RithmicProtocolFill,
+  id: number,
+  neighborhoodMs: number,
+): RithmicProtocolFill[] | null {
+  const candidateMs = sourceTimestampMs(candidate)
+  const nearby = rows.filter((row) => {
+    if (row === candidate) return false
+    const ms = sourceTimestampMs(row)
+    return candidateMs == null || ms == null || Math.abs(ms - candidateMs) <= neighborhoodMs
+  })
+  const sameId = nearby.filter((row) => numericFillId(row) === id)
+  if (sameId.length === 0) return null
+  const size = fillQuantity(candidate)
+  if (Number.isSafeInteger(id)) {
+    const ids = new Set(nearby.map(numericFillId).filter(Number.isSafeInteger))
+    let start = id
+    while (ids.has(start - 1)) start -= 1
+    const run = nearby.filter((row) => {
+      const rowId = numericFillId(row)
+      return Number.isSafeInteger(rowId) && rowId >= start && rowId <= id
+    })
+    if (run.length >= 2 && Math.abs(size - totalSize(run)) <= 1e-9) {
+      return [candidate]
+    }
+  }
+  return size > totalSize(sameId) ? sameId : null
+}
+
+/**
+ * One source's version of one order, ready to compare with the other source.
+ *
+ * `unique` drops exact re-deliveries (same identity) so they do not inflate
+ * the total; `dedupeFills` removes them from the output later. `redundant`
+ * are rows that restate this source's own rows (`findSourceRestatement`):
+ * a rollup next to all of its pieces, or partial pieces next to a fuller
+ * rollup. Order-history fallback rows share a tag with real executions
+ * (`replay` on one fetch path, `history` on another), so one bucket can hold
+ * both the rollup (11 ×2) and the pieces (10 ×1 + 11 ×1). Counting both
+ * doubles the order.
+ */
+function collapseSourceOrder(
+  fills: RithmicProtocolFill[],
+  neighborhoodMs?: number,
+): {
+  unique: RithmicProtocolFill[]
+  redundant: RithmicProtocolFill[]
+} {
+  const seen = new Set<string>()
+  let rows: RithmicProtocolFill[] = []
+  for (const fill of fills) {
+    const key = fillIdentityKey(fill)
+    if (seen.has(key)) continue
+    seen.add(key)
+    rows.push(fill)
+  }
+  const redundant: RithmicProtocolFill[] = []
+  for (;;) {
+    const restated = findSourceRestatement(rows, neighborhoodMs)
+    if (!restated) break
+    redundant.push(...restated)
+    const gone = new Set(restated)
+    rows = rows.filter((row) => !gone.has(row))
+  }
+  return { unique: rows, redundant }
+}
+
+/**
+ * Collapse one source's rows of a per-date group. Basketed rows collapse per
+ * basket and side, as in the per-order path. Unbasketed rows collapse per
+ * side over the book-date, comparing each row only with rows within the
+ * order piece window (`RITHMIC_PROTOCOL_ORDER_PIECE_WINDOW_MS`), since
+ * nothing else ties them to one order. The cross-source tolerance is for
+ * clock skew between sources and would take other orders for pieces.
+ */
+function collapseSourceDate(
+  fills: RithmicProtocolFill[],
+): { unique: RithmicProtocolFill[]; redundant: RithmicProtocolFill[] } {
+  const parts = new Map<string, RithmicProtocolFill[]>()
+  for (const fill of fills) {
+    const key = `${identitySide(fill.transactionType)}|${basketIdOf(fill)}`
+    const list = parts.get(key) ?? []
+    list.push(fill)
+    parts.set(key, list)
+  }
+  const unique = new Set<RithmicProtocolFill>()
+  const redundant: RithmicProtocolFill[] = []
+  for (const [key, part] of parts) {
+    const unbasketed = key.endsWith('|')
+    const version = collapseSourceOrder(
+      part,
+      unbasketed ? RITHMIC_PROTOCOL_ORDER_PIECE_WINDOW_MS : undefined,
+    )
+    for (const fill of version.unique) unique.add(fill)
+    redundant.push(...version.redundant)
+  }
+  // Keep the caller's order so matching stays deterministic.
+  return { unique: fills.filter((fill) => unique.has(fill)), redundant }
+}
+
+/**
+ * One order seen by both sources: keep the larger filled size (a partial
+ * report never wins), then the version with more pieces (real executions at
+ * real prices, not a rollup), then history (settled record). Inputs are the
+ * collapsed versions from `collapseSourceOrder`.
+ */
+function historyWinsOrder(
+  history: RithmicProtocolFill[],
+  live: RithmicProtocolFill[],
+): boolean {
+  const historySize = totalSize(history)
+  const liveSize = totalSize(live)
+  if (Math.abs(historySize - liveSize) > 1e-9) return historySize > liveSize
+  return history.length >= live.length
+}
+
+/**
+ * A basket id names one order across the whole session, so the order key
+ * (scope + basket id) carries no trade date: an order filled partly before
+ * the 16:00 CT break and partly after the 17:00 reopen, or one whose rows
+ * disagree on the trade date (a replay row without `fill_date` on a holiday
+ * session), stays one order.
+ */
+function orderScope(fill: RithmicProtocolFill): string {
+  const symbol = (fill.symbol ?? '').trim().toUpperCase()
+  return `${fill.accountId || 'unknown'}|${symbol}|${identitySide(fill.transactionType)}`
+}
+
+type OrderBasket = {
+  basketId: string
+  /** Account, symbol and side. */
+  scope: string
+  fills: RithmicProtocolFill[]
+}
+
+/**
+ * Basket ids are not unique forever. Fills of one key more than this far
+ * apart (after sorting by time) are treated as separate orders.
+ */
+export const RITHMIC_PROTOCOL_BASKET_REUSE_GAP_MS = 72 * 60 * 60 * 1000
+
+function splitReusedBasket(fills: RithmicProtocolFill[]): RithmicProtocolFill[][] {
+  const timed = fills
+    .map((fill) => ({ fill, ms: sourceTimestampMs(fill) }))
+    .filter((row): row is { fill: RithmicProtocolFill; ms: number } => row.ms != null)
+    .sort((a, b) => a.ms - b.ms)
+  const segments: RithmicProtocolFill[][] = []
+  let lastMs = Number.NEGATIVE_INFINITY
+  for (const { fill, ms } of timed) {
+    if (segments.length === 0 || ms - lastMs > RITHMIC_PROTOCOL_BASKET_REUSE_GAP_MS) {
+      segments.push([])
+    }
+    segments[segments.length - 1].push(fill)
+    lastMs = ms
+  }
+  // Rows without any clock cannot be placed in time; keep them with the
+  // first occurrence of the basket.
+  const untimed = fills.filter((fill) => sourceTimestampMs(fill) == null)
+  if (untimed.length > 0) {
+    if (segments.length === 0) segments.push([])
+    segments[0].push(...untimed)
+  }
+  return segments
+}
+
+/**
+ * The two sources normally report one order under one basket id. If they
+ * ever disagree, both versions would be single-source orders and both kept.
+ * Link baskets whose rows from different sources share a canonical fill id
+ * (same account, symbol and side — part of the basket key — and within
+ * `toleranceMs`), so the order is still compared as one.
+ */
+function linkBasketsAcrossSources(
+  baskets: Map<string, OrderBasket>,
+  toleranceMs: number,
+): Array<{ basketIds: string[]; fills: RithmicProtocolFill[] }> {
+  const parent = new Map<string, string>()
+  for (const key of baskets.keys()) parent.set(key, key)
+  const root = (key: string): string => {
+    let at = key
+    while (parent.get(at) !== at) at = parent.get(at)!
+    parent.set(key, at)
+    return at
+  }
+
+  const byFill = new Map<
+    string,
+    Array<{ basketKey: string; source: RithmicProtocolFill['source']; ms: number | null }>
+  >()
+  for (const [basketKey, basket] of baskets) {
+    for (const fill of basket.fills) {
+      const fillId = canonicalRithmicFillId(fill.fillId)
+      if (!fillId) continue
+      const key = `${basket.scope}|${fillId}`
+      const list = byFill.get(key) ?? []
+      list.push({ basketKey, source: fill.source, ms: sourceTimestampMs(fill) })
+      byFill.set(key, list)
+    }
+  }
+  for (const rows of byFill.values()) {
+    for (let i = 0; i < rows.length; i += 1) {
+      for (let j = i + 1; j < rows.length; j += 1) {
+        const a = rows[i]
+        const b = rows[j]
+        if (a.basketKey === b.basketKey || a.source === b.source) continue
+        if (a.ms == null || b.ms == null || Math.abs(a.ms - b.ms) > toleranceMs) continue
+        const ra = root(a.basketKey)
+        const rb = root(b.basketKey)
+        if (ra !== rb) parent.set(rb, ra)
+      }
+    }
+  }
+
+  const linked = new Map<string, { basketIds: string[]; fills: RithmicProtocolFill[] }>()
+  for (const [key, basket] of baskets) {
+    const group = linked.get(root(key)) ?? { basketIds: [], fills: [] }
+    if (!group.basketIds.includes(basket.basketId)) group.basketIds.push(basket.basketId)
+    group.fills.push(...basket.fills)
+    linked.set(root(key), group)
+  }
+  return [...linked.values()]
+}
+
+/**
+ * Reconcile ShowFillHistory (`source: 'history'`) with live executions
+ * (`source: 'replay'`) without dropping a real execution or counting one
+ * twice.
+ *
+ * Either source can be a rollup. Order-history fallback rows are tagged
+ * `history` or `replay` depending on the fetch path, and they report one row
+ * per order: the last fill id, the order's total size, one price. Example
+ * (LFF050 Nov 17): order-history `1232782` SELL ×2 @ 26830.50 for an order
+ * replay had as `1232781` ×1 @ 26830.75 + `1232782` ×1 @ 26830.50. On older
+ * Phidias/Bulenox ledgers it is the reverse: history has the split pieces and
+ * `replay` is the rollup.
+ *
+ * 1. Per order (same account, symbol, side and `basketId`; split only when
+ *    fills sit more than 72 h apart, for a reused basket id; baskets the two
+ *    sources gave one order are linked by a shared fill id): first collapse
+ *    each source's own restatements (`collapseSourceOrder`). When both
+ *    sources have the order, keep the larger filled size, then the source
+ *    with more pieces — the real executions at their real prices — then
+ *    history (settled record). Orders seen by only one source are always
+ *    kept. Every prod ledger row carries a basketId, and on every order both
+ *    sources had, side and total size agreed (2026-11-24 fleet scan, 232
+ *    orders).
+ * 2. A book-date (account, symbol, CME trade date) where either source has a
+ *    row without a basketId goes wholly through a per-trade-date rule, so an
+ *    unbasketed rollup is compared with the basketed pieces it restates
+ *    instead of both being kept. Each source is collapsed first
+ *    (`collapseSourceDate`), and only its unique rows are compared. Keep
+ *    history when it restates every live fill (same side and price within
+ *    the tolerance, quantity pooled); otherwise keep live, plus the history
+ *    quantity live does not account for (`historyQuantityLiveMissed`),
+ *    re-tagged `replay` so consolidation cannot use it to drop live fills.
+ *    A resized leftover with the same identity as a kept row is added to
+ *    that row (`foldResizedLeftovers`) so identity dedupe cannot drop it.
+ *
+ * There is no ±1-day "coverage" any more: the old rule let one rollup row
+ * mark Nov 16–18 as covered and dropped 28 live fills, leaving a phantom −2
+ * short that mis-paired every later trade.
+ *
+ * Rows that are neither `history` nor `replay` (manual) pass through.
+ */
+export function preferHistoryFillsWithDecisions(
+  fills: RithmicProtocolFill[],
+  toleranceMs = RITHMIC_PROTOCOL_TIMESTAMP_TOLERANCE_MS,
+): { fills: RithmicProtocolFill[]; decisions: HistoryPreferenceDecision[] } {
+  const dropped = new Set<RithmicProtocolFill>()
+  const replaced = new Map<RithmicProtocolFill, RithmicProtocolFill>()
+  const resizedLeftovers = new Set<RithmicProtocolFill>()
+  const decisions: HistoryPreferenceDecision[] = []
+
+  const plant = fills.filter(
+    (fill) => fill.source === 'replay' || fill.source === 'history',
+  )
+  const tradeDates = new Map(plant.map((fill) => [fill, fillTradeDateKey(fill)]))
+  const unbasketedBookDates = new Set<string>()
+  for (const fill of plant) {
+    if (!basketIdOf(fill)) {
+      unbasketedBookDates.add(bookDateKey(fill, tradeDates.get(fill)!))
+    }
+  }
+
+  const baskets = new Map<string, OrderBasket>()
+  const dateGroups = new Map<
+    string,
+    { history: RithmicProtocolFill[]; live: RithmicProtocolFill[]; tradeDate: string }
+  >()
+  for (const fill of plant) {
+    const tradeDate = tradeDates.get(fill)!
+    const bookDate = bookDateKey(fill, tradeDate)
+    const basketId = basketIdOf(fill)
+    if (basketId && !unbasketedBookDates.has(bookDate)) {
+      const scope = orderScope(fill)
+      const key = `${scope}|${basketId}`
+      const basket = baskets.get(key) ?? { basketId, scope, fills: [] }
+      basket.fills.push(fill)
+      baskets.set(key, basket)
+      continue
+    }
+    const group = dateGroups.get(bookDate) ?? { history: [], live: [], tradeDate }
+    if (fill.source === 'replay') group.live.push(fill)
+    else group.history.push(fill)
+    dateGroups.set(bookDate, group)
+  }
+
+  for (const { basketIds, fills: basketFills } of linkBasketsAcrossSources(baskets, toleranceMs)) {
+    for (const order of splitReusedBasket(basketFills)) {
+      const history = order.filter((fill) => fill.source === 'history')
+      const live = order.filter((fill) => fill.source === 'replay')
+      const historyVersion = collapseSourceOrder(history)
+      const liveVersion = collapseSourceOrder(live)
+      for (const fill of historyVersion.redundant) dropped.add(fill)
+      for (const fill of liveVersion.redundant) dropped.add(fill)
+      if (history.length === 0 || live.length === 0) continue
+      const keepHistory = historyWinsOrder(historyVersion.unique, liveVersion.unique)
+      for (const fill of keepHistory ? live : history) dropped.add(fill)
+      const first = order[0]
+      decisions.push({
+        accountId: first.accountId || 'unknown',
+        symbol: (first.symbol ?? '').trim().toUpperCase(),
+        tradeDate: tradeDates.get(first) ?? '',
+        basketId: basketIds.join(','),
+        historyFills: history.length,
+        liveFills: live.length,
+        kept: keepHistory ? 'history' : 'live',
+        historyBackfilled: 0,
+      })
+    }
+  }
+
+  for (const group of dateGroups.values()) {
+    // Undated rows cannot be compared per trade date; keep both.
+    if (!group.tradeDate) continue
+    const historyVersion = collapseSourceDate(group.history)
+    const liveVersion = collapseSourceDate(group.live)
+    for (const fill of historyVersion.redundant) dropped.add(fill)
+    for (const fill of liveVersion.redundant) dropped.add(fill)
+    if (group.history.length === 0 || group.live.length === 0) continue
+    const history = historyVersion.unique
+    const live = liveVersion.unique
+    const keepHistory = historyRestatesLive(history, live, toleranceMs)
+    let backfilled = 0
+    if (keepHistory) {
+      for (const fill of group.live) dropped.add(fill)
+    } else {
+      const missed = historyQuantityLiveMissed(history, live, toleranceMs)
+      const leftover = new Map(history.map((fill, index) => [fill, missed[index]]))
+      for (const fill of group.history) {
+        // Re-deliveries and rollups are not in `leftover`: their quantity is
+        // already counted by the row they restate.
+        const left = leftover.get(fill) ?? 0
+        if (left <= 1e-9) {
+          dropped.add(fill)
+          continue
+        }
+        backfilled += 1
+        // The backfill joins the live version. Tag it `replay` so
+        // consolidation sums it with the live pieces at its price instead of
+        // letting it "cover" (drop) live fills it was found not to restate.
+        const resize = left < fillQuantity(fill) - 1e-9
+        const backfill: RithmicProtocolFill = {
+          ...fill,
+          source: 'replay',
+          ...(resize ? { fillSize: left } : {}),
+        }
+        replaced.set(fill, backfill)
+        if (resize) resizedLeftovers.add(backfill)
+      }
+    }
+    const first = group.history[0]
+    decisions.push({
+      accountId: first.accountId || 'unknown',
+      symbol: (first.symbol ?? '').trim().toUpperCase(),
+      tradeDate: group.tradeDate,
+      historyFills: group.history.length,
+      liveFills: group.live.length,
+      kept: keepHistory ? 'history' : 'live',
+      historyBackfilled: backfilled,
+    })
+  }
+  const kept = fills
+    .filter((fill) => !dropped.has(fill))
+    .map((fill) => replaced.get(fill) ?? fill)
+  return { fills: foldResizedLeftovers(kept, resizedLeftovers), decisions }
+}
+
+/**
+ * A resized leftover (history quantity live never saw) can take the exact
+ * identity of a kept row: a rollup carries the order's last fill id, live
+ * usually has that last piece, and the leftover can come out at the same
+ * size. `dedupeFills` would then keep only one of them and lose the
+ * leftover. Add the leftover's quantity to the kept row instead (on a copy).
+ * Every kept row with that identity gets the same enlarged copy, so a
+ * re-delivery of it is still dropped by `dedupeFills` and counted there.
+ */
+function foldResizedLeftovers(
+  fills: RithmicProtocolFill[],
+  leftovers: Set<RithmicProtocolFill>,
+): RithmicProtocolFill[] {
+  if (leftovers.size === 0) return fills
+  const byKey = new Map<string, RithmicProtocolFill[]>()
+  for (const fill of fills) {
+    const key = fillIdentityKey(fill)
+    const list = byKey.get(key) ?? []
+    list.push(fill)
+    byKey.set(key, list)
+  }
+  const gone = new Set<RithmicProtocolFill>()
+  const enlarged = new Map<RithmicProtocolFill, RithmicProtocolFill>()
+  for (const rows of byKey.values()) {
+    const guests = rows.filter((fill) => leftovers.has(fill))
+    if (guests.length === 0) continue
+    let hosts = rows.filter((fill) => !leftovers.has(fill))
+    if (hosts.length === 0) {
+      if (guests.length === 1) continue
+      hosts = [guests.shift()!]
+    }
+    const fillSize = fillQuantity(hosts[0]) + totalSize(guests)
+    for (const fill of guests) gone.add(fill)
+    for (const fill of hosts) enlarged.set(fill, { ...fill, fillSize })
+  }
+  return fills
+    .filter((fill) => !gone.has(fill))
+    .map((fill) => enlarged.get(fill) ?? fill)
+}
+
 export function preferHistoryFills(
   fills: RithmicProtocolFill[],
   toleranceMs = RITHMIC_PROTOCOL_TIMESTAMP_TOLERANCE_MS,
 ): RithmicProtocolFill[] {
-  const historyByAccount = new Map<
-    string,
-    {
-      idTimes: Map<string, number[]>
-      days: Set<string>
-      newestByDay: Map<string, number>
-    }
-  >()
-  for (const fill of fills) {
-    if (fill.source !== 'history') continue
-    const accountId = fill.accountId || 'unknown'
-    const entry = historyByAccount.get(accountId) ?? {
-      idTimes: new Map<string, number[]>(),
-      days: new Set<string>(),
-      newestByDay: new Map<string, number>(),
-    }
-    const ts = sourceTimestampMs(fill)
-    const fillId = canonicalRithmicFillId(fill.fillId)
-    if (fillId) {
-      const key = `${fillId}|${(fill.symbol ?? '').trim().toUpperCase()}`
-      const times = entry.idTimes.get(key) ?? []
-      times.push(ts ?? Number.NaN)
-      entry.idTimes.set(key, times)
-    }
-    for (const day of historyCoverageDays(fill)) {
-      entry.days.add(day)
-      if (ts != null) {
-        const newest = entry.newestByDay.get(day) ?? Number.NEGATIVE_INFINITY
-        if (ts > newest) entry.newestByDay.set(day, ts)
-      }
-    }
-    historyByAccount.set(accountId, entry)
-  }
-  if (historyByAccount.size === 0) return fills
-
-  return fills.filter((fill) => {
-    if (fill.source !== 'replay') return true
-    const history = historyByAccount.get(fill.accountId || 'unknown')
-    if (!history) return true
-    const ts = sourceTimestampMs(fill)
-    const fillId = canonicalRithmicFillId(fill.fillId)
-    if (fillId) {
-      const times = history.idTimes.get(
-        `${fillId}|${(fill.symbol ?? '').trim().toUpperCase()}`,
-      )
-      if (
-        times?.some(
-          (historyTs) =>
-            ts == null || Number.isNaN(historyTs) || Math.abs(historyTs - ts) <= DAY_MS,
-        )
-      ) {
-        return false
-      }
-    }
-    const coveredDays = historyCoverageDays(fill).flatMap((day) =>
-      neighborDays(day).filter((candidate) => history.days.has(candidate)),
-    )
-    if (coveredDays.length === 0) return true
-    let newestOnCovered = Number.NEGATIVE_INFINITY
-    for (const day of coveredDays) {
-      const newest = history.newestByDay.get(day)
-      if (newest != null && newest > newestOnCovered) newestOnCovered = newest
-    }
-    if (ts != null && Number.isFinite(newestOnCovered)) {
-      return ts > newestOnCovered + toleranceMs
-    }
-    // History covers the day but neither side has a clock — drop the replay
-    // twin rather than double-count.
-    return false
-  })
+  return preferHistoryFillsWithDecisions(fills, toleranceMs).fills
 }
 
-/** Pieces of one order land within this window of each other in one source. */
-export const RITHMIC_PROTOCOL_ORDER_PIECE_WINDOW_MS = 2 * 1000
+export type SessionCarry = {
+  accountId: string
+  symbol: string
+  /** Trade date whose session ended with this open position. */
+  tradeDate: string
+  net: number
+}
+
+/**
+ * Positions still open at the end of a trade date, per account + symbol.
+ * A real swing hold shows up here too; callers log it so a phantom
+ * overnight lot (a missing or double-counted fill) is visible in sync logs
+ * instead of silently mis-pairing the next session.
+ */
+export function sessionCarryOvers(fills: RithmicProtocolFill[]): SessionCarry[] {
+  const books = new Map<string, RithmicProtocolFill[]>()
+  for (const fill of fills) {
+    if (fill.source === 'manual-retired') continue
+    const key = `${fill.accountId || 'unknown'}|${(fill.symbol ?? '').trim().toUpperCase()}`
+    const list = books.get(key) ?? []
+    list.push(fill)
+    books.set(key, list)
+  }
+  const carries: SessionCarry[] = []
+  for (const book of books.values()) {
+    const sorted = [...book].sort(
+      (a, b) => (sourceTimestampMs(a) ?? 0) - (sourceTimestampMs(b) ?? 0),
+    )
+    let net = 0
+    let current = ''
+    for (const fill of sorted) {
+      const tradeDate = fillTradeDateKey(fill)
+      if (current && tradeDate !== current && Math.abs(net) > 1e-9) {
+        carries.push({
+          accountId: fill.accountId || 'unknown',
+          symbol: (fill.symbol ?? '').trim().toUpperCase(),
+          tradeDate: current,
+          net,
+        })
+      }
+      current = tradeDate
+      net += identitySide(fill.transactionType) === 'B'
+        ? Math.abs(Number(fill.fillSize) || 0)
+        : -Math.abs(Number(fill.fillSize) || 0)
+    }
+    if (current && Math.abs(net) > 1e-9) {
+      carries.push({
+        accountId: sorted[0].accountId || 'unknown',
+        symbol: (sorted[0].symbol ?? '').trim().toUpperCase(),
+        tradeDate: current,
+        net,
+      })
+    }
+  }
+  return carries
+}
 
 function orderGroupKey(fill: RithmicProtocolFill): string {
   const symbol = (fill.symbol ?? '').trim().toUpperCase()
@@ -478,6 +1081,29 @@ function mergeCluster(cluster: OrderCluster): RithmicProtocolFill {
 }
 
 /**
+ * Whether two clusters may be the same order. Basketed rows were already
+ * reconciled per order by `preferHistoryFillsWithDecisions`, so clusters
+ * whose baskets are all known and disjoint are different orders — even at the
+ * same price a few seconds apart. A cluster with an unbasketed row could be
+ * anything.
+ */
+function clustersMayBeSameOrder(a: OrderCluster, b: OrderCluster): boolean {
+  const left = new Set<string>()
+  for (const fill of a.fills) {
+    const basketId = basketIdOf(fill)
+    if (!basketId) return true
+    left.add(basketId)
+  }
+  let shared = false
+  for (const fill of b.fills) {
+    const basketId = basketIdOf(fill)
+    if (!basketId) return true
+    if (left.has(basketId)) shared = true
+  }
+  return shared
+}
+
+/**
  * Rithmic reports one order differently per source: ShowFillHistory can roll
  * the partials up under the last fill id with the order's total size
  * (1245663 ×5), while ReplayExecutions sends each piece (1245660 ×1 …
@@ -487,7 +1113,11 @@ function mergeCluster(cluster: OrderCluster): RithmicProtocolFill {
  * Per account + symbol + side + price, pieces within ±2s (or sharing a
  * basketId) are one order. When history has the order, only history's volume
  * counts and every replay piece is dropped; within a source, pieces merge
- * into one fill with the summed size and the largest fill id.
+ * into one fill with the summed size and the largest fill id. A history
+ * cluster covers a replay cluster only when they share a basketId or either
+ * has a row without one — distinct baskets were already reconciled per
+ * order, and the per-order rule may have kept live for one and history for
+ * the next.
  *
  * Run after `dedupeFills` so an exact re-delivery is not summed twice.
  */
@@ -520,7 +1150,8 @@ export function consolidateOrderFills(
       const coveredByHistory = historyClusters.some(
         (h) =>
           cluster.startMs <= h.endMs + crossSourceToleranceMs &&
-          cluster.endMs >= h.startMs - crossSourceToleranceMs,
+          cluster.endMs >= h.startMs - crossSourceToleranceMs &&
+          clustersMayBeSameOrder(cluster, h),
       )
       if (!coveredByHistory) out.push(mergeCluster(cluster))
     }

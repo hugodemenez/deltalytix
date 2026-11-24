@@ -65,19 +65,31 @@ const replay = markFillSource(
 )
 
 describe('Lucid history vs replay', () => {
-  it('drops replay twins and partial splits when history covers the period', () => {
+  it('keeps the live partials when history rolls them up at one leg\'s price', () => {
+    // History prices the 5-lot exit at 7834; live has 2 @ 7834.25 + 3 @ 7834.
+    // Live executions are the source of truth, so history for the date goes.
     const fills = dedupeFills(preferHistoryFills([...history, ...replay]))
-    expect(fills).toHaveLength(2)
-    expect(fills.every((f) => f.source === 'history')).toBe(true)
+    expect(fills).toHaveLength(3)
+    expect(fills.every((f) => f.source === 'replay')).toBe(true)
   })
 
   it('keeps FIFO flat: no open lot left to carry into the next session', () => {
     const fills = dedupeFills(preferHistoryFills([...history, ...replay]))
     const { trades, openSkipped } = buildTradesFromRithmicFills(fills, 'u1', tickBySymbol)
     expect(openSkipped).toBe(0)
+    expect(trades.reduce((sum, trade) => sum + trade.quantity, 0)).toBe(5)
+    expect(trades.every((trade) => trade.side === 'Long')).toBe(true)
+  })
+
+  it('keeps history when it restates the live partials at the same price', () => {
+    const samePrice = replay.map((row) => ({ ...row, fillPrice: row.fillPrice === 7834.25 ? 7834 : row.fillPrice }))
+    const fills = dedupeFills(preferHistoryFills([...history, ...samePrice]))
+    expect(fills).toHaveLength(2)
+    expect(fills.every((f) => f.source === 'history')).toBe(true)
+    const { trades, openSkipped } = buildTradesFromRithmicFills(fills, 'u1', tickBySymbol)
+    expect(openSkipped).toBe(0)
     expect(trades).toHaveLength(1)
     expect(trades[0].quantity).toBe(5)
-    expect(trades[0].side).toBe('Long')
   })
 
   it('without preferring history the extra partials leave an open lot (the bug)', () => {
