@@ -481,16 +481,14 @@ function basketIdOf(fill: RithmicProtocolFill): string {
  *   next to the single piece 11 ×1). Drop those partial pieces.
  *
  * `neighborhoodMs` is set when the rows are a whole book-date rather than one
- * basket (unbasketed rows). Nothing then ties the rows to one order, so:
- * "the other rows" are only those within that window of the candidate (the
- * order piece window: pieces of one order in one source land within 2s), and
- * the larger-rollup branch only drops rows sharing the candidate's fill id,
- * so another order filled in the same second is not taken for a piece. The
- * equal-sum branch also needs the other rows' fill ids to be one unbroken
- * run ending at the candidate's (pieces 10 + 11 for rollup 11, not 9 + 11):
- * otherwise an unrelated order that happens to make up the difference would
- * pass for the missing piece. Failing that (or with non-numeric ids), the
- * rollup is kept and only rows sharing its fill id are dropped.
+ * basket (unbasketed rows). Nothing then ties the rows to one order, so
+ * "the other rows" are only the unbroken fill-id run ending at the
+ * candidate's id among rows within that window of it (the order piece
+ * window: pieces of one order in one source land within 2s). Pieces 10 + 11
+ * for rollup 11 collapse; 9 + 11 do not, and an unrelated order next to the
+ * run (8, or a later 12) neither makes up nor hides the sum
+ * (`findUnbasketedRestatement`). Failing the equal sum, the rollup is kept
+ * and only rows sharing its fill id are dropped.
  */
 function findSourceRestatement(
   rows: RithmicProtocolFill[],
@@ -499,13 +497,12 @@ function findSourceRestatement(
   for (const candidate of rows) {
     const id = numericFillId(candidate)
     if (!Number.isFinite(id)) continue
-    const candidateMs = sourceTimestampMs(candidate)
-    const others = rows.filter((row) => {
-      if (row === candidate) return false
-      if (neighborhoodMs == null) return true
-      const ms = sourceTimestampMs(row)
-      return candidateMs == null || ms == null || Math.abs(ms - candidateMs) <= neighborhoodMs
-    })
+    if (neighborhoodMs != null) {
+      const restated = findUnbasketedRestatement(rows, candidate, id, neighborhoodMs)
+      if (restated) return restated
+      continue
+    }
+    const others = rows.filter((row) => row !== candidate)
     if (others.length === 0) continue
     // Equal to the largest other id means another row shares this fill id.
     if (id !== Math.max(...others.map(numericFillId))) continue
@@ -516,32 +513,52 @@ function findSourceRestatement(
       // A rollup of one piece is that piece; leave it to identity dedupe.
       continue
     }
-    if (equalSum && (neighborhoodMs == null || isFillIdRunEndingAt(others, id))) {
-      return [candidate]
-    }
-    if (neighborhoodMs == null) {
-      if (size > othersSize) return others
-      continue
-    }
-    const sameId = others.filter((row) => numericFillId(row) === id)
-    if (size > totalSize(sameId)) return sameId
+    if (equalSum) return [candidate]
+    if (size > othersSize) return others
   }
   return null
 }
 
 /**
- * True when the rows' fill ids, taken once each, are consecutive integers
- * ending at `lastId` ({10, 11} for 11; not {9, 11}). Any non-numeric id fails.
+ * Unbasketed restatement of `candidate` (fill id `id`), or null. The
+ * comparison set is the unbroken fill-id run ending at `id` among the other
+ * rows within `neighborhoodMs` of the candidate ({10, 11} for rollup 11):
+ * rows outside that run (a lower id past a gap, any higher id, a non-numeric
+ * id) are another order and neither block nor stand in for a piece.
+ *
+ * - The run must hold another row with the candidate's fill id.
+ * - At least two run rows summing to the candidate's size: drop the rollup.
+ * - Otherwise keep the rollup and drop only the rows sharing its fill id,
+ *   when it is larger than they are.
  */
-function isFillIdRunEndingAt(rows: RithmicProtocolFill[], lastId: number): boolean {
-  const ids = new Set<number>()
-  for (const row of rows) {
-    const id = numericFillId(row)
-    if (!Number.isSafeInteger(id)) return false
-    ids.add(id)
+function findUnbasketedRestatement(
+  rows: RithmicProtocolFill[],
+  candidate: RithmicProtocolFill,
+  id: number,
+  neighborhoodMs: number,
+): RithmicProtocolFill[] | null {
+  const candidateMs = sourceTimestampMs(candidate)
+  const nearby = rows.filter((row) => {
+    if (row === candidate) return false
+    const ms = sourceTimestampMs(row)
+    return candidateMs == null || ms == null || Math.abs(ms - candidateMs) <= neighborhoodMs
+  })
+  const sameId = nearby.filter((row) => numericFillId(row) === id)
+  if (sameId.length === 0) return null
+  const size = fillQuantity(candidate)
+  if (Number.isSafeInteger(id)) {
+    const ids = new Set(nearby.map(numericFillId).filter(Number.isSafeInteger))
+    let start = id
+    while (ids.has(start - 1)) start -= 1
+    const run = nearby.filter((row) => {
+      const rowId = numericFillId(row)
+      return Number.isSafeInteger(rowId) && rowId >= start && rowId <= id
+    })
+    if (run.length >= 2 && Math.abs(size - totalSize(run)) <= 1e-9) {
+      return [candidate]
+    }
   }
-  if (ids.size === 0 || Math.max(...ids) !== lastId) return false
-  return lastId - Math.min(...ids) + 1 === ids.size
+  return size > totalSize(sameId) ? sameId : null
 }
 
 /**

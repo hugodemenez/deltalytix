@@ -616,6 +616,87 @@ describe('review fixes: one version per order, history never removes unrestated 
       expect(tags(preferHistoryFills(fills))).toEqual(['replay:9x1@99', 'replay:11x1@100'])
     })
   })
+
+  describe('round 5: an unbasketed rollup is compared with its contiguous fill-id run', () => {
+    const at = t('2026-11-17T15:00:00Z')
+    const piece10 = { fillId: '10', fillPrice: 100.25, fillDate: '20261117', ssboe: at }
+    const rollup11 = { fillId: '11', fillPrice: 100, fillSize: 2, fillDate: '20261117', ssboe: at }
+    const piece11 = { fillId: '11', fillPrice: 100, fillDate: '20261117', ssboe: at }
+
+    it('ignores a lower id outside the run (8 next to 10, 11)', () => {
+      const fills = [
+        r({ fillId: '8', fillPrice: 99, fillDate: '20261117', ssboe: at }),
+        r(piece10),
+        r(rollup11),
+        r(piece11),
+      ]
+      expect(tags(preferHistoryFills(fills))).toEqual([
+        'replay:8x1@99',
+        'replay:10x1@100.25',
+        'replay:11x1@100',
+      ])
+      expect(bought(prepareRithmicProtocolFills(fills).fills)).toBe(3)
+    })
+
+    it('ignores a higher id in the piece window (12 a second later)', () => {
+      const fills = [
+        r(piece10),
+        r(rollup11),
+        r(piece11),
+        r({ fillId: '12', fillPrice: 101, fillDate: '20261117', ssboe: at + 1 }),
+      ]
+      expect(tags(preferHistoryFills(fills))).toEqual([
+        'replay:10x1@100.25',
+        'replay:11x1@100',
+        'replay:12x1@101',
+      ])
+      expect(bought(prepareRithmicProtocolFills(fills).fills)).toBe(3)
+    })
+
+    it('ignores unrelated orders on both sides of the run', () => {
+      const fills = [
+        r({ fillId: '8', fillPrice: 99, fillDate: '20261117', ssboe: at }),
+        r(piece10),
+        r(rollup11),
+        r(piece11),
+        r({ fillId: '12', fillPrice: 101, fillDate: '20261117', ssboe: at + 1 }),
+      ]
+      expect(bought(prepareRithmicProtocolFills(fills).fills)).toBe(4)
+    })
+
+    it('matches the basketed result for the same rows', () => {
+      const fills = [
+        r({ fillId: '8', fillPrice: 99, basketId: 'x', fillDate: '20261117', ssboe: at }),
+        r({ ...piece10, basketId: 'a' }),
+        r({ ...rollup11, basketId: 'a' }),
+        r({ ...piece11, basketId: 'a' }),
+      ]
+      expect(tags(preferHistoryFills(fills))).toEqual([
+        'replay:8x1@99',
+        'replay:10x1@100.25',
+        'replay:11x1@100',
+      ])
+    })
+
+    it('does nothing without another row sharing the rollup fill id', () => {
+      const fills = [r(piece10), r(rollup11)]
+      expect(tags(preferHistoryFills(fills))).toEqual(['replay:10x1@100.25', 'replay:11x2@100'])
+    })
+
+    it('a non-numeric id is outside the run and does not block the collapse', () => {
+      const fills = [
+        r({ fillId: 'abc', fillPrice: 99, fillDate: '20261117', ssboe: at }),
+        r(piece10),
+        r(rollup11),
+        r(piece11),
+      ]
+      expect(tags(preferHistoryFills(fills))).toEqual([
+        'replay:abcx1@99',
+        'replay:10x1@100.25',
+        'replay:11x1@100',
+      ])
+    })
+  })
 })
 
 describe('cmeTradeDateFromMs', () => {
