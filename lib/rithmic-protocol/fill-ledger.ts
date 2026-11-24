@@ -8,6 +8,8 @@ import {
   fillDayKey,
   fillIdentityKey,
   preferHistoryFills,
+  preferHistoryFillsWithDecisions,
+  type HistoryPreferenceDecision,
   resolveRithmicProtocolPersistedId,
   RITHMIC_PROTOCOL_TIMESTAMP_TOLERANCE_MS,
   type DedupeFillsStats,
@@ -95,6 +97,8 @@ export function prepareRithmicProtocolFills(
   nearMisses: ManualFillNearMiss[]
   retirements: ManualFillRetirement[]
   stats: DedupeFillsStats
+  /** Orders (and undated-basket trade dates) where history and live both arrived, and which one was kept. */
+  historyDecisions: HistoryPreferenceDecision[]
 } {
   const active = fills.filter((fill) => fill.source !== 'manual-retired')
   const manuals = active.filter((fill) => fill.source === 'manual')
@@ -102,7 +106,8 @@ export function prepareRithmicProtocolFills(
   // Collapse plant fills first. A replay twin that history throws away must
   // not retire a manual patch, and split pieces must be one order before the
   // quantity check.
-  const preferred = preferHistoryFills(upstream)
+  const { fills: preferred, decisions: historyDecisions } =
+    preferHistoryFillsWithDecisions(upstream)
   const deduped = dedupeFillsWithStats(preferred)
   const consolidated = consolidateOrderFills(deduped.fills)
   const reconciled = reconcileManualFills(manuals, consolidated)
@@ -116,6 +121,7 @@ export function prepareRithmicProtocolFills(
       afterConsolidate: reconciled.fills.length,
       dropped: { ...deduped.stats.dropped },
     },
+    historyDecisions,
   }
 }
 
@@ -1210,12 +1216,7 @@ function clockDelta(
 export function deriveTradesFromFillLedger(
   stored: RithmicProtocolFill[],
   incoming: RithmicProtocolFill[],
-): {
-  fills: RithmicProtocolFill[]
-  nearMisses: ManualFillNearMiss[]
-  retirements: ManualFillRetirement[]
-  stats: DedupeFillsStats
-} {
+): ReturnType<typeof prepareRithmicProtocolFills> {
   return prepareRithmicProtocolFills(mergeFillLedgers(stored, incoming))
 }
 

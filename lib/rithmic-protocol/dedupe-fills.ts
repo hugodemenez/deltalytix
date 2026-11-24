@@ -252,11 +252,6 @@ export function markFillSource(
   return fills.map((fill) => ({ ...fill, source }))
 }
 
-function utcDayFromSsboe(ssboe: number): string {
-  const at = new Date(ssboe * 1000)
-  return `${at.getUTCFullYear()}${String(at.getUTCMonth() + 1).padStart(2, '0')}${String(at.getUTCDate()).padStart(2, '0')}`
-}
-
 function fillClockMs(fill: RithmicProtocolFill): number | null {
   const day = fillDayKey(fill)
   if (!/^\d{8}$/.test(day)) return null
@@ -290,132 +285,327 @@ function sourceTimestampMs(fill: RithmicProtocolFill): number | null {
   return fillClockMs(fill)
 }
 
-function historyCoverageDays(fill: RithmicProtocolFill): string[] {
-  const days = new Set<string>()
-  if (fill.fillDate) {
-    const date = fill.fillDate.replace(/-/g, '')
-    if (/^\d{8}$/.test(date)) days.add(date)
-  }
-  if (typeof fill.ssboe === 'number' && fill.ssboe > 0) {
-    days.add(utcDayFromSsboe(fill.ssboe))
-  }
-  const fallback = fillDayKey(fill)
-  if (fallback) days.add(fallback)
-  return [...days]
-}
-
-function neighborDays(day: string): string[] {
-  if (!/^\d{8}$/.test(day)) return day ? [day] : []
-  const year = Number(day.slice(0, 4))
-  const month = Number(day.slice(4, 6))
-  const date = Number(day.slice(6, 8))
-  const center = Date.UTC(year, month - 1, date)
-  const out: string[] = []
-  for (const offset of [-1, 0, 1]) {
-    const at = new Date(center + offset * DAY_MS)
-    out.push(
-      `${at.getUTCFullYear()}${String(at.getUTCMonth() + 1).padStart(2, '0')}${String(at.getUTCDate()).padStart(2, '0')}`,
-    )
-  }
-  return out
-}
-
-const DAY_MS = 24 * 60 * 60 * 1000
+const CHICAGO_PARTS = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/Chicago',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  hourCycle: 'h23',
+})
 
 /**
- * ShowFillHistory is the settled record; ReplayExecutions (and order-history
- * marked as replay) only fill days history did not cover, plus the tail after
- * that day's newest history fill. Mixing both for the same period
- * double-counted executions on Lucid: Replay can split one history fill into
- * partials under different fill ids (history 1163441 ×5 vs replay 1163440 ×2
- * + 1163441 ×3), omit `fill_date`, and stamp a different time — so the
- * fingerprint dedupe kept both, FIFO saw extra contracts, and an open lot
- * carried into the next session as a phantom overnight trade.
- *
- * Per account, a replay fill is dropped when:
- * - history has the same canonical fill id + symbol within a day of it, or
- * - it falls on a day history already covers and is at or before that day's
- *   newest history fill (+ jitter tolerance).
- * Replay (and order-history marked as replay) on days history did not cover
- * is kept, even when it is earlier than the global newest history fill —
- * otherwise an empty later ShowFillHistory window can never be filled from
- * order-history once an earlier window returned rows.
- * Accounts with no history fills keep every replay fill.
+ * CME Globex trade date for an instant: the Chicago calendar day, rolled to
+ * the next day at 17:00 CT, and weekend sessions (Fri 17:00 CT onward,
+ * Sunday evening open) rolled to Monday. Matches the plant's `fill_date`.
  */
+export function cmeTradeDateFromMs(ms: number): string {
+  const parts = Object.fromEntries(
+    CHICAGO_PARTS.formatToParts(new Date(ms)).map((part) => [part.type, part.value]),
+  ) as Record<string, string>
+  const day = new Date(
+    Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day)),
+  )
+  if (Number(parts.hour) >= 17) day.setUTCDate(day.getUTCDate() + 1)
+  const weekday = day.getUTCDay()
+  if (weekday === 6) day.setUTCDate(day.getUTCDate() + 2)
+  else if (weekday === 0) day.setUTCDate(day.getUTCDate() + 1)
+  return `${day.getUTCFullYear()}${String(day.getUTCMonth() + 1).padStart(2, '0')}${String(day.getUTCDate()).padStart(2, '0')}`
+}
+
+/**
+ * Trade date used to compare history with live fills. Prefer the plant's
+ * `fill_date` (already the exchange trade date). Replay rows can omit it, so
+ * fall back to the CME session of `ssboe` rather than a UTC calendar day —
+ * that is what kept history and replay on the same key without the old ±1
+ * day widening.
+ */
+export function fillTradeDateKey(fill: RithmicProtocolFill): string {
+  if (fill.fillDate) {
+    const date = fill.fillDate.replace(/-/g, '')
+    if (/^\d{8}$/.test(date)) return date
+  }
+  if (typeof fill.ssboe === 'number' && fill.ssboe > 0) {
+    const usecs = typeof fill.usecs === 'number' ? fill.usecs : 0
+    return cmeTradeDateFromMs(fill.ssboe * 1000 + Math.floor(usecs / 1000))
+  }
+  return ''
+}
+
+function bookDateKey(fill: RithmicProtocolFill, tradeDate: string): string {
+  const symbol = (fill.symbol ?? '').trim().toUpperCase()
+  return `${fill.accountId || 'unknown'}|${symbol}|${tradeDate}`
+}
+
+function sidePriceKey(fill: RithmicProtocolFill): string {
+  const price = Number(fill.fillPrice || fill.avgFillPrice || 0)
+  return `${identitySide(fill.transactionType)}|${price}`
+}
+
+/**
+ * True when every live fill is restated by history on the same side and price
+ * within `toleranceMs` (or when either side lacks a clock). Quantity is pooled
+ * across history rows in that window, so an aggregated history row equals
+ * split live pieces and split history pieces equal one aggregated live row —
+ * but only at the same price, so a rollup priced at one leg never hides the
+ * other leg.
+ */
+function historyRestatesLive(
+  history: RithmicProtocolFill[],
+  live: RithmicProtocolFill[],
+  toleranceMs: number,
+): boolean {
+  const capacity = history.map((fill) => ({
+    key: sidePriceKey(fill),
+    ms: sourceTimestampMs(fill),
+    left: Math.abs(Number(fill.fillSize) || 0),
+  }))
+  const ordered = [...live].sort(
+    (a, b) => (sourceTimestampMs(a) ?? 0) - (sourceTimestampMs(b) ?? 0),
+  )
+  for (const fill of ordered) {
+    const key = sidePriceKey(fill)
+    const ms = sourceTimestampMs(fill)
+    let needed = Math.abs(Number(fill.fillSize) || 0)
+    const candidates = capacity
+      .map((slot) => ({
+        slot,
+        delta: ms == null || slot.ms == null ? 0 : Math.abs(ms - slot.ms),
+      }))
+      .filter(({ slot, delta }) => slot.key === key && slot.left > 1e-9 && delta <= toleranceMs)
+      .sort((left, right) => left.delta - right.delta)
+    for (const { slot } of candidates) {
+      if (needed <= 1e-9) break
+      const take = Math.min(slot.left, needed)
+      slot.left -= take
+      needed -= take
+    }
+    if (needed > 1e-9) return false
+  }
+  return true
+}
+
+/** A live fill on the same side within the tolerance — history at that moment restates or rolls it up. */
+function hasNearbyLiveSameSide(
+  fill: RithmicProtocolFill,
+  live: RithmicProtocolFill[],
+  toleranceMs: number,
+): boolean {
+  const side = identitySide(fill.transactionType)
+  const ms = sourceTimestampMs(fill)
+  return live.some((row) => {
+    if (identitySide(row.transactionType) !== side) return false
+    const rowMs = sourceTimestampMs(row)
+    if (ms == null || rowMs == null) return true
+    return Math.abs(ms - rowMs) <= toleranceMs
+  })
+}
+
+export type HistoryPreferenceDecision = {
+  accountId: string
+  symbol: string
+  tradeDate: string
+  /** Set when the decision was made per order (shared `basketId`). */
+  basketId?: string
+  historyFills: number
+  liveFills: number
+  /** Which source's rows were kept. */
+  kept: 'history' | 'live'
+  /** Date fallback, live won: history fills kept because no same-side live fill is near them. */
+  historyBackfilled: number
+}
+
+function totalSize(fills: RithmicProtocolFill[]): number {
+  return fills.reduce((sum, fill) => sum + Math.abs(Number(fill.fillSize) || 0), 0)
+}
+
+/**
+ * One order seen by both sources: keep the larger filled size (a partial
+ * report never wins), then the version with more pieces (real executions at
+ * real prices, not a rollup), then history (settled record).
+ */
+function historyWinsOrder(
+  history: RithmicProtocolFill[],
+  live: RithmicProtocolFill[],
+): boolean {
+  const historySize = totalSize(history)
+  const liveSize = totalSize(live)
+  if (Math.abs(historySize - liveSize) > 1e-9) return historySize > liveSize
+  return history.length >= live.length
+}
+
+function orderKey(fill: RithmicProtocolFill, tradeDate: string): string | null {
+  const basketId = (fill.basketId ?? '').trim()
+  if (!basketId) return null
+  return `${bookDateKey(fill, tradeDate)}|${identitySide(fill.transactionType)}|${basketId}`
+}
+
+/**
+ * Reconcile ShowFillHistory (`source: 'history'`) with live executions
+ * (`source: 'replay'`) without dropping a real execution or counting one
+ * twice.
+ *
+ * Either source can be a rollup. Order-history fallback rows are tagged
+ * `history` or `replay` depending on the fetch path, and they report one row
+ * per order: the last fill id, the order's total size, one price. Example
+ * (LFF050 Nov 17): order-history `1232782` SELL ×2 @ 26830.50 for an order
+ * replay had as `1232781` ×1 @ 26830.75 + `1232782` ×1 @ 26830.50. On older
+ * Phidias/Bulenox ledgers it is the reverse: history has the split pieces and
+ * `replay` is the rollup.
+ *
+ * 1. Per order (same account, symbol, trade date, side and `basketId`): when
+ *    both sources have it, keep the larger filled size, then the source with
+ *    more pieces — the real executions at their real prices — then history
+ *    (settled record). Orders seen by only one source are always kept. Every prod
+ *    ledger row carries a basketId, and on every order both sources had, side
+ *    and total size agreed (2026-11-24 fleet scan, 232 orders).
+ * 2. Rows without a basketId fall back to a per-trade-date rule: keep history
+ *    when it restates every live fill (same side and price within the
+ *    tolerance, quantity pooled); otherwise keep live, plus history fills with
+ *    no same-side live fill nearby (executions live never saw).
+ *
+ * There is no ±1-day "coverage" any more: the old rule let one rollup row
+ * mark Nov 16–18 as covered and dropped 28 live fills, leaving a phantom −2
+ * short that mis-paired every later trade.
+ *
+ * Rows that are neither `history` nor `replay` (manual) pass through.
+ */
+export function preferHistoryFillsWithDecisions(
+  fills: RithmicProtocolFill[],
+  toleranceMs = RITHMIC_PROTOCOL_TIMESTAMP_TOLERANCE_MS,
+): { fills: RithmicProtocolFill[]; decisions: HistoryPreferenceDecision[] } {
+  const dropped = new Set<RithmicProtocolFill>()
+  const decisions: HistoryPreferenceDecision[] = []
+  const orders = new Map<
+    string,
+    { history: RithmicProtocolFill[]; live: RithmicProtocolFill[]; tradeDate: string }
+  >()
+  const dateGroups = new Map<
+    string,
+    { history: RithmicProtocolFill[]; live: RithmicProtocolFill[]; tradeDate: string }
+  >()
+  for (const fill of fills) {
+    if (fill.source !== 'replay' && fill.source !== 'history') continue
+    const tradeDate = fillTradeDateKey(fill)
+    const order = orderKey(fill, tradeDate)
+    const groups = order ? orders : dateGroups
+    const key = order ?? bookDateKey(fill, tradeDate)
+    const group = groups.get(key) ?? { history: [], live: [], tradeDate }
+    if (fill.source === 'replay') group.live.push(fill)
+    else group.history.push(fill)
+    groups.set(key, group)
+  }
+
+  for (const [key, group] of orders) {
+    if (group.history.length === 0 || group.live.length === 0) continue
+    const keepHistory = historyWinsOrder(group.history, group.live)
+    for (const fill of keepHistory ? group.live : group.history) dropped.add(fill)
+    const first = group.history[0]
+    decisions.push({
+      accountId: first.accountId || 'unknown',
+      symbol: (first.symbol ?? '').trim().toUpperCase(),
+      tradeDate: group.tradeDate,
+      basketId: key.slice(key.lastIndexOf('|') + 1),
+      historyFills: group.history.length,
+      liveFills: group.live.length,
+      kept: keepHistory ? 'history' : 'live',
+      historyBackfilled: 0,
+    })
+  }
+
+  for (const group of dateGroups.values()) {
+    if (group.history.length === 0 || group.live.length === 0) continue
+    // Undated rows cannot be compared per trade date; keep both.
+    if (!group.tradeDate) continue
+    const keepHistory = historyRestatesLive(group.history, group.live, toleranceMs)
+    let backfilled = 0
+    if (keepHistory) {
+      for (const fill of group.live) dropped.add(fill)
+    } else {
+      for (const fill of group.history) {
+        if (!hasNearbyLiveSameSide(fill, group.live, toleranceMs)) {
+          backfilled += 1
+          continue
+        }
+        dropped.add(fill)
+      }
+    }
+    const first = group.history[0]
+    decisions.push({
+      accountId: first.accountId || 'unknown',
+      symbol: (first.symbol ?? '').trim().toUpperCase(),
+      tradeDate: group.tradeDate,
+      historyFills: group.history.length,
+      liveFills: group.live.length,
+      kept: keepHistory ? 'history' : 'live',
+      historyBackfilled: backfilled,
+    })
+  }
+  return { fills: fills.filter((fill) => !dropped.has(fill)), decisions }
+}
+
 export function preferHistoryFills(
   fills: RithmicProtocolFill[],
   toleranceMs = RITHMIC_PROTOCOL_TIMESTAMP_TOLERANCE_MS,
 ): RithmicProtocolFill[] {
-  const historyByAccount = new Map<
-    string,
-    {
-      idTimes: Map<string, number[]>
-      days: Set<string>
-      newestByDay: Map<string, number>
-    }
-  >()
-  for (const fill of fills) {
-    if (fill.source !== 'history') continue
-    const accountId = fill.accountId || 'unknown'
-    const entry = historyByAccount.get(accountId) ?? {
-      idTimes: new Map<string, number[]>(),
-      days: new Set<string>(),
-      newestByDay: new Map<string, number>(),
-    }
-    const ts = sourceTimestampMs(fill)
-    const fillId = canonicalRithmicFillId(fill.fillId)
-    if (fillId) {
-      const key = `${fillId}|${(fill.symbol ?? '').trim().toUpperCase()}`
-      const times = entry.idTimes.get(key) ?? []
-      times.push(ts ?? Number.NaN)
-      entry.idTimes.set(key, times)
-    }
-    for (const day of historyCoverageDays(fill)) {
-      entry.days.add(day)
-      if (ts != null) {
-        const newest = entry.newestByDay.get(day) ?? Number.NEGATIVE_INFINITY
-        if (ts > newest) entry.newestByDay.set(day, ts)
-      }
-    }
-    historyByAccount.set(accountId, entry)
-  }
-  if (historyByAccount.size === 0) return fills
+  return preferHistoryFillsWithDecisions(fills, toleranceMs).fills
+}
 
-  return fills.filter((fill) => {
-    if (fill.source !== 'replay') return true
-    const history = historyByAccount.get(fill.accountId || 'unknown')
-    if (!history) return true
-    const ts = sourceTimestampMs(fill)
-    const fillId = canonicalRithmicFillId(fill.fillId)
-    if (fillId) {
-      const times = history.idTimes.get(
-        `${fillId}|${(fill.symbol ?? '').trim().toUpperCase()}`,
-      )
-      if (
-        times?.some(
-          (historyTs) =>
-            ts == null || Number.isNaN(historyTs) || Math.abs(historyTs - ts) <= DAY_MS,
-        )
-      ) {
-        return false
-      }
-    }
-    const coveredDays = historyCoverageDays(fill).flatMap((day) =>
-      neighborDays(day).filter((candidate) => history.days.has(candidate)),
+export type SessionCarry = {
+  accountId: string
+  symbol: string
+  /** Trade date whose session ended with this open position. */
+  tradeDate: string
+  net: number
+}
+
+/**
+ * Positions still open at the end of a trade date, per account + symbol.
+ * A real swing hold shows up here too; callers log it so a phantom
+ * overnight lot (a missing or double-counted fill) is visible in sync logs
+ * instead of silently mis-pairing the next session.
+ */
+export function sessionCarryOvers(fills: RithmicProtocolFill[]): SessionCarry[] {
+  const books = new Map<string, RithmicProtocolFill[]>()
+  for (const fill of fills) {
+    if (fill.source === 'manual-retired') continue
+    const key = `${fill.accountId || 'unknown'}|${(fill.symbol ?? '').trim().toUpperCase()}`
+    const list = books.get(key) ?? []
+    list.push(fill)
+    books.set(key, list)
+  }
+  const carries: SessionCarry[] = []
+  for (const book of books.values()) {
+    const sorted = [...book].sort(
+      (a, b) => (sourceTimestampMs(a) ?? 0) - (sourceTimestampMs(b) ?? 0),
     )
-    if (coveredDays.length === 0) return true
-    let newestOnCovered = Number.NEGATIVE_INFINITY
-    for (const day of coveredDays) {
-      const newest = history.newestByDay.get(day)
-      if (newest != null && newest > newestOnCovered) newestOnCovered = newest
+    let net = 0
+    let current = ''
+    for (const fill of sorted) {
+      const tradeDate = fillTradeDateKey(fill)
+      if (current && tradeDate !== current && Math.abs(net) > 1e-9) {
+        carries.push({
+          accountId: fill.accountId || 'unknown',
+          symbol: (fill.symbol ?? '').trim().toUpperCase(),
+          tradeDate: current,
+          net,
+        })
+      }
+      current = tradeDate
+      net += identitySide(fill.transactionType) === 'B'
+        ? Math.abs(Number(fill.fillSize) || 0)
+        : -Math.abs(Number(fill.fillSize) || 0)
     }
-    if (ts != null && Number.isFinite(newestOnCovered)) {
-      return ts > newestOnCovered + toleranceMs
+    if (current && Math.abs(net) > 1e-9) {
+      carries.push({
+        accountId: sorted[0].accountId || 'unknown',
+        symbol: (sorted[0].symbol ?? '').trim().toUpperCase(),
+        tradeDate: current,
+        net,
+      })
     }
-    // History covers the day but neither side has a clock — drop the replay
-    // twin rather than double-count.
-    return false
-  })
+  }
+  return carries
 }
 
 /** Pieces of one order land within this window of each other in one source. */

@@ -37,6 +37,7 @@ import {
   upsertRithmicProtocolFills,
 } from '@/lib/rithmic-protocol/fill-ledger-store'
 import { buildTradesFromRithmicFills } from '@/lib/rithmic-protocol/fills-to-trades'
+import { sessionCarryOvers } from '@/lib/rithmic-protocol/dedupe-fills'
 import {
   gatewayUri as gatewayUriFor,
   getDefaultRithmicProtocolGateway,
@@ -854,6 +855,35 @@ export async function getRithmicProtocolTrades(
     const prepared = deriveTradesFromFillLedger(storedFills, rawFills)
     const manualEffects = planManualFillSyncEffects(prepared)
     const fifoFills = manualEffects.fifoFills
+    // Per-order collapses (one source rolled up an order the other split) are
+    // routine and only counted. A per-date disagreement means rows without a
+    // basketId where history did not restate live — worth a warning.
+    const orderRollupsCollapsed = prepared.historyDecisions.filter(
+      (decision) => decision.basketId,
+    ).length
+    const historySuperseded = prepared.historyDecisions.filter(
+      (decision) => !decision.basketId && decision.kept === 'live',
+    )
+    for (const decision of historySuperseded) {
+      logger.warn(
+        `history disagrees with live fills; kept live account=${decision.accountId} ` +
+          `symbol=${decision.symbol} tradeDate=${decision.tradeDate} ` +
+          `history=${decision.historyFills} live=${decision.liveFills} ` +
+          `historyBackfilled=${decision.historyBackfilled}`,
+      )
+    }
+    const sessionCarries = sessionCarryOvers(fifoFills)
+    // The ledger spans months; log only the most recent carries so a long
+    // swing history does not flood every sync.
+    const recentCarries = [...sessionCarries]
+      .sort((left, right) => right.tradeDate.localeCompare(left.tradeDate))
+      .slice(0, 5)
+    for (const carry of recentCarries) {
+      logger.warn(
+        `position carried past session account=${carry.accountId} symbol=${carry.symbol} ` +
+          `tradeDate=${carry.tradeDate} net=${carry.net} — check for a missing or double-counted fill if this was not a swing hold`,
+      )
+    }
 
     syncStats.rawFills = fillStats.received
     syncStats.fillsAfterDedup = prepared.stats.afterDedup
@@ -863,6 +893,11 @@ export async function getRithmicProtocolTrades(
       ledger_inserted: ledgerWrite.inserted,
       ledger_updated: ledgerWrite.updated,
       ...manualEffects.droppedByReason,
+      ...(orderRollupsCollapsed > 0 ? { order_rollups_collapsed: orderRollupsCollapsed } : {}),
+      ...(historySuperseded.length > 0
+        ? { history_superseded_by_live: historySuperseded.length }
+        : {}),
+      ...(sessionCarries.length > 0 ? { session_carry: sessionCarries.length } : {}),
     }
 
     const tickDetails = await getTickDetails()

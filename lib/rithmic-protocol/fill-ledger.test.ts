@@ -870,7 +870,12 @@ describe('manual fills', () => {
     }
   })
 
-  it('keeps the manual when a matching replay twin is filtered by history', () => {
+  it('lets a live replay fill supersede the manual when history does not restate it', () => {
+    // Live executions are the source of truth. History for this trade date
+    // (88000, an hour later at another price) does not restate replay 9001,
+    // so live wins: 9001 stays and retires the matching manual patch. 88000
+    // has no live fill near it, so it is backfilled as an execution live
+    // never saw.
     const historyCover = markFillSource(
       [
         fill({
@@ -897,10 +902,11 @@ describe('manual fills', () => {
     )[0]
     const prepared = prepareRithmicProtocolFills([manual, historyCover, replayTwin])
     const ids = prepared.fills.map((row) => row.fillId)
-    expect(ids).toContain('manual-gap')
+    expect(ids).toContain('9001')
+    expect(ids).not.toContain('manual-gap')
     expect(ids).toContain('88000')
-    expect(ids).not.toContain('9001')
-    expect(prepared.fills.find((row) => row.fillId === 'manual-gap')?.fillSize).toBe(2)
+    expect(prepared.retirements).toHaveLength(1)
+    expect(prepared.retirements[0]?.manual.fillId).toBe('manual-gap')
   })
 
   it('retires a manual 2-lot against consolidated 1+1 split pieces', () => {
