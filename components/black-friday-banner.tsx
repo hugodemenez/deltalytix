@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { useBillingCurrency } from "@/hooks/use-billing-currency";
 import { useBlackFridayDisplay } from "@/hooks/use-black-friday-display";
@@ -36,7 +36,11 @@ export function BlackFridayBanner() {
   const ref = useRef<HTMLAnchorElement>(null);
   const visible = Boolean(display) && isPromoSurface(pathname);
 
-  useEffect(() => {
+  // Depend on visibility only. The navbar re-renders on scroll; an effect
+  // with no dependency list would drop --promo-banner-height after each
+  // paint and let the fixed header cover the page until it is set again.
+  // ResizeObserver covers text wrapping without re-subscribing.
+  useLayoutEffect(() => {
     const root = document.documentElement;
     const el = ref.current;
     if (!visible || !el) {
@@ -52,7 +56,7 @@ export function BlackFridayBanner() {
       observer.disconnect();
       root.style.removeProperty(BANNER_HEIGHT_VAR);
     };
-  });
+  }, [visible]);
 
   if (!visible || !display) return null;
 
