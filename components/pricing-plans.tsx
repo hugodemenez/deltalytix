@@ -8,7 +8,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Check, AlertCircle } from "lucide-react";
 import { useCurrentLocale, useI18n } from "@/locales/client";
-import NumberFlow from "@number-flow/react";
 import {
   Dialog,
   DialogContent,
@@ -96,7 +95,7 @@ export default function PricingPlans({
   );
   const t = useI18n();
   const locale = useCurrentLocale();
-  const { currency, symbol } = useBillingCurrency();
+  const { currency } = useBillingCurrency();
   const promo = promoProp ?? loadedPromo;
   const blackFriday = useBlackFridayDisplay();
   const billingPeriod: BillingPeriod =
@@ -398,6 +397,7 @@ export default function PricingPlans({
 
   const plusPlan = (
     <article
+      data-pricing-card
       className={cn(
         "relative flex min-h-[500px] min-w-0 flex-col rounded-sm bg-white p-5 dark:bg-black sm:p-6",
         showBfSale &&
@@ -434,7 +434,10 @@ export default function PricingPlans({
               {plans.plus.name}
             </h3>
           </div>
-          <div className="flex min-w-[11rem] shrink-0 flex-col items-end sm:min-w-[12rem]">
+          <div
+            data-price-block
+            className="flex h-8 min-w-0 flex-1 items-baseline justify-end gap-2 whitespace-nowrap"
+          >
             {showSale ? (
               <span className="sr-only">
                 {t(
@@ -443,19 +446,7 @@ export default function PricingPlans({
                     : "pricing.backToWork.regularPrice",
                   { price: strikeFormatted },
                 )}
-              </span>
-            ) : null}
-            <s
-              aria-hidden
-              className={cn(
-                "h-5 text-sm tabular-nums text-black/40 dark:text-white/40",
-                !showSale && "invisible",
-              )}
-            >
-              {showSale ? strikeFormatted : "\u00A0"}
-            </s>
-            {showSale ? (
-              <span className="sr-only">
+                {". "}
                 {t(
                   showBfSale
                     ? "pricing.blackFriday.offerPrice"
@@ -464,27 +455,30 @@ export default function PricingPlans({
                 )}
               </span>
             ) : null}
-            <div className="flex items-baseline">
-              <span className="text-2xl font-normal tabular-nums">
-                <NumberFlow
-                  prefix={currency === "EUR" ? undefined : symbol}
-                  suffix={currency === "EUR" ? symbol : undefined}
-                  value={currentPricing}
-                  digits={{ 1: { max: 2 } }}
-                />
-              </span>
-              <span
-                className={cn(
-                  "ml-1 text-sm text-black/55 dark:text-white/55",
-                  billingPeriod === "lifetime" && "invisible",
-                )}
-              >
-                / {t("pricing.month")}
-              </span>
-            </div>
+            <s
+              aria-hidden
+              className={cn(
+                "text-sm font-normal tabular-nums leading-none text-black/40 line-through decoration-black/30 dark:text-white/40 dark:decoration-white/30",
+                !showSale && "invisible",
+              )}
+            >
+              {strikeFormatted}
+            </s>
+            <span className="text-2xl font-normal tabular-nums leading-none">
+              {saleFormatted}
+            </span>
+            <span
+              className={cn(
+                "text-sm leading-none text-black/55 dark:text-white/55",
+                billingPeriod === "lifetime" && "hidden",
+              )}
+            >
+              / {t("pricing.month")}
+            </span>
           </div>
         </div>
         <p
+          data-price-detail
           aria-hidden={billingPeriod === "monthly"}
           className={cn(
             "mt-2 h-4 w-full overflow-hidden text-ellipsis whitespace-nowrap text-right text-xs text-black/55 dark:text-white/55",
