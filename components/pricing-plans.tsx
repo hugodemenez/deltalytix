@@ -33,7 +33,6 @@ import {
 } from "@/lib/billing-plan-catalog";
 import {
   backToWorkPeriodDisplay,
-  isBackToWorkOfferActive,
   type BackToWorkPricingDisplay,
 } from "@/lib/back-to-work-promo";
 import { getBackToWorkPricingDisplay } from "@/server/back-to-work-pricing";
@@ -326,8 +325,6 @@ export default function PricingPlans({
       : blackFriday.prices[billingPeriod]?.[currency];
   // Checkout never applies Back-to-Work while a Black Friday phase is on
   // (see resolveCheckoutAutoPromo), so do not advertise it then either.
-  const campaignActive =
-    !currentSubscription && !blackFriday && isBackToWorkOfferActive(promo);
   const periodOffer =
     currentSubscription || blackFriday
       ? undefined
@@ -345,8 +342,6 @@ export default function PricingPlans({
     periodOffer?.offerActive && periodOffer.saleMonthlyEquivalent !== undefined,
   );
   const showSale = showBfSale || showBtwSale;
-  const reserveSaleRow =
-    !currentSubscription && (Boolean(blackFriday) || campaignActive);
   const currentPricing = bfPrice
     ? chargeMonthlyEquivalent(billingPeriod, bfPrice.salePrice)
     : (periodOffer?.saleMonthlyEquivalent ?? listMonthly);
@@ -395,28 +390,37 @@ export default function PricingPlans({
               : "text-black/55 hover:text-black dark:text-white/55 dark:hover:text-white",
           )}
         >
-          <span className="inline-flex items-center justify-center gap-1.5">
-            {label}
-            {!currentSubscription &&
-            blackFriday?.prices[period]?.[currency] ? (
-              <>
-                <span
-                  aria-hidden
-                  className="h-1.5 w-1.5 shrink-0 rounded-full bg-current"
-                />
-                <span className="sr-only">
-                  {t("pricing.blackFriday.badge")}
-                </span>
-              </>
-            ) : null}
-          </span>
+          {label}
         </button>
       ))}
     </div>
   );
 
   const plusPlan = (
-    <article className="flex min-h-[500px] min-w-0 flex-col rounded-sm bg-white p-5 dark:bg-black sm:p-6">
+    <article
+      className={cn(
+        "relative flex min-h-[500px] min-w-0 flex-col rounded-sm bg-white p-5 dark:bg-black sm:p-6",
+        showBfSale &&
+          "shadow-[0_0_28px_oklch(0.2_0.01_95/0.14)] dark:shadow-[0_0_28px_oklch(0.95_0_0/0.16)]",
+      )}
+    >
+      {showBfSale ? (
+        <>
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -inset-px rounded-sm bg-gradient-to-br from-black via-neutral-500 to-black p-px dark:from-white dark:via-neutral-400 dark:to-white"
+            style={{
+              WebkitMask:
+                "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+              WebkitMaskComposite: "xor",
+              maskComposite: "exclude",
+            }}
+          />
+          <span className="absolute top-0 right-4 z-10 -translate-y-1/2 rounded-sm bg-black px-1.5 py-0.5 text-[10px] font-medium leading-4 text-white dark:bg-white dark:text-black">
+            {t("pricing.blackFriday.badge")}
+          </span>
+        </>
+      ) : null}
       <div className="mb-6 md:hidden">
         <p className="mb-2 text-xs font-medium text-black/55 dark:text-white/55">
           {t("pricing.billingPeriod")}
@@ -431,43 +435,34 @@ export default function PricingPlans({
             </h3>
           </div>
           <div className="flex min-w-[11rem] shrink-0 flex-col items-end sm:min-w-[12rem]">
-            {showBfSale ? (
-              <span className="mb-1 inline-flex rounded-sm bg-black px-1.5 py-0.5 text-[10px] font-medium leading-4 text-white dark:bg-white dark:text-black">
-                {t("pricing.blackFriday.badge")}
+            {showSale ? (
+              <span className="sr-only">
+                {t(
+                  showBfSale
+                    ? "pricing.blackFriday.regularPrice"
+                    : "pricing.backToWork.regularPrice",
+                  { price: strikeFormatted },
+                )}
               </span>
             ) : null}
-            {reserveSaleRow ? (
-              <>
-                {showSale ? (
-                  <span className="sr-only">
-                    {t(
-                      showBfSale
-                        ? "pricing.blackFriday.regularPrice"
-                        : "pricing.backToWork.regularPrice",
-                      { price: strikeFormatted },
-                    )}
-                  </span>
-                ) : null}
-                <s
-                  aria-hidden
-                  className={cn(
-                    "h-5 text-sm tabular-nums text-black/40 dark:text-white/40",
-                    !showSale && "invisible",
-                  )}
-                >
-                  {strikeFormatted}
-                </s>
-                {showSale ? (
-                  <span className="sr-only">
-                    {t(
-                      showBfSale
-                        ? "pricing.blackFriday.offerPrice"
-                        : "pricing.backToWork.offerPrice",
-                      { price: saleFormatted },
-                    )}
-                  </span>
-                ) : null}
-              </>
+            <s
+              aria-hidden
+              className={cn(
+                "h-5 text-sm tabular-nums text-black/40 dark:text-white/40",
+                !showSale && "invisible",
+              )}
+            >
+              {showSale ? strikeFormatted : "\u00A0"}
+            </s>
+            {showSale ? (
+              <span className="sr-only">
+                {t(
+                  showBfSale
+                    ? "pricing.blackFriday.offerPrice"
+                    : "pricing.backToWork.offerPrice",
+                  { price: saleFormatted },
+                )}
+              </span>
             ) : null}
             <div className="flex items-baseline">
               <span className="text-2xl font-normal tabular-nums">
