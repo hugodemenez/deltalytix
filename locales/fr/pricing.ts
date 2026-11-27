@@ -9,6 +9,13 @@ export default {
             regularPrice: 'Prix habituel {price}',
             offerPrice: 'Prix de l\'offre {price}',
         },
+        blackFriday: {
+            badge: 'Black Friday',
+            bannerLifetime: 'Black Friday : Lifetime à {sale} au lieu de {list} jusqu\'au {date}',
+            bannerPlans: 'Black Friday : mensuel à {monthly}, trimestriel à {quarterly} et annuel à {yearly} jusqu\'au {date}',
+            regularPrice: 'Prix habituel {price}',
+            offerPrice: 'Prix Black Friday {price}',
+        },
         includes: 'Inclus',
         loading: 'Chargement...',
         yearly: 'annuel',

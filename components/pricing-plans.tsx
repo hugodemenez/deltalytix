@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useBillingCurrency } from "@/hooks/use-billing-currency";
+import { useBlackFridayDisplay } from "@/hooks/use-black-friday-display";
 import {
   BILLING_PERIODS,
   PLUS_PLAN_PRICES,
@@ -32,7 +33,6 @@ import {
 } from "@/lib/billing-plan-catalog";
 import {
   backToWorkPeriodDisplay,
-  isBackToWorkOfferActive,
   type BackToWorkPricingDisplay,
 } from "@/lib/back-to-work-promo";
 import { getBackToWorkPricingDisplay } from "@/server/back-to-work-pricing";
@@ -53,6 +53,15 @@ type Plan = {
 type Plans = {
   [key: string]: Plan;
 };
+
+function chargeMonthlyEquivalent(
+  period: BillingPeriod,
+  charge: number,
+): number {
+  if (period === "yearly") return Math.round((charge / 12) * 100) / 100;
+  if (period === "quarterly") return Math.round((charge / 3) * 100) / 100;
+  return charge;
+}
 
 interface PricingPlansProps {
   isModal?: boolean;
@@ -77,7 +86,7 @@ export default function PricingPlans({
   promo: promoProp,
   currentSubscription,
 }: PricingPlansProps) {
-  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>("monthly");
+  const [chosenPeriod, setChosenPeriod] = useState<BillingPeriod | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showLifetimeConfirm, setShowLifetimeConfirm] = useState(false);
   const [pendingLookupKey, setPendingLookupKey] = useState<string>("");
@@ -89,6 +98,11 @@ export default function PricingPlans({
   const locale = useCurrentLocale();
   const { currency, symbol } = useBillingCurrency();
   const promo = promoProp ?? loadedPromo;
+  const blackFriday = useBlackFridayDisplay();
+  const billingPeriod: BillingPeriod =
+    chosenPeriod ??
+    (currentSubscription ? undefined : blackFriday?.periods[0]) ??
+    "monthly";
 
   // Read referral code from URL params or localStorage on mount
   useEffect(() => {
@@ -305,11 +319,16 @@ export default function PricingPlans({
     </article>
   );
 
-  const campaignActive =
-    !currentSubscription && isBackToWorkOfferActive(promo);
-  const periodOffer = currentSubscription
-    ? undefined
-    : backToWorkPeriodDisplay(promo, billingPeriod);
+  const bfPrice =
+    currentSubscription || !blackFriday
+      ? undefined
+      : blackFriday.prices[billingPeriod]?.[currency];
+  // Checkout never applies Back-to-Work while a Black Friday phase is on
+  // (see resolveCheckoutAutoPromo), so do not advertise it then either.
+  const periodOffer =
+    currentSubscription || blackFriday
+      ? undefined
+      : backToWorkPeriodDisplay(promo, billingPeriod);
   const listMonthly =
     billingPeriod === "yearly"
       ? plans.plus.price.yearly / 12
@@ -318,27 +337,26 @@ export default function PricingPlans({
         : billingPeriod === "lifetime"
           ? plans.plus.price.lifetime
           : plans.plus.price.monthly;
-  const currentPricing = periodOffer?.saleMonthlyEquivalent ?? listMonthly;
-  const showSale = Boolean(
+  const showBfSale = bfPrice !== undefined;
+  const showBtwSale = Boolean(
     periodOffer?.offerActive && periodOffer.saleMonthlyEquivalent !== undefined,
   );
+  const showSale = showBfSale || showBtwSale;
+  const currentPricing = bfPrice
+    ? chargeMonthlyEquivalent(billingPeriod, bfPrice.salePrice)
+    : (periodOffer?.saleMonthlyEquivalent ?? listMonthly);
+  const strikeMonthly = bfPrice
+    ? chargeMonthlyEquivalent(billingPeriod, bfPrice.listPrice)
+    : listMonthly;
   const listCharge =
     billingPeriod === "yearly"
       ? plans.plus.price.yearly
       : billingPeriod === "quarterly"
         ? plans.plus.price.quarterly
         : plans.plus.price.monthly;
-  const billedTotal = periodOffer?.saleCharge ?? listCharge;
-  const listMonthlyFormatted = formatBillingAmount(
-    listMonthly,
-    currency,
-    locale,
-  );
-  const saleMonthlyFormatted = formatBillingAmount(
-    currentPricing,
-    currency,
-    locale,
-  );
+  const billedTotal = bfPrice?.salePrice ?? periodOffer?.saleCharge ?? listCharge;
+  const strikeFormatted = formatBillingAmount(strikeMonthly, currency, locale);
+  const saleFormatted = formatBillingAmount(currentPricing, currency, locale);
 
   const billingDetail =
     billingPeriod === "yearly"
@@ -364,7 +382,7 @@ export default function PricingPlans({
         <button
           key={period}
           type="button"
-          onClick={() => setBillingPeriod(period)}
+          onClick={() => setChosenPeriod(period)}
           className={cn(
             "min-w-0 rounded-sm px-3 py-2 text-xs capitalize transition-colors duration-150 ease-out sm:min-w-24 sm:px-4",
             billingPeriod === period
@@ -379,7 +397,30 @@ export default function PricingPlans({
   );
 
   const plusPlan = (
-    <article className="flex min-h-[500px] min-w-0 flex-col rounded-sm bg-white p-5 dark:bg-black sm:p-6">
+    <article
+      className={cn(
+        "relative flex min-h-[500px] min-w-0 flex-col rounded-sm bg-white p-5 dark:bg-black sm:p-6",
+        showBfSale &&
+          "shadow-[0_0_28px_oklch(0.2_0.01_95/0.14)] dark:shadow-[0_0_28px_oklch(0.95_0_0/0.16)]",
+      )}
+    >
+      {showBfSale ? (
+        <>
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -inset-px rounded-sm bg-gradient-to-br from-black via-neutral-500 to-black p-px dark:from-white dark:via-neutral-400 dark:to-white"
+            style={{
+              WebkitMask:
+                "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+              WebkitMaskComposite: "xor",
+              maskComposite: "exclude",
+            }}
+          />
+          <span className="absolute top-0 right-4 z-10 -translate-y-1/2 rounded-sm bg-black px-1.5 py-0.5 text-[10px] font-medium leading-4 text-white dark:bg-white dark:text-black">
+            {t("pricing.blackFriday.badge")}
+          </span>
+        </>
+      ) : null}
       <div className="mb-6 md:hidden">
         <p className="mb-2 text-xs font-medium text-black/55 dark:text-white/55">
           {t("pricing.billingPeriod")}
@@ -394,32 +435,34 @@ export default function PricingPlans({
             </h3>
           </div>
           <div className="flex min-w-[11rem] shrink-0 flex-col items-end sm:min-w-[12rem]">
-            {campaignActive ? (
-              <>
-                {showSale ? (
-                  <span className="sr-only">
-                    {t("pricing.backToWork.regularPrice", {
-                      price: listMonthlyFormatted,
-                    })}
-                  </span>
-                ) : null}
-                <s
-                  aria-hidden
-                  className={cn(
-                    "h-5 text-sm tabular-nums text-black/40 dark:text-white/40",
-                    !showSale && "invisible",
-                  )}
-                >
-                  {listMonthlyFormatted}
-                </s>
-                {showSale ? (
-                  <span className="sr-only">
-                    {t("pricing.backToWork.offerPrice", {
-                      price: saleMonthlyFormatted,
-                    })}
-                  </span>
-                ) : null}
-              </>
+            {showSale ? (
+              <span className="sr-only">
+                {t(
+                  showBfSale
+                    ? "pricing.blackFriday.regularPrice"
+                    : "pricing.backToWork.regularPrice",
+                  { price: strikeFormatted },
+                )}
+              </span>
+            ) : null}
+            <s
+              aria-hidden
+              className={cn(
+                "h-5 text-sm tabular-nums text-black/40 dark:text-white/40",
+                !showSale && "invisible",
+              )}
+            >
+              {showSale ? strikeFormatted : "\u00A0"}
+            </s>
+            {showSale ? (
+              <span className="sr-only">
+                {t(
+                  showBfSale
+                    ? "pricing.blackFriday.offerPrice"
+                    : "pricing.backToWork.offerPrice",
+                  { price: saleFormatted },
+                )}
+              </span>
             ) : null}
             <div className="flex items-baseline">
               <span className="text-2xl font-normal tabular-nums">

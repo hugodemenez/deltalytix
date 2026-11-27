@@ -1,5 +1,9 @@
 import { fromZonedTime } from "date-fns-tz";
 import {
+  PLUS_PLAN_PRICES,
+  type BillingCurrency,
+} from "./billing-plan-catalog";
+import {
   resolveBackToWorkPromoCode,
   type BackToWorkPromoEnv,
 } from "./back-to-work-promo";
@@ -95,6 +99,28 @@ const PLANS_WINDOW = {
   end: "2026-12-14T23:59:59",
 } as const;
 
+/**
+ * Final sale price in major units. USD and EUR use the same number.
+ * Lifetime is 200 against the 300 catalog list. Monthly, quarterly, and
+ * yearly are 5, 15, and 50 against the 19.99 / 45 / 120 catalog list.
+ * List prices are read from PLUS_PLAN_PRICES, not copied here.
+ */
+export const BLACK_FRIDAY_SALE_PRICES: Record<BlackFridayPromoPeriod, number> =
+  {
+    lifetime: 200,
+    monthly: 5,
+    quarterly: 15,
+    yearly: 50,
+  };
+
+const PHASE_PERIODS: Record<
+  BlackFridayPromoPhase,
+  readonly BlackFridayPromoPeriod[]
+> = {
+  lifetime: ["lifetime"],
+  plans: ["monthly", "quarterly", "yearly"],
+};
+
 const SECOND_MS = 1000;
 
 const LOOKUP_KEY =
@@ -143,6 +169,87 @@ export function blackFridayPromoPhase(
     return "plans";
   }
   return undefined;
+}
+
+export type BlackFridayPrice = {
+  listPrice: number;
+  salePrice: number;
+};
+
+export type BlackFridayDisplay = {
+  phase: BlackFridayPromoPhase;
+  /** Last instant the active window is on, inclusive (23:59:59.999 Europe/Paris). */
+  endsAt: Date;
+  periods: readonly BlackFridayPromoPeriod[];
+  prices: Partial<
+    Record<BlackFridayPromoPeriod, Record<BillingCurrency, BlackFridayPrice>>
+  >;
+};
+
+/**
+ * Public-site offer for `now`. Windows and sale amounts live in this module.
+ * List prices come from the Plus catalog. Returns undefined outside both
+ * Paris windows. Pure: pass `now` in; do not read the clock here.
+ */
+export function getBlackFridayDisplay(now: Date): BlackFridayDisplay | undefined {
+  const phase = blackFridayPromoPhase(now);
+  if (!phase) return undefined;
+
+  const periods = PHASE_PERIODS[phase];
+  const endLocal = phase === "lifetime" ? LIFETIME_WINDOW.end : PLANS_WINDOW.end;
+  const prices: BlackFridayDisplay["prices"] = {};
+
+  for (const period of periods) {
+    const listPrice = PLUS_PLAN_PRICES[period];
+    const salePrice = BLACK_FRIDAY_SALE_PRICES[period];
+    if (!(salePrice > 0) || !(salePrice < listPrice)) continue;
+
+    const price = { listPrice, salePrice };
+    prices[period] = { USD: price, EUR: price };
+  }
+
+  if (Object.keys(prices).length === 0) return undefined;
+
+  return {
+    phase,
+    endsAt: new Date(parisMs(endLocal) + SECOND_MS - 1),
+    periods,
+    prices,
+  };
+}
+
+/** Next instant the public offer appears, switches phase, or ends. */
+export function nextBlackFridayBoundary(now: Date): Date | undefined {
+  const nowMs = now.getTime();
+  for (const ms of [
+    LIFETIME_WINDOW_MS.startMs,
+    PLANS_WINDOW_MS.startMs,
+    PLANS_WINDOW_MS.endExclusiveMs,
+  ]) {
+    if (ms > nowMs) return new Date(ms);
+  }
+  return undefined;
+}
+
+/** Paris calendar date for the banner. French is `30/11`; English is `Nov 30`. */
+export function formatBlackFridayUntil(endsAt: Date, locale: string): string {
+  const timeZone = BLACK_FRIDAY_PROMO_TIMEZONE;
+  if (locale === "fr") {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      day: "numeric",
+      month: "2-digit",
+      timeZone,
+    }).formatToParts(endsAt);
+    const day = parts.find((part) => part.type === "day")?.value ?? "";
+    const month = parts.find((part) => part.type === "month")?.value ?? "";
+    return `${day}/${month}`;
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    day: "numeric",
+    month: "short",
+    timeZone,
+  }).format(endsAt);
 }
 
 function normalize(value: string | null | undefined): string {
