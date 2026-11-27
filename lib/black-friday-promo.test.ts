@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { fromZonedTime } from "date-fns-tz";
-import { billingLookupKey } from "./billing-plan-catalog";
+import { PLUS_PLAN_PRICES, billingLookupKey } from "./billing-plan-catalog";
 import {
   BLACK_FRIDAY_LIFETIME_LIST_AMOUNT_MINOR,
   BLACK_FRIDAY_PROMO_TIMEZONE,
   blackFridayPromoEnvKey,
   blackFridayPromoPhase,
+  formatBlackFridayUntil,
+  getBlackFridayDisplay,
+  nextBlackFridayBoundary,
   resolveBlackFridayPromoCode,
   resolveCheckoutAutoPromo,
   resolveCheckoutAutoPromoCode,
@@ -593,5 +596,111 @@ describe("resolveCheckoutAutoPromoCode", () => {
       campaign: "btw",
     });
     expect(resolveCheckoutAutoPromo(monthlyUsd, both, duringLifetime)).toBeUndefined();
+  });
+});
+
+describe("getBlackFridayDisplay", () => {
+  const lifetimeEndsAt = paris("2026-11-30T23:59:59", 999);
+  const plansEndsAt = paris("2026-12-14T23:59:59", 999);
+
+  it("is empty before the lifetime window and one millisecond before it opens", () => {
+    expect(getBlackFridayDisplay(beforeLifetime)).toBeUndefined();
+    expect(
+      getBlackFridayDisplay(paris("2026-11-27T00:00:00", -1)),
+    ).toBeUndefined();
+    expect(nextBlackFridayBoundary(beforeLifetime)?.toISOString()).toBe(
+      lifetimeStart.toISOString(),
+    );
+  });
+
+  it("offers only Lifetime at both edges of the lifetime window", () => {
+    for (const now of [
+      lifetimeStart,
+      duringLifetime,
+      lifetimeEnd,
+      paris("2026-11-30T23:59:59", 999),
+    ]) {
+      const display = getBlackFridayDisplay(now);
+      expect(display?.phase).toBe("lifetime");
+      expect(display?.periods).toEqual(["lifetime"]);
+      expect(display?.endsAt.toISOString()).toBe(lifetimeEndsAt.toISOString());
+      expect(display?.prices.monthly).toBeUndefined();
+      expect(display?.prices.quarterly).toBeUndefined();
+      expect(display?.prices.yearly).toBeUndefined();
+
+      for (const currency of ["USD", "EUR"] as const) {
+        expect(display?.prices.lifetime?.[currency]).toEqual({
+          listPrice: PLUS_PLAN_PRICES.lifetime,
+          salePrice: 200,
+        });
+      }
+    }
+
+    expect(nextBlackFridayBoundary(lifetimeEnd)?.toISOString()).toBe(
+      plansStart.toISOString(),
+    );
+  });
+
+  it("offers monthly, quarterly, and yearly at both edges of the plans window", () => {
+    for (const now of [
+      plansStart,
+      duringPlans,
+      plansEnd,
+      paris("2026-12-14T23:59:59", 999),
+    ]) {
+      const display = getBlackFridayDisplay(now);
+      expect(display?.phase).toBe("plans");
+      expect(display?.periods).toEqual(["monthly", "quarterly", "yearly"]);
+      expect(display?.endsAt.toISOString()).toBe(plansEndsAt.toISOString());
+      expect(display?.prices.lifetime).toBeUndefined();
+
+      for (const currency of ["USD", "EUR"] as const) {
+        expect(display?.prices.monthly?.[currency]).toEqual({
+          listPrice: PLUS_PLAN_PRICES.monthly,
+          salePrice: 5,
+        });
+        expect(display?.prices.quarterly?.[currency]).toEqual({
+          listPrice: PLUS_PLAN_PRICES.quarterly,
+          salePrice: 15,
+        });
+        expect(display?.prices.yearly?.[currency]).toEqual({
+          listPrice: PLUS_PLAN_PRICES.yearly,
+          salePrice: 50,
+        });
+      }
+    }
+  });
+
+  it("is empty at the plans window end and does not schedule another change", () => {
+    expect(getBlackFridayDisplay(afterPlans)).toBeUndefined();
+    expect(
+      getBlackFridayDisplay(paris("2026-12-14T23:59:59", 1000)),
+    ).toBeUndefined();
+    expect(nextBlackFridayBoundary(afterPlans)).toBeUndefined();
+    expect(nextBlackFridayBoundary(plansEnd)?.toISOString()).toBe(
+      afterPlans.toISOString(),
+    );
+  });
+
+  it("formats the Paris end date without using the viewer timezone", () => {
+    expect(formatBlackFridayUntil(lifetimeEndsAt, "fr")).toBe("30/11");
+    expect(formatBlackFridayUntil(lifetimeEndsAt, "en")).toBe("Nov 30");
+    expect(formatBlackFridayUntil(plansEndsAt, "fr")).toBe("14/12");
+    expect(formatBlackFridayUntil(plansEndsAt, "en")).toBe("Dec 14");
+  });
+
+  it("keeps sale prices below the catalog list for every currency", () => {
+    const lifetime = getBlackFridayDisplay(duringLifetime);
+    const plans = getBlackFridayDisplay(duringPlans);
+    expect(PLUS_PLAN_PRICES.lifetime * 100).toBe(
+      BLACK_FRIDAY_LIFETIME_LIST_AMOUNT_MINOR,
+    );
+
+    for (const display of [lifetime, plans]) {
+      for (const price of Object.values(display?.prices ?? {})) {
+        expect(price?.USD.salePrice).toBeLessThan(price?.USD.listPrice ?? 0);
+        expect(price?.EUR).toEqual(price?.USD);
+      }
+    }
   });
 });
