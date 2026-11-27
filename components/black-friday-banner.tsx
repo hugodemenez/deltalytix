@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { useBillingCurrency } from "@/hooks/use-billing-currency";
 import { useBlackFridayDisplay } from "@/hooks/use-black-friday-display";
@@ -9,6 +10,9 @@ import { formatBlackFridayUntil } from "@/lib/black-friday-promo";
 import { localizeLandingHref } from "@/lib/landing-nav-paths";
 import { LOCALES } from "@/lib/locales";
 import { useCurrentLocale, useI18n } from "@/locales/landing-client";
+
+/** Read by `.pt-nav-content` so the fixed header never covers page content. */
+const BANNER_HEIGHT_VAR = "--promo-banner-height";
 
 function isPromoSurface(pathname: string): boolean {
   let path = pathname || "/";
@@ -29,8 +33,28 @@ export function BlackFridayBanner() {
   const { currency } = useBillingCurrency();
   const locale = useCurrentLocale();
   const t = useI18n();
+  const ref = useRef<HTMLAnchorElement>(null);
+  const visible = Boolean(display) && isPromoSurface(pathname);
 
-  if (!isPromoSurface(pathname) || !display) return null;
+  useEffect(() => {
+    const root = document.documentElement;
+    const el = ref.current;
+    if (!visible || !el) {
+      root.style.removeProperty(BANNER_HEIGHT_VAR);
+      return;
+    }
+    const sync = () =>
+      root.style.setProperty(BANNER_HEIGHT_VAR, `${el.offsetHeight}px`);
+    sync();
+    const observer = new ResizeObserver(sync);
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty(BANNER_HEIGHT_VAR);
+    };
+  });
+
+  if (!visible || !display) return null;
 
   const date = formatBlackFridayUntil(display.endsAt, locale);
   const lifetime = display.prices.lifetime?.[currency];
@@ -64,6 +88,7 @@ export function BlackFridayBanner() {
 
   return (
     <Link
+      ref={ref}
       href={localizeLandingHref(locale, "/pricing")}
       className="block bg-black px-4 py-1.5 text-center text-xs leading-4 text-pretty text-white transition-opacity hover:opacity-90 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white dark:bg-white dark:text-black dark:focus-visible:ring-black"
     >

@@ -324,12 +324,12 @@ export default function PricingPlans({
     currentSubscription || !blackFriday
       ? undefined
       : blackFriday.prices[billingPeriod]?.[currency];
+  // Checkout never applies Back-to-Work while a Black Friday phase is on
+  // (see resolveCheckoutAutoPromo), so do not advertise it then either.
   const campaignActive =
-    !currentSubscription && isBackToWorkOfferActive(promo);
-  // Black Friday wins for the period it discounts. Other periods keep
-  // Back-to-Work when that offer is still active.
+    !currentSubscription && !blackFriday && isBackToWorkOfferActive(promo);
   const periodOffer =
-    currentSubscription || bfPrice
+    currentSubscription || blackFriday
       ? undefined
       : backToWorkPeriodDisplay(promo, billingPeriod);
   const listMonthly =
