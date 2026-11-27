@@ -620,9 +620,7 @@
   }
 
   .pt-nav-content {
-    padding-top: calc(
-      3.5rem + env(safe-area-inset-top, 0px) + var(--promo-banner-height, 0px)
-    );
+    padding-top: calc(3.5rem + env(safe-area-inset-top, 0px));
   }
 
   /* Full-viewport overlay that respects iOS Safari dynamic toolbars (bottom tabs, address bar) */
