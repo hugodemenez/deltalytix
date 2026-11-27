@@ -65,6 +65,7 @@ import {
 } from "@/lib/landing-nav-paths";
 import { YOUTUBE_CHANNEL_URL } from "@/lib/social-links";
 import { ThemeToggleIcon } from "@/components/theme-toggle-icon";
+import { BlackFridayBanner } from "@/components/black-friday-banner";
 
 const ListItem = React.forwardRef<
   React.ComponentRef<"a">,
@@ -402,6 +403,7 @@ export default function Component() {
       <header
         className={`fixed top-0 left-0 right-0 z-50 canvas-bg bg-[oklch(0.97_0_0)] pt-safe text-foreground transition-transform duration-300 dark:bg-[oklch(0.17_0_0)] ${isVisible ? "translate-y-0" : "-translate-y-full"}`}
       >
+        <BlackFridayBanner />
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 lg:px-6">
         <Link href={localize("/")} className="flex items-center space-x-2">
           <Logo className="w-6 h-6 fill-black dark:fill-white" />

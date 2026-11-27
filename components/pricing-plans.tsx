@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useBillingCurrency } from "@/hooks/use-billing-currency";
+import { useBlackFridayDisplay } from "@/hooks/use-black-friday-display";
 import {
   BILLING_PERIODS,
   PLUS_PLAN_PRICES,
@@ -54,6 +55,15 @@ type Plans = {
   [key: string]: Plan;
 };
 
+function chargeMonthlyEquivalent(
+  period: BillingPeriod,
+  charge: number,
+): number {
+  if (period === "yearly") return Math.round((charge / 12) * 100) / 100;
+  if (period === "quarterly") return Math.round((charge / 3) * 100) / 100;
+  return charge;
+}
+
 interface PricingPlansProps {
   isModal?: boolean;
   onClose?: () => void;
@@ -77,7 +87,7 @@ export default function PricingPlans({
   promo: promoProp,
   currentSubscription,
 }: PricingPlansProps) {
-  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>("monthly");
+  const [chosenPeriod, setChosenPeriod] = useState<BillingPeriod | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showLifetimeConfirm, setShowLifetimeConfirm] = useState(false);
   const [pendingLookupKey, setPendingLookupKey] = useState<string>("");
@@ -89,6 +99,11 @@ export default function PricingPlans({
   const locale = useCurrentLocale();
   const { currency, symbol } = useBillingCurrency();
   const promo = promoProp ?? loadedPromo;
+  const blackFriday = useBlackFridayDisplay();
+  const billingPeriod: BillingPeriod =
+    chosenPeriod ??
+    (currentSubscription ? undefined : blackFriday?.periods[0]) ??
+    "monthly";
 
   // Read referral code from URL params or localStorage on mount
   useEffect(() => {
@@ -305,11 +320,18 @@ export default function PricingPlans({
     </article>
   );
 
+  const bfPrice =
+    currentSubscription || !blackFriday
+      ? undefined
+      : blackFriday.prices[billingPeriod]?.[currency];
+  // Checkout never applies Back-to-Work while a Black Friday phase is on
+  // (see resolveCheckoutAutoPromo), so do not advertise it then either.
   const campaignActive =
-    !currentSubscription && isBackToWorkOfferActive(promo);
-  const periodOffer = currentSubscription
-    ? undefined
-    : backToWorkPeriodDisplay(promo, billingPeriod);
+    !currentSubscription && !blackFriday && isBackToWorkOfferActive(promo);
+  const periodOffer =
+    currentSubscription || blackFriday
+      ? undefined
+      : backToWorkPeriodDisplay(promo, billingPeriod);
   const listMonthly =
     billingPeriod === "yearly"
       ? plans.plus.price.yearly / 12
@@ -318,27 +340,28 @@ export default function PricingPlans({
         : billingPeriod === "lifetime"
           ? plans.plus.price.lifetime
           : plans.plus.price.monthly;
-  const currentPricing = periodOffer?.saleMonthlyEquivalent ?? listMonthly;
-  const showSale = Boolean(
+  const showBfSale = bfPrice !== undefined;
+  const showBtwSale = Boolean(
     periodOffer?.offerActive && periodOffer.saleMonthlyEquivalent !== undefined,
   );
+  const showSale = showBfSale || showBtwSale;
+  const reserveSaleRow =
+    !currentSubscription && (Boolean(blackFriday) || campaignActive);
+  const currentPricing = bfPrice
+    ? chargeMonthlyEquivalent(billingPeriod, bfPrice.salePrice)
+    : (periodOffer?.saleMonthlyEquivalent ?? listMonthly);
+  const strikeMonthly = bfPrice
+    ? chargeMonthlyEquivalent(billingPeriod, bfPrice.listPrice)
+    : listMonthly;
   const listCharge =
     billingPeriod === "yearly"
       ? plans.plus.price.yearly
       : billingPeriod === "quarterly"
         ? plans.plus.price.quarterly
         : plans.plus.price.monthly;
-  const billedTotal = periodOffer?.saleCharge ?? listCharge;
-  const listMonthlyFormatted = formatBillingAmount(
-    listMonthly,
-    currency,
-    locale,
-  );
-  const saleMonthlyFormatted = formatBillingAmount(
-    currentPricing,
-    currency,
-    locale,
-  );
+  const billedTotal = bfPrice?.salePrice ?? periodOffer?.saleCharge ?? listCharge;
+  const strikeFormatted = formatBillingAmount(strikeMonthly, currency, locale);
+  const saleFormatted = formatBillingAmount(currentPricing, currency, locale);
 
   const billingDetail =
     billingPeriod === "yearly"
@@ -364,7 +387,7 @@ export default function PricingPlans({
         <button
           key={period}
           type="button"
-          onClick={() => setBillingPeriod(period)}
+          onClick={() => setChosenPeriod(period)}
           className={cn(
             "min-w-0 rounded-sm px-3 py-2 text-xs capitalize transition-colors duration-150 ease-out sm:min-w-24 sm:px-4",
             billingPeriod === period
@@ -372,7 +395,21 @@ export default function PricingPlans({
               : "text-black/55 hover:text-black dark:text-white/55 dark:hover:text-white",
           )}
         >
-          {label}
+          <span className="inline-flex items-center justify-center gap-1.5">
+            {label}
+            {!currentSubscription &&
+            blackFriday?.prices[period]?.[currency] ? (
+              <>
+                <span
+                  aria-hidden
+                  className="h-1.5 w-1.5 shrink-0 rounded-full bg-current"
+                />
+                <span className="sr-only">
+                  {t("pricing.blackFriday.badge")}
+                </span>
+              </>
+            ) : null}
+          </span>
         </button>
       ))}
     </div>
@@ -394,13 +431,21 @@ export default function PricingPlans({
             </h3>
           </div>
           <div className="flex min-w-[11rem] shrink-0 flex-col items-end sm:min-w-[12rem]">
-            {campaignActive ? (
+            {showBfSale ? (
+              <span className="mb-1 inline-flex rounded-sm bg-black px-1.5 py-0.5 text-[10px] font-medium leading-4 text-white dark:bg-white dark:text-black">
+                {t("pricing.blackFriday.badge")}
+              </span>
+            ) : null}
+            {reserveSaleRow ? (
               <>
                 {showSale ? (
                   <span className="sr-only">
-                    {t("pricing.backToWork.regularPrice", {
-                      price: listMonthlyFormatted,
-                    })}
+                    {t(
+                      showBfSale
+                        ? "pricing.blackFriday.regularPrice"
+                        : "pricing.backToWork.regularPrice",
+                      { price: strikeFormatted },
+                    )}
                   </span>
                 ) : null}
                 <s
@@ -410,13 +455,16 @@ export default function PricingPlans({
                     !showSale && "invisible",
                   )}
                 >
-                  {listMonthlyFormatted}
+                  {strikeFormatted}
                 </s>
                 {showSale ? (
                   <span className="sr-only">
-                    {t("pricing.backToWork.offerPrice", {
-                      price: saleMonthlyFormatted,
-                    })}
+                    {t(
+                      showBfSale
+                        ? "pricing.blackFriday.offerPrice"
+                        : "pricing.backToWork.offerPrice",
+                      { price: saleFormatted },
+                    )}
                   </span>
                 ) : null}
               </>
